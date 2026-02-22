@@ -23,6 +23,10 @@ const es: Record<string, string> = {
   'pipeline.card.overdue': 'Overdue',
   'pipeline.empty': 'No leads found.',
   
+  'pipeline.filters.searchPlaceholder': 'Buscar empresa, email, web',
+  'pipeline.filters.nicheAll': 'Todas',
+  'pipeline.filters.nicheUnspecified': 'Sin especificar',
+  
   'auth.signOut': 'Cerrar sesión',
   'auth.signingOut': 'Saliendo…',
 

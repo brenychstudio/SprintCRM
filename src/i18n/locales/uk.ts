@@ -23,6 +23,10 @@ const uk: Record<string, string> = {
   'pipeline.card.overdue': 'Overdue',
   'pipeline.empty': 'No leads found.',
   
+  'pipeline.filters.searchPlaceholder': 'Пошук: компанія, email, сайт',
+  'pipeline.filters.nicheAll': 'Усі',
+  'pipeline.filters.nicheUnspecified': 'Не вказано',
+  
   'auth.signOut': 'Вийти',
   'auth.signingOut': 'Вихід…',
   'auth.loadingSession': 'Завантаження сесії…',

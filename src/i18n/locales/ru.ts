@@ -23,6 +23,10 @@ const ru: Record<string, string> = {
   'pipeline.card.overdue': 'Overdue',
   'pipeline.empty': 'No leads found.',
 
+  'pipeline.filters.searchPlaceholder': 'Поиск: компания, email, сайт',
+  'pipeline.filters.nicheAll': 'Все',
+  'pipeline.filters.nicheUnspecified': 'Не указано',
+  
   'auth.signOut': 'Выйти',
   'auth.signingOut': 'Выход…',
 
