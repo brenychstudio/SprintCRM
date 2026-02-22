@@ -9,7 +9,20 @@ const en: Record<string, string> = {
   'nav.today': 'Today',
   'nav.leads': 'Leads',
   'nav.imports': 'Imports',
+  'nav.pipeline': 'Pipeline',
 
+  'pipeline.title': 'Pipeline',
+  'pipeline.stage.new': 'New',
+  'pipeline.stage.contacted': 'Contacted',
+  'pipeline.stage.replied': 'Replied',
+  'pipeline.stage.proposal': 'Proposal',
+  'pipeline.stage.won': 'Won',
+  'pipeline.stage.lost': 'Lost',
+
+  'pipeline.action.move': 'Move',
+  'pipeline.card.overdue': 'Overdue',
+  'pipeline.empty': 'No leads found.',
+  
   'auth.signOut': 'Sign out',
   'auth.signingOut': 'Signing out…',
 

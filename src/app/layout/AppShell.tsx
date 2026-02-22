@@ -14,6 +14,7 @@ export function AppShell() {
       { to: '/today', label: t('nav.today') },
       { to: '/leads', label: t('nav.leads') },
       { to: '/imports', label: t('nav.imports') },
+      { to: '/pipeline', label: t('nav.pipeline') },
     ],
     [t],
   )

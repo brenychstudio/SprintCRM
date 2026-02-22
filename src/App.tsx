@@ -5,6 +5,7 @@ import { AppShell } from './app/layout/AppShell'
 import { LeadsPage } from './app/pages/leads/LeadsPage'
 import { TodayPage } from './app/pages/today/TodayPage'
 import { ImportsPage } from './app/pages/imports/ImportsPage'
+import { PipelinePage } from './app/pages/pipeline/PipelinePage'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/today" element={<TodayPage />} />
           <Route path="/leads" element={<LeadsPage />} />
           <Route path="/imports" element={<ImportsPage />} />
+          <Route path="/pipeline" element={<PipelinePage />} />
         </Route>
       </Route>
 
