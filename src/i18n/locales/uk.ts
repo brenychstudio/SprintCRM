@@ -21,6 +21,7 @@ const uk: Record<string, string> = {
   'today.title': 'Сьогодні',
   'today.subtitle': 'Ліди на сьогодні та прострочені. Рухайте процес одним кліком.',
   'today.loading': 'Завантаження черги…',
+  'today.error': 'Не вдалося завантажити чергу.',
   'today.empty': 'Зараз немає задач на виконання.',
   'today.table.company': 'Компанія',
   'today.table.stage': 'Стадія',
@@ -58,6 +59,7 @@ const uk: Record<string, string> = {
   'leads.table.website': 'Сайт',
   'leads.table.stage': 'Стадія',
   'leads.table.nextActionAt': 'Наступна дія',
+  'leads.error': 'Не вдалося завантажити ліди.',
   'leads.empty': 'Лідів не знайдено.',
   'leads.loading': 'Завантаження лідів…',
 

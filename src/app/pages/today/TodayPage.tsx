@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { defaultNextForStage, leadsQueryKeys, listLeads, logActivity, updateLead } from '../../../features/leads/leadsApi'
-import type { Lead } from '../../../features/leads/types'
+import type { Lead, NextAction } from '../../../features/leads/types'
 import { useI18n } from '../../../i18n/i18n'
 import { endOfTodayISO, isoAtMadridNineAMInDays, startOfTodayISO } from '../../../lib/dates'
 
@@ -18,11 +18,11 @@ function TodayLeadDrawer({ lead, onClose }: { lead: Lead; onClose: () => void })
         <dl className="mt-6 grid grid-cols-1 gap-4 text-sm text-zinc-700">
           <div>
             <dt className="text-xs text-zinc-500">{t('today.drawer.stage')}</dt>
-            <dd className="mt-1 capitalize">{lead.stage}</dd>
+            <dd className="mt-1">{t(`leads.filter.stage.${lead.stage}`)}</dd>
           </div>
           <div>
             <dt className="text-xs text-zinc-500">{t('today.drawer.nextAction')}</dt>
-            <dd className="mt-1">{lead.next_action}</dd>
+            <dd className="mt-1">{t(`action.${lead.next_action}`)}</dd>
           </div>
           <div>
             <dt className="text-xs text-zinc-500">{t('today.drawer.nextAt')}</dt>
@@ -82,7 +82,12 @@ export function TodayPage() {
         <p className="mt-2 text-sm text-zinc-600">{t('today.subtitle')}</p>
       </div>
 
-      {queueQuery.isLoading ? <p className="mt-4 text-sm text-zinc-500">{t('today.loading')}</p> : null}
+      {queueQuery.isLoading ? (
+        <div className="mt-4 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">{t('today.loading')}</div>
+      ) : null}
+      {queueQuery.isError ? (
+        <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{t('today.error')}</div>
+      ) : null}
 
       <div className="mt-5 overflow-hidden rounded-2xl border border-zinc-200">
         <table className="min-w-full divide-y divide-zinc-200 text-sm">
@@ -102,8 +107,8 @@ export function TodayPage() {
               return (
                 <tr key={lead.id}>
                   <td className="px-4 py-3 text-zinc-900">{lead.company_name}</td>
-                  <td className="px-4 py-3 capitalize">{lead.stage}</td>
-                  <td className="px-4 py-3">{lead.next_action}</td>
+                  <td className="px-4 py-3">{t(`leads.filter.stage.${lead.stage}`)}</td>
+                  <td className="px-4 py-3">{t(`action.${lead.next_action as NextAction}`)}</td>
                   <td className="px-4 py-3">{new Date(lead.next_action_at).toLocaleString()}</td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2 py-1 text-xs ${isOverdue ? 'bg-red-50 text-red-700' : 'bg-zinc-100 text-zinc-700'}`}>
@@ -115,7 +120,7 @@ export function TodayPage() {
                       <button
                         type="button"
                         onClick={() => setSelectedLead(lead)}
-                        className="rounded-xl border border-zinc-200 px-3 py-2 text-sm"
+                        className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
                       >
                         {t('today.actions.open')}
                       </button>
@@ -123,7 +128,7 @@ export function TodayPage() {
                         type="button"
                         onClick={() => doneMutation.mutate(lead)}
                         disabled={doneMutation.isPending}
-                        className="rounded-xl bg-zinc-900 px-3 py-2 text-sm text-white disabled:opacity-60"
+                        className="rounded-xl bg-zinc-900 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-60"
                       >
                         {t('today.actions.done')}
                       </button>

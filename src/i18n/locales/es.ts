@@ -21,6 +21,7 @@ const es: Record<string, string> = {
   'today.title': 'Today',
   'today.subtitle': 'Leads due today and overdue. Keep momentum with one click.',
   'today.loading': 'Loading queue…',
+  'today.error': 'Unable to load queue right now.',
   'today.empty': 'Nothing due right now.',
   'today.table.company': 'Company',
   'today.table.stage': 'Stage',
@@ -58,6 +59,7 @@ const es: Record<string, string> = {
   'leads.table.website': 'Website',
   'leads.table.stage': 'Stage',
   'leads.table.nextActionAt': 'Next action at',
+  'leads.error': 'Unable to load leads right now.',
   'leads.empty': 'No leads found.',
   'leads.loading': 'Loading leads…',
 
@@ -72,6 +74,21 @@ const es: Record<string, string> = {
   'drawer.activityTitle': 'Activity timeline',
   'drawer.loadingActivities': 'Loading activities…',
   'drawer.noActivities': 'No activities yet.',
+
+  'action.follow_up': 'Follow up',
+  'action.send_proposal': 'Send proposal',
+  'action.request_call': 'Request call',
+  'action.nurture': 'Nurture',
+
+  'activity.imported': 'Imported',
+  'activity.contacted': 'Contacted',
+  'activity.replied': 'Replied',
+  'activity.proposal_sent': 'Proposal sent',
+  'activity.won': 'Won',
+  'activity.lost': 'Lost',
+  'activity.note': 'Note',
+  'activity.stage_changed': 'Stage changed',
+  'activity.next_action_set': 'Next action set',
 }
 
 export default es
