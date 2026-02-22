@@ -8,6 +8,7 @@ const es: Record<string, string> = {
 
   'nav.today': 'Today',
   'nav.leads': 'Leads',
+  'nav.imports': 'Imports',
   'auth.signOut': 'Sign out',
   'auth.signingOut': 'Signing out…',
 
@@ -89,6 +90,38 @@ const es: Record<string, string> = {
   'activity.note': 'Note',
   'activity.stage_changed': 'Stage changed',
   'activity.next_action_set': 'Next action set',
+
+  'imports.title': 'Import Wizard',
+  'imports.subtitle': 'Upload a file, map columns, and preview dedup results before import.',
+  'imports.step.upload': 'Upload',
+  'imports.step.preview': 'Preview',
+  'imports.step.mapping': 'Mapping',
+  'imports.step.dedup': 'Dedup',
+  'imports.upload.cta': 'Upload file',
+  'imports.upload.hint': 'Supported formats: .xlsx, .csv',
+  'imports.preview.title': 'Preview first rows',
+  'imports.mapping.title': 'Map columns to lead fields',
+  'imports.mapping.required': 'Required',
+  'imports.mapping.optional': 'Optional',
+  'imports.dedup.title': 'Dedup preview',
+  'imports.dedup.in_file': 'Duplicates in file',
+  'imports.dedup.in_db': 'Possible duplicates in CRM',
+  'imports.dedup.eligible': 'Eligible rows',
+  'imports.field.company_name': 'Company name',
+  'imports.field.email': 'Email',
+  'imports.field.website': 'Website',
+  'imports.field.phone': 'Phone',
+  'imports.field.niche': 'Niche',
+  'imports.field.contact_name': 'Contact name',
+  'imports.field.country_city': 'Country / city',
+  'imports.field.notes': 'Notes',
+
+  'common.cancel': 'Cancel',
+  'common.continue': 'Continue',
+  'common.back': 'Back',
+  'common.loading': 'Loading…',
+  'common.error': 'Something went wrong.',
+  'common.empty': 'Empty',
 }
 
 export default es
