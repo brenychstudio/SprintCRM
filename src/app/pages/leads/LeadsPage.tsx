@@ -10,28 +10,16 @@ import {
   updateLead,
 } from '../../../features/leads/leadsApi'
 import type { Lead, LeadDueFilter, LeadStage, NextAction } from '../../../features/leads/types'
+import { useI18n } from '../../../i18n/i18n'
 import { isoAtMadridNineAMForDateInput, isoAtMadridNineAMInDays } from '../../../lib/dates'
 
-const stageOptions: Array<{ value: LeadStage | 'all'; label: string }> = [
-  { value: 'all', label: 'All stages' },
-  { value: 'new', label: 'New' },
-  { value: 'contacted', label: 'Contacted' },
-  { value: 'replied', label: 'Replied' },
-  { value: 'proposal', label: 'Proposal' },
-  { value: 'won', label: 'Won' },
-  { value: 'lost', label: 'Lost' },
-]
-
-const dueOptions: Array<{ value: LeadDueFilter | 'all'; label: string }> = [
-  { value: 'all', label: 'All due' },
-  { value: 'today', label: 'Due today' },
-  { value: 'overdue', label: 'Overdue' },
-]
-
+const stageValues: Array<LeadStage | 'all'> = ['all', 'new', 'contacted', 'replied', 'proposal', 'won', 'lost']
+const dueValues: Array<LeadDueFilter | 'all'> = ['all', 'today', 'overdue']
 const nextActionOptions: NextAction[] = ['follow_up', 'send_proposal', 'request_call', 'nurture']
 
 function LeadDrawer({ lead, onClose, onLeadChange }: { lead: Lead; onClose: () => void; onLeadChange: (lead: Lead) => void }) {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
   const [stage, setStage] = useState(lead.stage)
   const [nextAction, setNextAction] = useState(lead.next_action)
   const [nextDate, setNextDate] = useState(lead.next_action_at.slice(0, 10))
@@ -116,40 +104,42 @@ function LeadDrawer({ lead, onClose, onLeadChange }: { lead: Lead; onClose: () =
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-zinc-900/30">
-      <button type="button" aria-label="Close drawer" onClick={onClose} className="h-full flex-1" />
+      <button type="button" aria-label={t('drawer.close')} onClick={onClose} className="h-full flex-1" />
       <aside className="h-full w-full max-w-xl overflow-y-auto border-l border-zinc-200 bg-white p-6 shadow-xl">
         <h2 className="text-xl font-semibold text-zinc-900">{lead.company_name}</h2>
-        <p className="mt-1 text-xs text-zinc-500">Lead ID: {lead.id}</p>
+        <p className="mt-1 text-xs text-zinc-500">{t('drawer.leadId', { id: lead.id })}</p>
 
         <div className="mt-6 grid gap-4">
-          <label className="space-y-1"><span className="text-xs text-zinc-500">Stage</span>
+          <label className="space-y-1"><span className="text-xs text-zinc-500">{t('drawer.stage')}</span>
             <select value={stage} onChange={(e) => setStage(e.target.value as LeadStage)} className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm">
-              {stageOptions.filter((s) => s.value !== 'all').map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+              {stageValues.filter((s) => s !== 'all').map((s) => <option key={s} value={s}>{t(`leads.filter.stage.${s}`)}</option>)}
             </select>
           </label>
-          <label className="space-y-1"><span className="text-xs text-zinc-500">Next action</span>
+          <label className="space-y-1"><span className="text-xs text-zinc-500">{t('drawer.nextAction')}</span>
             <select value={nextAction} onChange={(e) => setNextAction(e.target.value as NextAction)} className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm">
               {nextActionOptions.map((a) => <option key={a} value={a}>{a}</option>)}
             </select>
           </label>
-          <label className="space-y-1"><span className="text-xs text-zinc-500">Next date</span>
+          <label className="space-y-1"><span className="text-xs text-zinc-500">{t('drawer.nextDate')}</span>
             <input type="date" value={nextDate} onChange={(e) => setNextDate(e.target.value)} className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm" />
           </label>
-          <label className="space-y-1"><span className="text-xs text-zinc-500">Notes</span>
+          <label className="space-y-1"><span className="text-xs text-zinc-500">{t('drawer.notes')}</span>
             <textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm" />
           </label>
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
-          <button type="button" onClick={() => touchMutation.mutate()} disabled={isBusy} className="rounded-xl border border-zinc-200 px-3 py-2 text-sm">Log touch</button>
-          <button type="button" onClick={() => saveMutation.mutate()} disabled={isBusy} className="rounded-xl bg-zinc-900 px-4 py-2 text-sm text-white">Save</button>
+          <button type="button" onClick={() => touchMutation.mutate()} disabled={isBusy} className="rounded-xl border border-zinc-200 px-3 py-2 text-sm">{t('drawer.logTouch')}</button>
+          <button type="button" onClick={() => saveMutation.mutate()} disabled={isBusy} className="rounded-xl bg-zinc-900 px-4 py-2 text-sm text-white">{t('drawer.save')}</button>
           {(['contacted', 'replied', 'proposal'] as LeadStage[]).map((targetStage) => (
-            <button key={targetStage} type="button" onClick={() => moveMutation.mutate(targetStage)} disabled={isBusy} className="rounded-xl border border-zinc-200 px-3 py-2 text-sm capitalize">{targetStage}</button>
+            <button key={targetStage} type="button" onClick={() => moveMutation.mutate(targetStage)} disabled={isBusy} className="rounded-xl border border-zinc-200 px-3 py-2 text-sm capitalize">{t(`leads.filter.stage.${targetStage}`)}</button>
           ))}
         </div>
 
         <div className="mt-8">
-          <h3 className="text-sm font-semibold text-zinc-900">Activity timeline</h3>
+          <h3 className="text-sm font-semibold text-zinc-900">{t('drawer.activityTitle')}</h3>
+          {activitiesQuery.isLoading ? <p className="mt-3 text-sm text-zinc-500">{t('drawer.loadingActivities')}</p> : null}
+          {!activitiesQuery.isLoading && !activitiesQuery.data?.length ? <p className="mt-3 text-sm text-zinc-500">{t('drawer.noActivities')}</p> : null}
           <ul className="mt-3 space-y-2">
             {activitiesQuery.data?.map((activity) => (
               <li key={activity.id} className="rounded-xl border border-zinc-200 px-3 py-2 text-sm">
@@ -166,6 +156,7 @@ function LeadDrawer({ lead, onClose, onLeadChange }: { lead: Lead; onClose: () =
 
 export function LeadsPage() {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
   const [search, setSearch] = useState('')
   const [stage, setStage] = useState<LeadStage | 'all'>('all')
   const [due, setDue] = useState<LeadDueFilter | 'all'>('all')
@@ -197,26 +188,28 @@ export function LeadsPage() {
     <section>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">Leads</h1>
-          <p className="mt-1 text-sm text-zinc-600">Search, filter, and keep every next action disciplined.</p>
+          <h1 className="text-2xl font-semibold text-zinc-900">{t('leads.title')}</h1>
+          <p className="mt-1 text-sm text-zinc-600">{t('leads.subtitle')}</p>
         </div>
-        <button type="button" onClick={() => createMutation.mutate()} disabled={createMutation.isPending} className="rounded-xl bg-zinc-900 px-4 py-2 text-sm text-white">{createMutation.isPending ? 'Creating…' : 'New lead'}</button>
+        <button type="button" onClick={() => createMutation.mutate()} disabled={createMutation.isPending} className="rounded-xl bg-zinc-900 px-4 py-2 text-sm text-white">{createMutation.isPending ? t('leads.creating') : t('leads.newLead')}</button>
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
-        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search company, email, website" className="rounded-xl border border-zinc-200 px-3 py-2 text-sm" />
+        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('leads.searchPlaceholder')} className="rounded-xl border border-zinc-200 px-3 py-2 text-sm" />
         <select value={stage} onChange={(event) => setStage(event.target.value as LeadStage | 'all')} className="rounded-xl border border-zinc-200 px-3 py-2 text-sm">
-          {stageOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          {stageValues.map((option) => <option key={option} value={option}>{t(`leads.filter.stage.${option}`)}</option>)}
         </select>
         <select value={due} onChange={(event) => setDue(event.target.value as LeadDueFilter | 'all')} className="rounded-xl border border-zinc-200 px-3 py-2 text-sm">
-          {dueOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          {dueValues.map((option) => <option key={option} value={option}>{t(`leads.filter.due.${option}`)}</option>)}
         </select>
       </div>
+
+      {leadsQuery.isLoading ? <p className="mt-4 text-sm text-zinc-500">{t('leads.loading')}</p> : null}
 
       <div className="mt-5 overflow-hidden rounded-2xl border border-zinc-200">
         <table className="min-w-full divide-y divide-zinc-200 text-sm">
           <thead className="bg-zinc-50 text-left text-xs uppercase tracking-wide text-zinc-500">
-            <tr><th className="px-4 py-3 font-medium">Company</th><th className="px-4 py-3 font-medium">Email</th><th className="px-4 py-3 font-medium">Website</th><th className="px-4 py-3 font-medium">Stage</th><th className="px-4 py-3 font-medium">Next action at</th></tr>
+            <tr><th className="px-4 py-3 font-medium">{t('leads.table.company')}</th><th className="px-4 py-3 font-medium">{t('leads.table.email')}</th><th className="px-4 py-3 font-medium">{t('leads.table.website')}</th><th className="px-4 py-3 font-medium">{t('leads.table.stage')}</th><th className="px-4 py-3 font-medium">{t('leads.table.nextActionAt')}</th></tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 bg-white text-zinc-700">
             {leadsQuery.data?.map((lead) => (
@@ -228,6 +221,11 @@ export function LeadsPage() {
                 <td className="px-4 py-3">{new Date(lead.next_action_at).toLocaleString()}</td>
               </tr>
             ))}
+            {!leadsQuery.data?.length ? (
+              <tr>
+                <td className="px-4 py-6 text-center text-sm text-zinc-500" colSpan={5}>{t('leads.empty')}</td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
