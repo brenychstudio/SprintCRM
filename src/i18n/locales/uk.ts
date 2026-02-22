@@ -122,6 +122,20 @@ const uk: Record<string, string> = {
   'common.loading': 'Завантаження…',
   'common.error': 'Сталася помилка.',
   'common.empty': 'Порожньо',
+
+  'imports.run.start': 'Запустити імпорт',
+  'imports.run.running': 'Імпорт виконується…',
+  'imports.run.done': 'Імпорт завершено',
+  'imports.report.title': 'Звіт імпорту',
+  'imports.report.imported': 'Імпортовано',
+  'imports.report.skipped': 'Пропущено',
+  'imports.report.reason.duplicate_email': 'duplicate_email',
+  'imports.report.reason.duplicate_domain': 'duplicate_domain',
+  'imports.report.reason.duplicate_phone': 'duplicate_phone',
+  'imports.report.reason.missing_company_name': 'missing_company_name',
+  'imports.report.reason.invalid_row': 'invalid_row',
+  'imports.report.open_leads': 'Відкрити ліди',
+  'imports.report.new_import': 'Новий імпорт',
 }
 
 export default uk

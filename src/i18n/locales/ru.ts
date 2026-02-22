@@ -122,6 +122,20 @@ const ru: Record<string, string> = {
   'common.loading': 'Loading…',
   'common.error': 'Something went wrong.',
   'common.empty': 'Empty',
+
+  'imports.run.start': 'Start import',
+  'imports.run.running': 'Import is running…',
+  'imports.run.done': 'Import completed',
+  'imports.report.title': 'Import report',
+  'imports.report.imported': 'Imported',
+  'imports.report.skipped': 'Skipped',
+  'imports.report.reason.duplicate_email': 'duplicate_email',
+  'imports.report.reason.duplicate_domain': 'duplicate_domain',
+  'imports.report.reason.duplicate_phone': 'duplicate_phone',
+  'imports.report.reason.missing_company_name': 'missing_company_name',
+  'imports.report.reason.invalid_row': 'invalid_row',
+  'imports.report.open_leads': 'Open leads',
+  'imports.report.new_import': 'New import',
 }
 
 export default ru

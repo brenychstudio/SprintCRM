@@ -7,6 +7,7 @@ import { supabase } from '../../../lib/supabase'
 
 type WizardStep = 'upload' | 'preview' | 'mapping' | 'dedup'
 type ImportField = 'company_name' | 'email' | 'website' | 'phone' | 'niche' | 'contact_name' | 'country_city' | 'notes'
+type DedupReason = 'duplicate_email' | 'duplicate_domain' | 'duplicate_phone' | 'missing_company_name' | 'invalid_row'
 
 type RawRow = Record<string, string>
 type NormalizedRow = {
@@ -18,9 +19,29 @@ type NormalizedRow = {
   __dedupKey: string | null
 }
 
+type ImportReport = {
+  imported: number
+  skipped: number
+  reasons: Record<DedupReason, number>
+}
+
+type LeadInsertRow = {
+  company_name: string
+  email: string | null
+  website: string | null
+  phone: string | null
+  niche: string | null
+  contact_name: string | null
+  country_city: string | null
+  notes: string | null
+  source_file: string
+  org_id: string
+}
+
 const steps: WizardStep[] = ['upload', 'preview', 'mapping', 'dedup']
 const previewRowsCount = 10
 const chunkSize = 200
+const insertBatchSize = 75
 
 const requiredFields: ImportField[] = ['company_name']
 const optionalFields: ImportField[] = ['email', 'website', 'phone', 'niche', 'contact_name', 'country_city', 'notes']
@@ -79,6 +100,34 @@ function toStringRecord(row: unknown): RawRow {
   return out
 }
 
+function emptyReasonCounters(): Record<DedupReason, number> {
+  return {
+    duplicate_email: 0,
+    duplicate_domain: 0,
+    duplicate_phone: 0,
+    missing_company_name: 0,
+    invalid_row: 0,
+  }
+}
+
+function dedupReasonFromKey(key: string | null): DedupReason {
+  if (key?.startsWith('email:')) return 'duplicate_email'
+  if (key?.startsWith('domain:')) return 'duplicate_domain'
+  if (key?.startsWith('phone:')) return 'duplicate_phone'
+  return 'invalid_row'
+}
+
+async function resolveCurrentOrgId() {
+  const { data: memberships, error } = await supabase
+    .from('memberships')
+    .select('org_id, created_at')
+    .order('created_at', { ascending: true })
+    .limit(1)
+
+  if (error) throw error
+  return memberships?.[0]?.org_id ?? null
+}
+
 export function ImportsPage() {
   const { t } = useI18n()
   const [fileName, setFileName] = useState('')
@@ -96,6 +145,7 @@ export function ImportsPage() {
     notes: '',
   })
   const [error, setError] = useState<string | null>(null)
+  const [report, setReport] = useState<ImportReport | null>(null)
 
   const currentStep = steps[stepIndex]
 
@@ -126,8 +176,7 @@ export function ImportsPage() {
 
     normalizedRows.forEach((row) => {
       if (!row.__dedupKey) return
-      const current = keyCount.get(row.__dedupKey) ?? 0
-      keyCount.set(row.__dedupKey, current + 1)
+      keyCount.set(row.__dedupKey, (keyCount.get(row.__dedupKey) ?? 0) + 1)
     })
 
     normalizedRows.forEach((row) => {
@@ -140,17 +189,8 @@ export function ImportsPage() {
 
   const dedupMutation = useMutation({
     mutationFn: async () => {
-      const { data: memberships, error: membershipsError } = await supabase
-        .from('memberships')
-        .select('org_id, created_at')
-        .order('created_at', { ascending: true })
-        .limit(1)
-
-      if (membershipsError) throw membershipsError
-      const orgId = memberships?.[0]?.org_id
-      if (!orgId) {
-        return { inDbDuplicates: 0, eligible: 0, matchedIndexes: new Set<number>() }
-      }
+      const orgId = await resolveCurrentOrgId()
+      if (!orgId) return { inDbDuplicates: 0, eligible: 0, matchedIndexes: new Set<number>() }
 
       const emailNorms = Array.from(new Set(normalizedRows.map((r) => r.__emailNorm).filter((v): v is string => Boolean(v))))
       const domainNorms = Array.from(new Set(normalizedRows.map((r) => r.__domainNorm).filter((v): v is string => Boolean(v))))
@@ -205,15 +245,142 @@ export function ImportsPage() {
 
       const eligible = normalizedRows.filter((row) => {
         const companyName = mapping.company_name ? row.raw[mapping.company_name]?.trim() : ''
-        const hasCompanyName = Boolean(companyName)
-        return hasCompanyName && !inFileDuplicateRowIndexes.has(row.__index) && !matchedIndexes.has(row.__index)
+        return Boolean(companyName) && !inFileDuplicateRowIndexes.has(row.__index) && !matchedIndexes.has(row.__index)
       }).length
 
-      return {
-        inDbDuplicates: matchedIndexes.size,
-        eligible,
-        matchedIndexes,
+      return { inDbDuplicates: matchedIndexes.size, eligible, matchedIndexes }
+    },
+  })
+
+  const importRunMutation = useMutation({
+    mutationFn: async () => {
+      const orgId = await resolveCurrentOrgId()
+      if (!orgId) throw new Error('org_not_found')
+
+      const dedupRules = {
+        priority: ['email', 'domain', 'phone'],
+        in_file: true,
+        db_org_scoped: true,
       }
+
+      const { data: importRecord, error: importCreateError } = await supabase
+        .from('imports')
+        .insert({
+          org_id: orgId,
+          file_name: fileName,
+          rows_total: rows.length,
+          mapping_json: mapping,
+          dedup_rules: dedupRules,
+          rows_imported: 0,
+          rows_skipped: 0,
+        })
+        .select('id')
+        .single()
+
+      if (importCreateError) throw importCreateError
+
+      const importId = importRecord.id as string
+      const reasons = emptyReasonCounters()
+      const dbDupes = dedupMutation.data?.matchedIndexes ?? new Set<number>()
+
+      const payloads: Array<{ index: number; lead: LeadInsertRow }> = []
+
+      normalizedRows.forEach((row) => {
+        const companyName = mapping.company_name ? normalizeText(row.raw[mapping.company_name]) : null
+        if (!companyName) {
+          reasons.missing_company_name += 1
+          return
+        }
+
+        if (!row.__dedupKey) {
+          reasons.invalid_row += 1
+          return
+        }
+
+        if (inFileDuplicateRowIndexes.has(row.__index)) {
+          reasons[dedupReasonFromKey(row.__dedupKey)] += 1
+          return
+        }
+
+        if (dbDupes.has(row.__index)) {
+          reasons[dedupReasonFromKey(row.__dedupKey)] += 1
+          return
+        }
+
+        payloads.push({
+          index: row.__index,
+          lead: {
+            org_id: orgId,
+            company_name: companyName,
+            email: mapping.email ? normalizeText(row.raw[mapping.email]) : null,
+            website: mapping.website ? normalizeText(row.raw[mapping.website]) : null,
+            phone: mapping.phone ? normalizeText(row.raw[mapping.phone]) : null,
+            niche: mapping.niche ? normalizeText(row.raw[mapping.niche]) : null,
+            contact_name: mapping.contact_name ? normalizeText(row.raw[mapping.contact_name]) : null,
+            country_city: mapping.country_city ? normalizeText(row.raw[mapping.country_city]) : null,
+            notes: mapping.notes ? normalizeText(row.raw[mapping.notes]) : null,
+            source_file: fileName,
+          },
+        })
+      })
+
+      let importedCount = 0
+      const insertedLeads: Array<{ id: string }> = []
+
+      const payloadChunks = chunkArray(payloads, insertBatchSize)
+      for (const chunk of payloadChunks) {
+        const batchPayload = chunk.map((item) => item.lead)
+        const { data, error: batchError } = await supabase.from('leads').insert(batchPayload).select('id')
+
+        if (!batchError && data) {
+          importedCount += data.length
+          insertedLeads.push(...(data as Array<{ id: string }>))
+          continue
+        }
+
+        for (const item of chunk) {
+          const { data: rowData, error: rowError } = await supabase.from('leads').insert(item.lead).select('id').single()
+          if (!rowError && rowData) {
+            importedCount += 1
+            insertedLeads.push({ id: rowData.id as string })
+            continue
+          }
+
+          if (rowError?.code === '23505') {
+            const original = normalizedRows[item.index]
+            reasons[dedupReasonFromKey(original?.__dedupKey ?? null)] += 1
+            continue
+          }
+
+          throw rowError
+        }
+      }
+
+      const activityRows = insertedLeads.map((lead) => ({
+        lead_id: lead.id,
+        type: 'imported',
+        meta: { import_id: importId, file_name: fileName },
+      }))
+
+      for (const chunk of chunkArray(activityRows, insertBatchSize)) {
+        const { error: activityError } = await supabase.from('activities').insert(chunk)
+        if (activityError) throw activityError
+      }
+
+      const skippedCount = Object.values(reasons).reduce((acc, value) => acc + value, 0)
+
+      const { error: importUpdateError } = await supabase
+        .from('imports')
+        .update({
+          rows_imported: importedCount,
+          rows_skipped: skippedCount,
+          dedup_rules: { ...dedupRules, skipped_reasons: reasons },
+        })
+        .eq('id', importId)
+
+      if (importUpdateError) throw importUpdateError
+
+      return { imported: importedCount, skipped: skippedCount, reasons }
     },
   })
 
@@ -244,13 +411,10 @@ export function ImportsPage() {
 
     const buffer = await file.arrayBuffer()
     const workbook = XLSX.read(buffer, { type: 'array' })
-    const firstSheetName = workbook.SheetNames[0]
-    const worksheet = workbook.Sheets[firstSheetName]
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]]
     const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: '' })
     const parsedRows = json.map((row) => toStringRecord(row)).filter((row) => Object.values(row).some((value) => value.trim() !== ''))
-    const nextHeaders = Object.keys(parsedRows[0] ?? {})
-
-    setHeaders(nextHeaders)
+    setHeaders(Object.keys(parsedRows[0] ?? {}))
     setRows(parsedRows)
     setStepIndex(1)
   }
@@ -269,11 +433,28 @@ export function ImportsPage() {
       return
     }
 
+    if (currentStep === 'dedup') {
+      const result = await importRunMutation.mutateAsync()
+      setReport(result)
+      return
+    }
+
     if (stepIndex < steps.length - 1) setStepIndex((prev) => prev + 1)
   }
 
   const goBack = () => {
     if (stepIndex > 0) setStepIndex((prev) => prev - 1)
+  }
+
+  const resetWizard = () => {
+    setStepIndex(0)
+    setRows([])
+    setHeaders([])
+    setFileName('')
+    setError(null)
+    setReport(null)
+    dedupMutation.reset()
+    importRunMutation.reset()
   }
 
   const inFileDupes = inFileDuplicateRowIndexes.size
@@ -287,167 +468,199 @@ export function ImportsPage() {
         <p className="mt-1 text-sm text-zinc-600">{t('imports.subtitle')}</p>
       </header>
 
-      <div className="mb-6 flex flex-wrap gap-2">
-        {steps.map((step, index) => (
-          <div
-            key={step}
-            className={`rounded-xl border px-3 py-2 text-xs ${index <= stepIndex ? 'border-zinc-300 bg-zinc-100 text-zinc-900' : 'border-zinc-200 bg-white text-zinc-500'}`}
-          >
-            {t(`imports.step.${step}`)}
+      {report ? (
+        <div className="rounded-2xl border border-zinc-200 bg-white p-6">
+          <p className="text-xs uppercase tracking-wide text-zinc-500">{t('imports.run.done')}</p>
+          <h2 className="mt-2 text-lg font-semibold text-zinc-900">{t('imports.report.title')}</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+              <p className="text-xs text-zinc-500">{t('imports.report.imported')}</p>
+              <p className="mt-1 text-2xl font-semibold text-zinc-900">{report.imported}</p>
+            </div>
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+              <p className="text-xs text-zinc-500">{t('imports.report.skipped')}</p>
+              <p className="mt-1 text-2xl font-semibold text-zinc-900">{report.skipped}</p>
+            </div>
           </div>
-        ))}
-      </div>
 
-      {error ? <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
+          <div className="mt-5 grid gap-2 text-sm text-zinc-700">
+            <p>{t('imports.report.reason.duplicate_email')}: {report.reasons.duplicate_email}</p>
+            <p>{t('imports.report.reason.duplicate_domain')}: {report.reasons.duplicate_domain}</p>
+            <p>{t('imports.report.reason.duplicate_phone')}: {report.reasons.duplicate_phone}</p>
+            <p>{t('imports.report.reason.missing_company_name')}: {report.reasons.missing_company_name}</p>
+            <p>{t('imports.report.reason.invalid_row')}: {report.reasons.invalid_row}</p>
+          </div>
 
-      {currentStep === 'upload' ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6">
-          <label className="inline-flex cursor-pointer rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white">
-            <span>{t('imports.upload.cta')}</span>
-            <input
-              type="file"
-              accept=".xlsx,.csv"
-              className="hidden"
-              onChange={(event) => {
-                const file = event.target.files?.[0]
-                if (file) void parseFile(file)
-              }}
-            />
-          </label>
-          <p className="mt-3 text-sm text-zinc-500">{t('imports.upload.hint')}</p>
-          {fileName ? <p className="mt-2 text-sm text-zinc-700">{fileName}</p> : null}
+          <div className="mt-6 flex gap-2">
+            <button type="button" className="rounded-xl border border-zinc-200 px-4 py-2 text-sm text-zinc-700">
+              {t('imports.report.open_leads')}
+            </button>
+            <button type="button" onClick={resetWizard} className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white">
+              {t('imports.report.new_import')}
+            </button>
+          </div>
         </div>
-      ) : null}
+      ) : (
+        <>
+          <div className="mb-6 flex flex-wrap gap-2">
+            {steps.map((step, index) => (
+              <div
+                key={step}
+                className={`rounded-xl border px-3 py-2 text-xs ${index <= stepIndex ? 'border-zinc-300 bg-zinc-100 text-zinc-900' : 'border-zinc-200 bg-white text-zinc-500'}`}
+              >
+                {t(`imports.step.${step}`)}
+              </div>
+            ))}
+          </div>
 
-      {currentStep === 'preview' ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6">
-          <h2 className="text-lg font-semibold text-zinc-900">{t('imports.preview.title')}</h2>
-          {previewRows.length === 0 ? (
-            <p className="mt-4 text-sm text-zinc-500">{t('common.empty')}</p>
-          ) : (
-            <div className="mt-4 overflow-x-auto rounded-xl border border-zinc-200">
-              <table className="min-w-full divide-y divide-zinc-200 text-sm">
-                <thead className="bg-zinc-50 text-left text-xs uppercase tracking-wide text-zinc-500">
-                  <tr>
-                    {headers.map((header) => (
-                      <th key={header} className="px-3 py-2 font-medium">{header}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-200 bg-white">
-                  {previewRows.map((row, rowIndex) => (
-                    <tr key={rowIndex}>
-                      {headers.map((header) => (
-                        <td key={`${rowIndex}-${header}`} className="px-3 py-2 text-zinc-700">{row[header] || '—'}</td>
+          {error ? <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
+          {importRunMutation.isError ? <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{t('common.error')}</div> : null}
+
+          {currentStep === 'upload' ? (
+            <div className="rounded-2xl border border-zinc-200 bg-white p-6">
+              <label className="inline-flex cursor-pointer rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white">
+                <span>{t('imports.upload.cta')}</span>
+                <input
+                  type="file"
+                  accept=".xlsx,.csv"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0]
+                    if (file) void parseFile(file)
+                  }}
+                />
+              </label>
+              <p className="mt-3 text-sm text-zinc-500">{t('imports.upload.hint')}</p>
+              {fileName ? <p className="mt-2 text-sm text-zinc-700">{fileName}</p> : null}
+            </div>
+          ) : null}
+
+          {currentStep === 'preview' ? (
+            <div className="rounded-2xl border border-zinc-200 bg-white p-6">
+              <h2 className="text-lg font-semibold text-zinc-900">{t('imports.preview.title')}</h2>
+              {previewRows.length === 0 ? (
+                <p className="mt-4 text-sm text-zinc-500">{t('common.empty')}</p>
+              ) : (
+                <div className="mt-4 overflow-x-auto rounded-xl border border-zinc-200">
+                  <table className="min-w-full divide-y divide-zinc-200 text-sm">
+                    <thead className="bg-zinc-50 text-left text-xs uppercase tracking-wide text-zinc-500">
+                      <tr>
+                        {headers.map((header) => (
+                          <th key={header} className="px-3 py-2 font-medium">{header}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-200 bg-white">
+                      {previewRows.map((row, rowIndex) => (
+                        <tr key={rowIndex}>
+                          {headers.map((header) => (
+                            <td key={`${rowIndex}-${header}`} className="px-3 py-2 text-zinc-700">{row[header] || '—'}</td>
+                          ))}
+                        </tr>
                       ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      ) : null}
+          ) : null}
 
-      {currentStep === 'mapping' ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6">
-          <h2 className="text-lg font-semibold text-zinc-900">{t('imports.mapping.title')}</h2>
+          {currentStep === 'mapping' ? (
+            <div className="rounded-2xl border border-zinc-200 bg-white p-6">
+              <h2 className="text-lg font-semibold text-zinc-900">{t('imports.mapping.title')}</h2>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {requiredFields.map((field) => (
-              <label key={field} className="space-y-1">
-                <span className="text-xs text-zinc-500">{t(`imports.field.${field}`)} · {t('imports.mapping.required')}</span>
-                <select
-                  value={mapping[field]}
-                  onChange={(event) => setMapping((prev) => ({ ...prev, [field]: event.target.value }))}
-                  className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm"
-                >
-                  <option value="">{t('common.empty')}</option>
-                  {headers.map((header) => (
-                    <option key={header} value={header}>{header}</option>
-                  ))}
-                </select>
-              </label>
-            ))}
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {requiredFields.map((field) => (
+                  <label key={field} className="space-y-1">
+                    <span className="text-xs text-zinc-500">{t(`imports.field.${field}`)} · {t('imports.mapping.required')}</span>
+                    <select
+                      value={mapping[field]}
+                      onChange={(event) => setMapping((prev) => ({ ...prev, [field]: event.target.value }))}
+                      className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm"
+                    >
+                      <option value="">{t('common.empty')}</option>
+                      {headers.map((header) => (
+                        <option key={header} value={header}>{header}</option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
 
-            {optionalFields.map((field) => (
-              <label key={field} className="space-y-1">
-                <span className="text-xs text-zinc-500">{t(`imports.field.${field}`)} · {t('imports.mapping.optional')}</span>
-                <select
-                  value={mapping[field]}
-                  onChange={(event) => setMapping((prev) => ({ ...prev, [field]: event.target.value }))}
-                  className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm"
-                >
-                  <option value="">{t('common.empty')}</option>
-                  {headers.map((header) => (
-                    <option key={header} value={header}>{header}</option>
-                  ))}
-                </select>
-              </label>
-            ))}
+                {optionalFields.map((field) => (
+                  <label key={field} className="space-y-1">
+                    <span className="text-xs text-zinc-500">{t(`imports.field.${field}`)} · {t('imports.mapping.optional')}</span>
+                    <select
+                      value={mapping[field]}
+                      onChange={(event) => setMapping((prev) => ({ ...prev, [field]: event.target.value }))}
+                      className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm"
+                    >
+                      <option value="">{t('common.empty')}</option>
+                      {headers.map((header) => (
+                        <option key={header} value={header}>{header}</option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {currentStep === 'dedup' ? (
+            <div className="rounded-2xl border border-zinc-200 bg-white p-6">
+              <h2 className="text-lg font-semibold text-zinc-900">{t('imports.dedup.title')}</h2>
+
+              {dedupMutation.isPending ? <p className="mt-4 text-sm text-zinc-500">{t('common.loading')}</p> : null}
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+                  <p className="text-xs text-zinc-500">{t('imports.dedup.in_file')}</p>
+                  <p className="mt-1 text-xl font-semibold text-zinc-900">{inFileDupes}</p>
+                </div>
+                <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+                  <p className="text-xs text-zinc-500">{t('imports.dedup.in_db')}</p>
+                  <p className="mt-1 text-xl font-semibold text-zinc-900">{inDbDupes}</p>
+                </div>
+                <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+                  <p className="text-xs text-zinc-500">{t('imports.dedup.eligible')}</p>
+                  <p className="mt-1 text-xl font-semibold text-zinc-900">{eligibleRows}</p>
+                </div>
+              </div>
+
+              {importRunMutation.isPending ? <p className="mt-5 text-sm text-zinc-500">{t('imports.run.running')}</p> : null}
+            </div>
+          ) : null}
+
+          <div className="mt-6 flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={goBack}
+              disabled={stepIndex === 0 || importRunMutation.isPending}
+              className="rounded-xl border border-zinc-200 px-4 py-2 text-sm text-zinc-700 disabled:opacity-50"
+            >
+              {t('common.back')}
+            </button>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={resetWizard}
+                disabled={importRunMutation.isPending}
+                className="rounded-xl border border-zinc-200 px-4 py-2 text-sm text-zinc-700 disabled:opacity-50"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="button"
+                onClick={() => void goNext()}
+                disabled={(stepIndex === 0 && rows.length === 0) || importRunMutation.isPending}
+                className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              >
+                {currentStep === 'dedup' ? t('imports.run.start') : t('common.continue')}
+              </button>
+            </div>
           </div>
-        </div>
-      ) : null}
-
-      {currentStep === 'dedup' ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6">
-          <h2 className="text-lg font-semibold text-zinc-900">{t('imports.dedup.title')}</h2>
-
-          {dedupMutation.isPending ? <p className="mt-4 text-sm text-zinc-500">{t('common.loading')}</p> : null}
-          {dedupMutation.isError ? <p className="mt-4 text-sm text-red-700">{t('common.error')}</p> : null}
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
-              <p className="text-xs text-zinc-500">{t('imports.dedup.in_file')}</p>
-              <p className="mt-1 text-xl font-semibold text-zinc-900">{inFileDupes}</p>
-            </div>
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
-              <p className="text-xs text-zinc-500">{t('imports.dedup.in_db')}</p>
-              <p className="mt-1 text-xl font-semibold text-zinc-900">{inDbDupes}</p>
-            </div>
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
-              <p className="text-xs text-zinc-500">{t('imports.dedup.eligible')}</p>
-              <p className="mt-1 text-xl font-semibold text-zinc-900">{eligibleRows}</p>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="mt-6 flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={goBack}
-          disabled={stepIndex === 0}
-          className="rounded-xl border border-zinc-200 px-4 py-2 text-sm text-zinc-700 disabled:opacity-50"
-        >
-          {t('common.back')}
-        </button>
-
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setStepIndex(0)
-              setRows([])
-              setHeaders([])
-              setFileName('')
-              setError(null)
-              dedupMutation.reset()
-            }}
-            className="rounded-xl border border-zinc-200 px-4 py-2 text-sm text-zinc-700"
-          >
-            {t('common.cancel')}
-          </button>
-          <button
-            type="button"
-            onClick={() => void goNext()}
-            disabled={stepIndex === 0 && rows.length === 0}
-            className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-          >
-            {t('common.continue')}
-          </button>
-        </div>
-      </div>
+        </>
+      )}
     </section>
   )
 }
