@@ -7,6 +7,9 @@ const ru: Record<string, string> = {
   'lang.ru': 'Русский',
 
   'nav.today': 'Today',
+  'nav.imports': 'Импорт',
+  'imports.title': 'Импорт',
+  'imports.subtitle': 'Загрузи XLSX/CSV, сопоставь колонки, проверь дубли и запусти импорт.',
   'nav.leads': 'Leads',
   'nav.imports': 'Imports',
   'auth.signOut': 'Sign out',

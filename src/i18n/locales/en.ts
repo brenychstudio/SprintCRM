@@ -8,7 +8,62 @@ const en: Record<string, string> = {
 
   'nav.today': 'Today',
   'nav.leads': 'Leads',
+<<<<<<< HEAD
+    'nav.imports': 'Imports',
+
+  'imports.title': 'Imports',
+  'imports.subtitle': 'Upload XLSX/CSV, map columns, preview duplicates, then import.',
+  'imports.step.upload': 'Upload',
+  'imports.step.preview': 'Preview',
+  'imports.step.mapping': 'Mapping',
+  'imports.step.dedup': 'Dedup',
+  'imports.step.report': 'Report',
+
+  'imports.chooseFile': 'Choose file',
+  'imports.fileHint': 'XLSX or CSV. XLSX: first sheet only.',
+  'imports.previewRows': 'Preview rows',
+  'imports.continue': 'Continue',
+  'imports.back': 'Back',
+
+  'imports.required': 'Required',
+  'imports.ignore': 'Ignore',
+  'imports.run': 'Run import',
+  'imports.running': 'Importing…',
+  'imports.new': 'New import',
+
+  'imports.summary.total': 'Total rows',
+  'imports.summary.imported': 'Imported',
+  'imports.summary.skipped': 'Skipped',
+  'imports.summary.duplicates': 'Duplicates detected',
+  'imports.summary.ready': 'Ready',
+  'imports.readyYes': 'Yes',
+
+  'imports.skippedReasons': 'Skipped reasons',
+  'imports.openLeads': 'Open leads',
+
+  'imports.field.company': 'Company name',
+  'imports.field.website': 'Website',
+  'imports.field.email': 'Email',
+  'imports.field.phone': 'Phone',
+  'imports.field.niche': 'Niche',
+  'imports.field.location': 'Country/City',
+  'imports.field.contact': 'Contact name',
+  'imports.field.notes': 'Notes',
+
+  'imports.error.parse': 'Failed to parse file.',
+  'imports.error.import': 'Import failed.',
+
+  'imports.reason.missing_company_name': 'Missing company name',
+  'imports.reason.duplicate_email': 'Duplicate email (in file)',
+  'imports.reason.duplicate_domain': 'Duplicate domain (in file)',
+  'imports.reason.duplicate_phone': 'Duplicate phone (in file)',
+  'imports.reason.duplicate_db': 'Duplicate (already in DB)',
+  'imports.reason.invalid_row': 'Invalid row',
+  'imports.reason.insert_error': 'Insert error',
+
+=======
   'nav.imports': 'Imports',
+>>>>>>> main
   'auth.signOut': 'Sign out',
   'auth.signingOut': 'Signing out…',
 
@@ -65,7 +120,7 @@ const en: Record<string, string> = {
   'leads.loading': 'Loading leads…',
 
   'drawer.close': 'Close drawer',
-  'drawer.leadId': 'Lead ID: {id}',
+  'drawer.leadId': 'Lead ID:',
   'drawer.stage': 'Stage',
   'drawer.nextAction': 'Next action',
   'drawer.nextDate': 'Next date',

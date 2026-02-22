@@ -7,8 +7,14 @@ const uk: Record<string, string> = {
   'lang.ru': 'Русский',
 
   'nav.today': 'Сьогодні',
-  'nav.leads': 'Ліди',
   'nav.imports': 'Імпорт',
+  'nav.leads': 'Ліди',
+<<<<<<< HEAD
+  'imports.title': 'Імпорт',
+  'imports.subtitle': 'Завантаж XLSX/CSV, замап колонкі, переглянь дублі і запусти імпорт.',
+=======
+  'nav.imports': 'Імпорт',
+>>>>>>> main
   'auth.signOut': 'Вийти',
   'auth.signingOut': 'Вихід…',
 

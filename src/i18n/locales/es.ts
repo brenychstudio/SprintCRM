@@ -8,7 +8,14 @@ const es: Record<string, string> = {
 
   'nav.today': 'Today',
   'nav.leads': 'Leads',
+<<<<<<< HEAD
+    'nav.imports': 'Importación',
+  'imports.title': 'Importación',
+  'imports.subtitle': 'Sube XLSX/CSV, mapea columnas, revisa duplicados y ejecuta la importación.',
+  
+=======
   'nav.imports': 'Imports',
+>>>>>>> main
   'auth.signOut': 'Sign out',
   'auth.signingOut': 'Signing out…',
 
