@@ -9,6 +9,14 @@ import { supabase } from '../../../lib/supabase'
 
 const stageOrder: LeadStage[] = ['new', 'contacted', 'replied', 'proposal', 'won', 'lost']
 
+function milestoneForStage(stage: LeadStage): 'replied' | 'proposal_sent' | 'won' | 'lost' | null {
+  if (stage === 'replied') return 'replied'
+  if (stage === 'proposal') return 'proposal_sent'
+  if (stage === 'won') return 'won'
+  if (stage === 'lost') return 'lost'
+  return null
+}
+
 export function PipelinePage() {
   const { t } = useI18n()
   const queryClient = useQueryClient()
@@ -42,11 +50,18 @@ export function PipelinePage() {
         last_touch_at: new Date().toISOString(),
       })
 
-      await logActivity({
-        lead_id: lead.id,
-        type: 'stage_changed',
-        meta: { from: lead.stage, to, next_action: next.next_action, next_action_at: nextActionAt },
-      })
+      if (lead.stage !== to) {
+        await logActivity({
+          lead_id: lead.id,
+          type: 'stage_changed',
+          meta: { from: lead.stage, to, next_action: next.next_action, next_action_at: nextActionAt },
+        })
+
+        const milestone = milestoneForStage(to)
+        if (milestone) {
+          await logActivity({ lead_id: lead.id, type: milestone })
+        }
+      }
 
       return updated
     },

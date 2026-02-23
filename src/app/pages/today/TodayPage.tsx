@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { defaultNextForStage, leadsQueryKeys, listLeads, logActivity, updateLead } from '../../../features/leads/leadsApi'
+import { defaultNextForStage, leadsQueryKeys, listLeads, updateLead } from '../../../features/leads/leadsApi'
 import type { Lead, NextAction } from '../../../features/leads/types'
 import { useI18n } from '../../../i18n/i18n'
 import { endOfTodayISO, isoAtMadridNineAMInDays, startOfTodayISO } from '../../../lib/dates'
@@ -60,12 +60,6 @@ export function TodayPage() {
         last_touch_at: new Date().toISOString(),
         next_action: next.next_action,
         next_action_at: nextActionAt,
-      })
-
-      await logActivity({
-        lead_id: lead.id,
-        type: 'next_action_set',
-        meta: { auto: true, next_action: next.next_action, next_action_at: nextActionAt },
       })
 
       return updatedLead

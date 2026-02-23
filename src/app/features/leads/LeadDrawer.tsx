@@ -8,6 +8,15 @@ import { isoAtMadridNineAMForDateInput, isoAtMadridNineAMInDays } from '../../..
 const stageValues: LeadStage[] = ['new', 'contacted', 'replied', 'proposal', 'won', 'lost']
 const nextActionOptions: NextAction[] = ['follow_up', 'send_proposal', 'request_call', 'nurture']
 
+
+function milestoneForStage(stage: LeadStage): 'replied' | 'proposal_sent' | 'won' | 'lost' | null {
+  if (stage === 'replied') return 'replied'
+  if (stage === 'proposal') return 'proposal_sent'
+  if (stage === 'won') return 'won'
+  if (stage === 'lost') return 'lost'
+  return null
+}
+
 export function LeadDrawer({
   lead,
   onClose,
@@ -51,6 +60,19 @@ export function LeadDrawer({
         notes,
       })
 
+      if (lead.stage !== stage) {
+        await logActivity({
+          lead_id: lead.id,
+          type: 'stage_changed',
+          meta: { from: lead.stage, to: stage, next_action: nextAction, next_action_at: updatedLead.next_action_at },
+        })
+
+        const milestone = milestoneForStage(stage)
+        if (milestone) {
+          await logActivity({ lead_id: lead.id, type: milestone })
+        }
+      }
+
       await logActivity({
         lead_id: lead.id,
         type: 'next_action_set',
@@ -83,11 +105,18 @@ export function LeadDrawer({
         last_touch_at: new Date().toISOString(),
       })
 
-      await logActivity({
-        lead_id: lead.id,
-        type: 'stage_changed',
-        meta: { from: lead.stage, to: targetStage, next_action: next.next_action, next_action_at: nextActionAt },
-      })
+      if (lead.stage !== targetStage) {
+        await logActivity({
+          lead_id: lead.id,
+          type: 'stage_changed',
+          meta: { from: lead.stage, to: targetStage, next_action: next.next_action, next_action_at: nextActionAt },
+        })
+
+        const milestone = milestoneForStage(targetStage)
+        if (milestone) {
+          await logActivity({ lead_id: lead.id, type: milestone })
+        }
+      }
 
       return updatedLead
     },
