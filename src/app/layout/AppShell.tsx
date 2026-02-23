@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useI18n } from '../../i18n/i18n'
 import type { SupportedLang } from '../../i18n/i18n'
@@ -9,13 +9,16 @@ export function AppShell() {
   const { lang, setLang, t } = useI18n()
   const [isSigningOut, setIsSigningOut] = useState(false)
 
-  const navItems = [
-    { to: '/today', label: t('nav.today') },
-    { to: '/leads', label: t('nav.leads') },
-    { to: '/imports', label: t('nav.imports') },
-    { to: '/pipeline', label: t('nav.pipeline') },
-    { to: '/reports', label: t('nav.reports') },
-  ]
+  const navItems = useMemo(
+    () => [
+      { to: '/today', label: t('nav.today') },
+      { to: '/leads', label: t('nav.leads') },
+      { to: '/imports', label: t('nav.imports') },
+      { to: '/pipeline', label: t('nav.pipeline') },
+      { to: "/reports", label: t("nav.reports") },
+    ],
+    [t],
+  )
 
   const handleSignOut = async () => {
     setIsSigningOut(true)
@@ -37,7 +40,7 @@ export function AppShell() {
             <select
               value={lang}
               onChange={(event) => setLang(event.target.value as SupportedLang)}
-              className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm"
+              className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-200"
             >
               <option value="en">{t('lang.en')}</option>
               <option value="uk">{t('lang.uk')}</option>
@@ -66,7 +69,7 @@ export function AppShell() {
             type="button"
             onClick={handleSignOut}
             disabled={isSigningOut}
-            className="mt-auto rounded-xl border border-zinc-200 px-3 py-2 text-left text-sm text-zinc-700 disabled:opacity-60"
+            className="mt-auto rounded-xl border border-zinc-200 px-3 py-2 text-left text-sm text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
           >
             {isSigningOut ? t('auth.signingOut') : t('auth.signOut')}
           </button>
