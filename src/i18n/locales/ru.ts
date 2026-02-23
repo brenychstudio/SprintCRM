@@ -27,6 +27,30 @@ const ru: Record<string, string> = {
   'pipeline.filters.nicheAll': 'Все',
   'pipeline.filters.nicheUnspecified': 'Не указано',
   
+  'nav.reports': 'Отчёты',
+  'reports.title': 'Отчёты',
+  'reports.range.7d': 'Последние 7 дней',
+  'reports.range.30d': 'Последние 30 дней',
+  'reports.range.all': 'За всё время',
+
+  'reports.kpi.contacted': 'Контакт',
+  'reports.kpi.replied': 'Ответы',
+  'reports.kpi.proposals': 'Предложения',
+  'reports.kpi.won': 'Сделки',
+  'reports.kpi.lost': 'Потеряно',
+  'reports.kpi.active': 'Активные',
+  'reports.kpi.overdue': 'Просроченные',
+
+  'reports.section.funnel': 'Воронка',
+  'reports.funnel.contacted': 'Контакт',
+  'reports.funnel.replied': 'Ответ',
+  'reports.funnel.proposal': 'Предложение',
+  'reports.funnel.won': 'Сделка',
+
+  'reports.funnel.header.step': 'Этап',
+  'reports.funnel.header.count': 'Количество',
+  'reports.funnel.header.conversion': 'Конверсия',
+  
   'auth.signOut': 'Выйти',
   'auth.signingOut': 'Выход…',
 

@@ -27,6 +27,30 @@ const en: Record<string, string> = {
   'pipeline.filters.nicheAll': 'All',
   'pipeline.filters.nicheUnspecified': 'Unspecified',
   
+  'nav.reports': 'Reports',
+  'reports.title': 'Reports',
+  'reports.range.7d': 'Last 7 days',
+  'reports.range.30d': 'Last 30 days',
+  'reports.range.all': 'All time',
+
+  'reports.kpi.contacted': 'Contacted',
+  'reports.kpi.replied': 'Replied',
+  'reports.kpi.proposals': 'Proposals',
+  'reports.kpi.won': 'Won',
+  'reports.kpi.lost': 'Lost',
+  'reports.kpi.active': 'Active',
+  'reports.kpi.overdue': 'Overdue',
+
+  'reports.section.funnel': 'Funnel',
+  'reports.funnel.contacted': 'Contacted',
+  'reports.funnel.replied': 'Replied',
+  'reports.funnel.proposal': 'Proposal',
+  'reports.funnel.won': 'Won',
+
+  'reports.funnel.header.step': 'Step',
+  'reports.funnel.header.count': 'Count',
+  'reports.funnel.header.conversion': 'Conversion',
+  
   'auth.signOut': 'Sign out',
   'auth.signingOut': 'Signing out…',
 

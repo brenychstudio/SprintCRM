@@ -27,6 +27,30 @@ const uk: Record<string, string> = {
   'pipeline.filters.nicheAll': 'Усі',
   'pipeline.filters.nicheUnspecified': 'Не вказано',
   
+  'nav.reports': 'Звіти',
+  'reports.title': 'Звіти',
+  'reports.range.7d': 'Останні 7 днів',
+  'reports.range.30d': 'Останні 30 днів',
+  'reports.range.all': 'Весь час',
+
+  'reports.kpi.contacted': 'Контакт',
+  'reports.kpi.replied': 'Відповідь',
+  'reports.kpi.proposals': 'Пропозиції',
+  'reports.kpi.won': 'Угоди',
+  'reports.kpi.lost': 'Втрачено',
+  'reports.kpi.active': 'Активні',
+  'reports.kpi.overdue': 'Прострочені',
+
+  'reports.section.funnel': 'Воронка',
+  'reports.funnel.contacted': 'Контакт',
+  'reports.funnel.replied': 'Відповідь',
+  'reports.funnel.proposal': 'Пропозиція',
+  'reports.funnel.won': 'Угода',
+
+  'reports.funnel.header.step': 'Етап',
+  'reports.funnel.header.count': 'Кількість',
+  'reports.funnel.header.conversion': 'Конверсія',
+  
   'auth.signOut': 'Вийти',
   'auth.signingOut': 'Вихід…',
   'auth.loadingSession': 'Завантаження сесії…',

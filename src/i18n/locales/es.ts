@@ -27,6 +27,30 @@ const es: Record<string, string> = {
   'pipeline.filters.nicheAll': 'Todas',
   'pipeline.filters.nicheUnspecified': 'Sin especificar',
   
+  'nav.reports': 'Informes',
+  'reports.title': 'Informes',
+  'reports.range.7d': 'Últimos 7 días',
+  'reports.range.30d': 'Últimos 30 días',
+  'reports.range.all': 'Todo el tiempo',
+
+  'reports.kpi.contacted': 'Contactados',
+  'reports.kpi.replied': 'Respuestas',
+  'reports.kpi.proposals': 'Propuestas',
+  'reports.kpi.won': 'Ganados',
+  'reports.kpi.lost': 'Perdidos',
+  'reports.kpi.active': 'Activos',
+  'reports.kpi.overdue': 'Vencidos',
+
+  'reports.section.funnel': 'Embudo',
+  'reports.funnel.contacted': 'Contactados',
+  'reports.funnel.replied': 'Respuestas',
+  'reports.funnel.proposal': 'Propuesta',
+  'reports.funnel.won': 'Ganado',
+
+  'reports.funnel.header.step': 'Etapa',
+  'reports.funnel.header.count': 'Cantidad',
+  'reports.funnel.header.conversion': 'Conversión',
+  
   'auth.signOut': 'Cerrar sesión',
   'auth.signingOut': 'Saliendo…',
 

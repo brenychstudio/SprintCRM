@@ -15,6 +15,7 @@ export function AppShell() {
       { to: '/leads', label: t('nav.leads') },
       { to: '/imports', label: t('nav.imports') },
       { to: '/pipeline', label: t('nav.pipeline') },
+      { to: "/reports", label: t("nav.reports") },
     ],
     [t],
   )
