@@ -1,9 +1,17 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { defaultNextForStage, leadsQueryKeys, listLeads, updateLead } from '../../../features/leads/leadsApi'
-import type { Lead, NextAction } from '../../../features/leads/types'
+import { defaultNextForStage, leadsQueryKeys, listLeads, logActivity, updateLead } from '../../../features/leads/leadsApi'
+import type { Lead, LeadStage, NextAction } from '../../../features/leads/types'
 import { useI18n } from '../../../i18n/i18n'
 import { endOfTodayISO, isoAtMadridNineAMInDays, startOfTodayISO } from '../../../lib/dates'
+
+function milestoneForStage(stage: LeadStage): 'replied' | 'proposal_sent' | 'won' | 'lost' | null {
+  if (stage === 'replied') return 'replied'
+  if (stage === 'proposal') return 'proposal_sent'
+  if (stage === 'won') return 'won'
+  if (stage === 'lost') return 'lost'
+  return null
+}
 
 function TodayLeadDrawer({ lead, onClose }: { lead: Lead; onClose: () => void }) {
   const { t } = useI18n()
@@ -69,6 +77,49 @@ export function TodayPage() {
     },
   })
 
+  const touchMutation = useMutation({
+    mutationFn: async (lead: Lead) => {
+      const updated = await updateLead(lead.id, { last_touch_at: new Date().toISOString() })
+      await logActivity({ lead_id: lead.id, type: 'contacted', channel: 'email' })
+      return updated
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: leadsQueryKeys.all })
+    },
+  })
+
+  const moveStageMutation = useMutation({
+    mutationFn: async ({ lead, to }: { lead: Lead; to: LeadStage }) => {
+      const next = defaultNextForStage(to)
+      const nextActionAt = isoAtMadridNineAMInDays(next.days)
+
+      const updated = await updateLead(lead.id, {
+        stage: to,
+        next_action: next.next_action,
+        next_action_at: nextActionAt,
+        last_touch_at: new Date().toISOString(),
+      })
+
+      if (lead.stage !== to) {
+        await logActivity({
+          lead_id: lead.id,
+          type: 'stage_changed',
+          meta: { from: lead.stage, to, next_action: next.next_action, next_action_at: nextActionAt },
+        })
+
+        const milestone = milestoneForStage(to)
+        if (milestone) {
+          await logActivity({ lead_id: lead.id, type: milestone })
+        }
+      }
+
+      return updated
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: leadsQueryKeys.all })
+    },
+  })
+
   return (
     <section>
       <div>
@@ -98,9 +149,20 @@ export function TodayPage() {
           <tbody className="divide-y divide-zinc-200 bg-white text-zinc-700">
             {queueQuery.data?.map((lead) => {
               const isOverdue = lead.next_action_at < startOfToday
+              const isTerminal = lead.stage === 'won' || lead.stage === 'lost'
+              const isBusy = doneMutation.isPending || touchMutation.isPending || moveStageMutation.isPending
+
               return (
                 <tr key={lead.id}>
-                  <td className="px-4 py-3 text-zinc-900">{lead.company_name}</td>
+                  <td className="px-4 py-3 text-zinc-900">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedLead(lead)}
+                      className="text-left font-medium text-zinc-900 transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 focus-visible:ring-offset-2"
+                    >
+                      {lead.company_name}
+                    </button>
+                  </td>
                   <td className="px-4 py-3">{t(`leads.filter.stage.${lead.stage}`)}</td>
                   <td className="px-4 py-3">{t(`action.${lead.next_action as NextAction}`)}</td>
                   <td className="px-4 py-3">{new Date(lead.next_action_at).toLocaleString()}</td>
@@ -110,19 +172,42 @@ export function TodayPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex flex-wrap justify-end gap-2">
                       <button
                         type="button"
-                        onClick={() => setSelectedLead(lead)}
-                        className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          touchMutation.mutate(lead)
+                        }}
+                        disabled={isBusy}
+                        className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 focus-visible:ring-offset-2"
                       >
-                        {t('today.actions.open')}
+                        {t('drawer.logTouch')}
                       </button>
+
+                      {(['contacted', 'replied', 'proposal'] as LeadStage[]).map((target) => (
+                        <button
+                          key={target}
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            moveStageMutation.mutate({ lead, to: target })
+                          }}
+                          disabled={isBusy || isTerminal || lead.stage === target}
+                          className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 focus-visible:ring-offset-2"
+                        >
+                          {t(`pipeline.stage.${target}`)}
+                        </button>
+                      ))}
+
                       <button
                         type="button"
-                        onClick={() => doneMutation.mutate(lead)}
-                        disabled={doneMutation.isPending}
-                        className="rounded-xl bg-zinc-900 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-60"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          doneMutation.mutate(lead)
+                        }}
+                        disabled={isBusy}
+                        className="rounded-xl bg-zinc-900 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 focus-visible:ring-offset-2"
                       >
                         {t('today.actions.done')}
                       </button>
@@ -131,9 +216,12 @@ export function TodayPage() {
                 </tr>
               )
             })}
+
             {!queueQuery.isLoading && !queueQuery.data?.length ? (
               <tr>
-                <td className="px-4 py-8 text-center text-sm text-zinc-500" colSpan={6}>{t('today.empty')}</td>
+                <td className="px-4 py-8 text-center text-sm text-zinc-500" colSpan={6}>
+                  {t('today.empty')}
+                </td>
               </tr>
             ) : null}
           </tbody>
