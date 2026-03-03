@@ -6,6 +6,9 @@ const es: Record<string, string> = {
   'lang.es': 'Español',
   'lang.ru': 'Русский',
 
+  'common.loading': 'Cargando…',
+  'common.error': 'Ha ocurrido un error.',
+
   'nav.today': 'Hoy',
   'nav.leads': 'Leads',
   'nav.imports': 'Importación',
@@ -21,6 +24,8 @@ const es: Record<string, string> = {
 
   'pipeline.action.move': 'Move',
   'pipeline.card.overdue': 'Overdue',
+  'pipeline.card.nextAction': 'Próxima acción',
+  'pipeline.card.nextAt': 'Próxima fecha',
   'pipeline.empty': 'No leads found.',
   
   'pipeline.filters.searchPlaceholder': 'Buscar empresa, email, web',
@@ -42,6 +47,13 @@ const es: Record<string, string> = {
   'reports.kpi.overdue': 'Vencidos',
 
   'reports.section.funnel': 'Embudo',
+  'reports.section.top_niches': 'Top nichos',
+  'reports.section.top_sources': 'Top fuentes',
+  'reports.section.overdue_health': 'Vencidos',
+  'reports.unspecified': 'Sin especificar',
+  'reports.table.niche': 'Nicho',
+  'reports.table.source': 'Fuente',
+  'reports.table.overdue_percent': 'Vencidos % de activos',
   'reports.funnel.contacted': 'Contactados',
   'reports.funnel.replied': 'Respuestas',
   'reports.funnel.proposal': 'Propuesta',

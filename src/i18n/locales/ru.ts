@@ -6,6 +6,9 @@ const ru: Record<string, string> = {
   'lang.es': 'Español',
   'lang.ru': 'Русский',
 
+  'common.loading': 'Загрузка…',
+  'common.error': 'Произошла ошибка.',
+
   'nav.today': 'Сегодня',
   'nav.leads': 'Лиды',
   'nav.imports': 'Импорт',
@@ -21,6 +24,8 @@ const ru: Record<string, string> = {
 
   'pipeline.action.move': 'Move',
   'pipeline.card.overdue': 'Overdue',
+  'pipeline.card.nextAction': 'Следующее действие',
+  'pipeline.card.nextAt': 'Дата',
   'pipeline.empty': 'No leads found.',
 
   'pipeline.filters.searchPlaceholder': 'Поиск: компания, email, сайт',
@@ -42,6 +47,13 @@ const ru: Record<string, string> = {
   'reports.kpi.overdue': 'Просроченные',
 
   'reports.section.funnel': 'Воронка',
+  'reports.section.top_niches': 'Топ ниши',
+  'reports.section.top_sources': 'Топ источники',
+  'reports.section.overdue_health': 'Просрочка',
+  'reports.unspecified': 'Не указано',
+  'reports.table.niche': 'Ниша',
+  'reports.table.source': 'Источник',
+  'reports.table.overdue_percent': 'Просрочено % от активных',
   'reports.funnel.contacted': 'Контакт',
   'reports.funnel.replied': 'Ответ',
   'reports.funnel.proposal': 'Предложение',
