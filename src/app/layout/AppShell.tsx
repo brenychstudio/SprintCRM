@@ -31,7 +31,7 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
-      <div className="mx-auto flex min-h-screen w-full max-w-7xl gap-6 p-6">
+      <div className="mx-auto flex min-h-screen w-full max-w-screen-2xl gap-6 p-4 sm:p-6">
         <aside className="flex w-64 flex-col rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
           <p className="mb-4 text-sm font-semibold tracking-wide text-zinc-500">{t('app.name')}</p>
 
