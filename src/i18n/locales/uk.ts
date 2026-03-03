@@ -6,6 +6,9 @@ const uk: Record<string, string> = {
   'lang.es': 'Español',
   'lang.ru': 'Русский',
 
+  'common.loading': 'Завантаження…',
+  'common.error': 'Сталася помилка.',
+
   'nav.today': 'Сьогодні',
   'nav.leads': 'Ліди',
   'nav.imports': 'Імпорт',
@@ -21,6 +24,8 @@ const uk: Record<string, string> = {
 
   'pipeline.action.move': 'Move',
   'pipeline.card.overdue': 'Overdue',
+  'pipeline.card.nextAction': 'Наступна дія',
+  'pipeline.card.nextAt': 'Дата дії',
   'pipeline.empty': 'No leads found.',
   
   'pipeline.filters.searchPlaceholder': 'Пошук: компанія, email, сайт',
@@ -42,6 +47,13 @@ const uk: Record<string, string> = {
   'reports.kpi.overdue': 'Прострочені',
 
   'reports.section.funnel': 'Воронка',
+  'reports.section.top_niches': 'Топ ніші',
+  'reports.section.top_sources': 'Топ джерела',
+  'reports.section.overdue_health': 'Прострочення',
+  'reports.unspecified': 'Не вказано',
+  'reports.table.niche': 'Ніша',
+  'reports.table.source': 'Джерело',
+  'reports.table.overdue_percent': 'Прострочено % від активних',
   'reports.funnel.contacted': 'Контакт',
   'reports.funnel.replied': 'Відповідь',
   'reports.funnel.proposal': 'Пропозиція',
