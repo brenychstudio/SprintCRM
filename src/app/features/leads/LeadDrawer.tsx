@@ -8,7 +8,6 @@ import { isoAtMadridNineAMForDateInput, isoAtMadridNineAMInDays } from '../../..
 const stageValues: LeadStage[] = ['new', 'contacted', 'replied', 'proposal', 'won', 'lost']
 const nextActionOptions: NextAction[] = ['follow_up', 'send_proposal', 'request_call', 'nurture']
 
-
 function milestoneForStage(stage: LeadStage): 'replied' | 'proposal_sent' | 'won' | 'lost' | null {
   if (stage === 'replied') return 'replied'
   if (stage === 'proposal') return 'proposal_sent'
@@ -28,16 +27,29 @@ export function LeadDrawer({
 }) {
   const queryClient = useQueryClient()
   const { t } = useI18n()
+
+  // Local form state
   const [stage, setStage] = useState(lead.stage)
   const [nextAction, setNextAction] = useState(lead.next_action)
   const [nextDate, setNextDate] = useState(lead.next_action_at.slice(0, 10))
   const [notes, setNotes] = useState(lead.notes ?? '')
+
+  // Baseline snapshot (for activity hygiene)
+  const [baselineStage, setBaselineStage] = useState(lead.stage)
+  const [baselineNextAction, setBaselineNextAction] = useState(lead.next_action)
+  const [baselineNextDate, setBaselineNextDate] = useState(lead.next_action_at.slice(0, 10))
+  const [baselineNotes, setBaselineNotes] = useState(lead.notes ?? '')
 
   useEffect(() => {
     setStage(lead.stage)
     setNextAction(lead.next_action)
     setNextDate(lead.next_action_at.slice(0, 10))
     setNotes(lead.notes ?? '')
+
+    setBaselineStage(lead.stage)
+    setBaselineNextAction(lead.next_action)
+    setBaselineNextDate(lead.next_action_at.slice(0, 10))
+    setBaselineNotes(lead.notes ?? '')
   }, [lead])
 
   const activitiesQuery = useQuery({
@@ -53,6 +65,14 @@ export function LeadDrawer({
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      const stageDirty = stage !== baselineStage
+      const nextActionDirty = nextAction !== baselineNextAction
+      const nextDateDirty = nextDate !== baselineNextDate
+      const notesDirty = notes !== baselineNotes
+
+      // No-op save: avoid DB write + avoid noisy activities
+      if (!stageDirty && !nextActionDirty && !nextDateDirty && !notesDirty) return lead
+
       const updatedLead = await updateLead(lead.id, {
         stage,
         next_action: nextAction,
@@ -60,11 +80,13 @@ export function LeadDrawer({
         notes,
       })
 
-      if (lead.stage !== stage) {
+      // Canonical: stage_changed always when stage changes
+      // Canonical: replied/proposal_sent/won/lost only when moving to that stage
+      if (stageDirty) {
         await logActivity({
           lead_id: lead.id,
           type: 'stage_changed',
-          meta: { from: lead.stage, to: stage, next_action: nextAction, next_action_at: updatedLead.next_action_at },
+          meta: { from: baselineStage, to: stage, next_action: nextAction, next_action_at: updatedLead.next_action_at },
         })
 
         const milestone = milestoneForStage(stage)
@@ -73,11 +95,15 @@ export function LeadDrawer({
         }
       }
 
-      await logActivity({
-        lead_id: lead.id,
-        type: 'next_action_set',
-        meta: { stage, next_action: nextAction, next_action_at: updatedLead.next_action_at },
-      })
+      // Canonical: next_action_set only when user explicitly changes next action/date
+      // (do NOT log it for notes-only saves or stage-only moves)
+      if (nextActionDirty || nextDateDirty) {
+        await logActivity({
+          lead_id: lead.id,
+          type: 'next_action_set',
+          meta: { stage, next_action: nextAction, next_action_at: updatedLead.next_action_at },
+        })
+      }
 
       return updatedLead
     },
@@ -133,29 +159,86 @@ export function LeadDrawer({
         <p className="mt-1 text-xs text-zinc-500">{t('drawer.leadId', { id: lead.id })}</p>
 
         <div className="mt-6 grid gap-4">
-          <label className="space-y-1"><span className="text-xs text-zinc-500">{t('drawer.stage')}</span>
-            <select value={stage} onChange={(e) => setStage(e.target.value as LeadStage)} className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm">
-              {stageValues.map((s) => <option key={s} value={s}>{t(`leads.filter.stage.${s}`)}</option>)}
+          <label className="space-y-1">
+            <span className="text-xs text-zinc-500">{t('drawer.stage')}</span>
+            <select
+              value={stage}
+              onChange={(e) => setStage(e.target.value as LeadStage)}
+              className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm"
+            >
+              {stageValues.map((s) => (
+                <option key={s} value={s}>
+                  {t(`leads.filter.stage.${s}`)}
+                </option>
+              ))}
             </select>
           </label>
-          <label className="space-y-1"><span className="text-xs text-zinc-500">{t('drawer.nextAction')}</span>
-            <select value={nextAction} onChange={(e) => setNextAction(e.target.value as NextAction)} className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm">
-              {nextActionOptions.map((a) => <option key={a} value={a}>{t(`action.${a}`)}</option>)}
+
+          <label className="space-y-1">
+            <span className="text-xs text-zinc-500">{t('drawer.nextAction')}</span>
+            <select
+              value={nextAction}
+              onChange={(e) => setNextAction(e.target.value as NextAction)}
+              className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm"
+            >
+              {nextActionOptions.map((a) => (
+                <option key={a} value={a}>
+                  {t(`action.${a}`)}
+                </option>
+              ))}
             </select>
           </label>
-          <label className="space-y-1"><span className="text-xs text-zinc-500">{t('drawer.nextDate')}</span>
-            <input type="date" value={nextDate} onChange={(e) => setNextDate(e.target.value)} className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm" />
+
+          <label className="space-y-1">
+            <span className="text-xs text-zinc-500">{t('drawer.nextDate')}</span>
+            <input
+              type="date"
+              value={nextDate}
+              onChange={(e) => setNextDate(e.target.value)}
+              className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm"
+            />
           </label>
-          <label className="space-y-1"><span className="text-xs text-zinc-500">{t('drawer.notes')}</span>
-            <textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm" />
+
+          <label className="space-y-1">
+            <span className="text-xs text-zinc-500">{t('drawer.notes')}</span>
+            <textarea
+              rows={4}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm"
+            />
           </label>
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
-          <button type="button" onClick={() => touchMutation.mutate()} disabled={isBusy} className="rounded-xl border border-zinc-200 px-3 py-2 text-sm">{t('drawer.logTouch')}</button>
-          <button type="button" onClick={() => saveMutation.mutate()} disabled={isBusy} className="rounded-xl bg-zinc-900 px-4 py-2 text-sm text-white">{t('drawer.save')}</button>
+          <button
+            type="button"
+            onClick={() => touchMutation.mutate()}
+            disabled={isBusy}
+            className="rounded-xl border border-zinc-200 px-3 py-2 text-sm"
+          >
+            {t('drawer.logTouch')}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => saveMutation.mutate()}
+            disabled={isBusy}
+            className="rounded-xl bg-zinc-900 px-4 py-2 text-sm text-white"
+          >
+            {t('drawer.save')}
+          </button>
+
           {(['contacted', 'replied', 'proposal'] as LeadStage[]).map((targetStage) => (
-            <button key={targetStage} type="button" onClick={() => moveMutation.mutate(targetStage)} disabled={isBusy} className="rounded-xl border border-zinc-200 px-3 py-2 text-sm">{t(`leads.filter.stage.${targetStage}`)}</button>
+            <button
+              key={targetStage}
+              type="button"
+              onClick={() => moveMutation.mutate(targetStage)}
+              disabled={isBusy}
+              className="rounded-xl border border-zinc-200 px-3 py-2 text-sm"
+            >
+              {t(`leads.filter.stage.${targetStage}`)}
+            </button>
           ))}
         </div>
 
