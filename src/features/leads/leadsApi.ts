@@ -11,6 +11,7 @@ import type {
   NextAction,
   UpdateLeadInput,
 } from './types'
+import { cleanNullable, deriveWebsiteDomain, normalizeEmail, normalizePhone } from '../../lib/normalize'
 
 export type LeadFilters = {
   q?: string
@@ -47,25 +48,30 @@ export async function listLeads(filters: LeadFilters = {}): Promise<Lead[]> {
 }
 
 export async function createLead(input: CreateLeadInput): Promise<Lead> {
+  const website = cleanNullable(input.website)
+  const website_domain = deriveWebsiteDomain(website, input.website_domain)
+  const email = normalizeEmail(input.email)
+  const phone = normalizePhone(input.phone)
+
   const { data, error } = await supabase
     .from('leads')
     .insert({
       company_name: input.company_name,
-      website: input.website,
-      website_domain: input.website_domain,
-      niche: input.niche,
-      country_city: input.country_city,
-      contact_name: input.contact_name,
-      email: input.email,
-      phone: input.phone,
-      source_file: input.source_file,
+      website,
+      website_domain,
+      niche: cleanNullable(input.niche),
+      country_city: cleanNullable(input.country_city),
+      contact_name: cleanNullable(input.contact_name),
+      email,
+      phone,
+      source_file: cleanNullable(input.source_file),
       stage: input.stage,
       status: input.status,
       last_touch_at: input.last_touch_at,
       next_action: input.next_action,
       next_action_at: input.next_action_at,
-      notes: input.notes,
-      revenue: input.revenue,
+      notes: cleanNullable(input.notes),
+      revenue: input.revenue ?? null,
     })
     .select('*')
     .single()
@@ -75,7 +81,20 @@ export async function createLead(input: CreateLeadInput): Promise<Lead> {
 }
 
 export async function updateLead(id: string, patch: UpdateLeadInput): Promise<Lead> {
-  const { data, error } = await supabase.from('leads').update(patch).eq('id', id).select('*').single()
+  const nextPatch: UpdateLeadInput = { ...patch }
+
+  if ('email' in patch) nextPatch.email = normalizeEmail(patch.email)
+  if ('phone' in patch) nextPatch.phone = normalizePhone(patch.phone)
+
+  if ('website' in patch || 'website_domain' in patch) {
+    const website = 'website' in patch ? cleanNullable(patch.website) : undefined
+    const domain = 'website_domain' in patch ? patch.website_domain : undefined
+
+    nextPatch.website = 'website' in patch ? website : patch.website
+    nextPatch.website_domain = deriveWebsiteDomain(website ?? null, domain ?? patch.website_domain)
+  }
+
+  const { data, error } = await supabase.from('leads').update(nextPatch).eq('id', id).select('*').single()
   if (error) throw error
   return data as Lead
 }
