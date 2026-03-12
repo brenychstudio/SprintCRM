@@ -117,6 +117,11 @@ const ru: Record<string, string> = {
   'leads.error': 'Не удалось загрузить лиды.',
   'leads.empty': 'Ничего не найдено.',
   'leads.loading': 'Загрузка…',
+  'leads.bulk.selected': 'Выбрано',
+  'leads.bulk.clear': 'Очистить',
+  'leads.bulk.applyStage': 'Применить этап',
+  'leads.bulk.applyNext': 'Применить действие',
+  'leads.bulk.markInactive': 'Сделать неактивным',
 
   'drawer.close': 'Закрыть',
   'drawer.leadId': 'ID лида:',

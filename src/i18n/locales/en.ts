@@ -117,6 +117,11 @@ const en: Record<string, string> = {
   'leads.error': 'Unable to load leads right now.',
   'leads.empty': 'No leads found.',
   'leads.loading': 'Loading leads…',
+  'leads.bulk.selected': 'Selected',
+  'leads.bulk.clear': 'Clear',
+  'leads.bulk.applyStage': 'Apply stage',
+  'leads.bulk.applyNext': 'Apply next action',
+  'leads.bulk.markInactive': 'Mark inactive',
 
   'drawer.close': 'Close drawer',
   'drawer.leadId': 'Lead ID:',

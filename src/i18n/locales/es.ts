@@ -117,6 +117,11 @@ const es: Record<string, string> = {
   'leads.error': 'No se pueden cargar leads.',
   'leads.empty': 'No hay leads.',
   'leads.loading': 'Cargando…',
+  'leads.bulk.selected': 'Seleccionados',
+  'leads.bulk.clear': 'Limpiar',
+  'leads.bulk.applyStage': 'Aplicar etapa',
+  'leads.bulk.applyNext': 'Aplicar acción',
+  'leads.bulk.markInactive': 'Marcar inactivo',
 
   'drawer.close': 'Cerrar',
   'drawer.leadId': 'ID:',

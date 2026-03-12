@@ -116,6 +116,11 @@ const uk: Record<string, string> = {
   'leads.error': 'Не вдалося завантажити ліди.',
   'leads.empty': 'Нічого не знайдено.',
   'leads.loading': 'Завантаження…',
+  'leads.bulk.selected': 'Обрано',
+  'leads.bulk.clear': 'Очистити',
+  'leads.bulk.applyStage': 'Застосувати етап',
+  'leads.bulk.applyNext': 'Застосувати дію',
+  'leads.bulk.markInactive': 'Зробити неактивним',
 
   'drawer.close': 'Закрити',
   'drawer.leadId': 'ID ліда:',
