@@ -62,6 +62,10 @@ const en: Record<string, string> = {
   'reports.funnel.header.step': 'Step',
   'reports.funnel.header.count': 'Count',
   'reports.funnel.header.conversion': 'Conversion',
+  'reports.export.leads': 'Export leads CSV',
+  'reports.export.activities': 'Export activities CSV',
+  'reports.export.exporting': 'Exporting…',
+  'reports.export.error': 'Export failed.',
   
   'auth.signOut': 'Sign out',
   'auth.signingOut': 'Signing out…',

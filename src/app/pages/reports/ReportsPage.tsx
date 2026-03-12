@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useI18n } from '../../../i18n/i18n'
 import { supabase } from '../../../lib/supabase'
+import { ReportsExportBar } from '../../features/reports/ReportsExportBar'
 
 type RangePreset = '7d' | '30d' | 'all'
 
@@ -69,11 +70,13 @@ function ratio(numerator: number, denominator: number): string {
 export function ReportsPage() {
   const { t } = useI18n()
   const [range, setRange] = useState<RangePreset>('30d')
+  const fromISO = sinceIso(range) ?? undefined
+  const toISO = undefined
 
   const reportQuery = useQuery<ReportsData>({
     queryKey: ['reports', range],
     queryFn: async () => {
-      const since = sinceIso(range)
+      const since = fromISO
       const nowIso = new Date().toISOString()
 
       let activitiesQuery = supabase
@@ -207,19 +210,22 @@ export function ReportsPage() {
     <section>
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold text-zinc-900">{t('reports.title')}</h1>
-        <div className="flex gap-2">
-          {(['7d', '30d', 'all'] as RangePreset[]).map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => setRange(item)}
-              className={`rounded-xl border px-3 py-2 text-sm ${
-                range === item ? 'border-zinc-300 bg-zinc-100 text-zinc-900' : 'border-zinc-200 bg-white text-zinc-600'
-              }`}
-            >
-              {t(`reports.range.${item}`)}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-start gap-3">
+          <div className="flex gap-2">
+            {(['7d', '30d', 'all'] as RangePreset[]).map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setRange(item)}
+                className={`rounded-xl border px-3 py-2 text-sm ${
+                  range === item ? 'border-zinc-300 bg-zinc-100 text-zinc-900' : 'border-zinc-200 bg-white text-zinc-600'
+                }`}
+              >
+                {t(`reports.range.${item}`)}
+              </button>
+            ))}
+          </div>
+          <ReportsExportBar fromISO={fromISO} toISO={toISO} />
         </div>
       </header>
 

@@ -62,6 +62,10 @@ const uk: Record<string, string> = {
   'reports.funnel.header.step': 'Етап',
   'reports.funnel.header.count': 'Кількість',
   'reports.funnel.header.conversion': 'Конверсія',
+  'reports.export.leads': 'Експорт лідів (CSV)',
+  'reports.export.activities': 'Експорт активностей (CSV)',
+  'reports.export.exporting': 'Експорт…',
+  'reports.export.error': 'Помилка експорту.',
   
   'auth.signOut': 'Вийти',
   'auth.signingOut': 'Вихід…',
