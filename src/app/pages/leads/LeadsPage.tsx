@@ -56,7 +56,7 @@ export function LeadsPage() {
   }, [someSelected])
 
   const toggleAll = () => {
-    setSelectedIds((prev) => (allSelected ? [] : allIds))
+    setSelectedIds(allSelected ? [] : allIds)
   }
 
   const toggleOne = (id: string) => {
