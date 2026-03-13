@@ -5,9 +5,44 @@ import { BulkActionsBar } from '../../features/leads/BulkActionsBar'
 import { createLead, leadsQueryKeys, listLeads } from '../../../features/leads/leadsApi'
 import type { Lead, LeadDueFilter, LeadStage } from '../../../features/leads/types'
 import { useI18n } from '../../../i18n/i18n'
+import { endOfTodayISO, startOfTodayISO } from '../../../lib/dates'
 
 const stageValues: Array<LeadStage | 'all'> = ['all', 'new', 'contacted', 'replied', 'proposal', 'won', 'lost']
 const dueValues: Array<LeadDueFilter | 'all'> = ['all', 'today', 'overdue']
+const smartViewValues = ['all', 'overdue', 'active_contacts', 'proposal', 'new'] as const
+type SmartView = (typeof smartViewValues)[number]
+
+type SavedLeadView = {
+  id: string
+  name: string
+  smartView: SmartView
+  search: string
+  stage: LeadStage | 'all'
+  due: LeadDueFilter | 'all'
+  niche: string
+  city: string
+}
+
+const SAVED_VIEWS_KEY = 'leads.smartViews.v1'
+
+function loadSavedViews(): SavedLeadView[] {
+  try {
+    const raw = localStorage.getItem(SAVED_VIEWS_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as SavedLeadView[]
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function saveSavedViews(views: SavedLeadView[]) {
+  try {
+    localStorage.setItem(SAVED_VIEWS_KEY, JSON.stringify(views))
+  } catch {
+    // ignore
+  }
+}
 
 export function LeadsPage() {
   const queryClient = useQueryClient()
@@ -16,31 +51,89 @@ export function LeadsPage() {
   const [search, setSearch] = useState('')
   const [stage, setStage] = useState<LeadStage | 'all'>('all')
   const [due, setDue] = useState<LeadDueFilter | 'all'>('all')
+  const [niche, setNiche] = useState('__all')
+  const [city, setCity] = useState('__all')
+  const [smartView, setSmartView] = useState<SmartView>('all')
 
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
-
-  const filters = useMemo(
-    () => ({
-      q: search.trim() || undefined,
-      stage: stage === 'all' ? undefined : stage,
-      due: due === 'all' ? undefined : due,
-    }),
-    [due, search, stage],
-  )
+  const [savedViews, setSavedViews] = useState<SavedLeadView[]>(() => loadSavedViews())
+  const [selectedSavedViewId, setSelectedSavedViewId] = useState('')
 
   const leadsQuery = useQuery({
-    queryKey: leadsQueryKeys.list(filters),
-    queryFn: () => listLeads(filters),
+    queryKey: leadsQueryKeys.list({ scope: 'leads-smart-views' }),
+    queryFn: () => listLeads({}),
   })
+
+  useEffect(() => {
+    saveSavedViews(savedViews)
+  }, [savedViews])
+
+  const nicheOptions = useMemo(() => {
+    const values = new Set<string>()
+    for (const lead of leadsQuery.data ?? []) {
+      const v = lead.niche?.trim()
+      if (v) values.add(v)
+    }
+    return Array.from(values).sort((a, b) => a.localeCompare(b))
+  }, [leadsQuery.data])
+
+  const cityOptions = useMemo(() => {
+    const values = new Set<string>()
+    for (const lead of leadsQuery.data ?? []) {
+      const v = lead.country_city?.trim()
+      if (v) values.add(v)
+    }
+    return Array.from(values).sort((a, b) => a.localeCompare(b))
+  }, [leadsQuery.data])
+
+  const startToday = useMemo(() => new Date(startOfTodayISO()).getTime(), [])
+  const endToday = useMemo(() => new Date(endOfTodayISO()).getTime(), [])
+
+  const filteredLeads = useMemo(() => {
+    const q = search.trim().toLowerCase()
+
+    return (leadsQuery.data ?? []).filter((lead) => {
+      const nextAt = new Date(lead.next_action_at).getTime()
+      const leadNiche = lead.niche?.trim() ?? ''
+      const leadCity = lead.country_city?.trim() ?? ''
+
+      // Smart view base
+      if (smartView === 'overdue' && !(nextAt < startToday)) return false
+      if (smartView === 'active_contacts' && !(['contacted', 'replied', 'proposal'] as LeadStage[]).includes(lead.stage)) return false
+      if (smartView === 'proposal' && lead.stage !== 'proposal') return false
+      if (smartView === 'new' && lead.stage !== 'new') return false
+
+      // Search
+      const matchesSearch =
+        !q ||
+        [lead.company_name, lead.contact_name ?? '', lead.email ?? '', lead.website_domain ?? lead.website ?? '', lead.country_city ?? '', lead.niche ?? '']
+          .join(' ')
+          .toLowerCase()
+          .includes(q)
+
+      if (!matchesSearch) return false
+
+      // Manual filters refine the view
+      if (stage !== 'all' && lead.stage !== stage) return false
+      if (due === 'today' && !(nextAt >= startToday && nextAt <= endToday)) return false
+      if (due === 'overdue' && !(nextAt < startToday)) return false
+      if (niche === '__unspecified' && leadNiche) return false
+      if (niche !== '__all' && niche !== '__unspecified' && leadNiche !== niche) return false
+      if (city === '__unspecified' && leadCity) return false
+      if (city !== '__all' && city !== '__unspecified' && leadCity !== city) return false
+
+      return true
+    })
+  }, [city, due, endToday, leadsQuery.data, niche, search, smartView, stage, startToday])
 
   const leadsById = useMemo(() => {
     const map: Record<string, Lead> = {}
-    for (const lead of leadsQuery.data ?? []) map[lead.id] = lead
+    for (const lead of filteredLeads) map[lead.id] = lead
     return map
-  }, [leadsQuery.data])
+  }, [filteredLeads])
 
-  const allIds = useMemo(() => (leadsQuery.data ?? []).map((l) => l.id), [leadsQuery.data])
+  const allIds = useMemo(() => filteredLeads.map((l) => l.id), [filteredLeads])
 
   useEffect(() => {
     setSelectedIds((prev) => prev.filter((id) => leadsById[id]))
@@ -73,21 +166,77 @@ export function LeadsPage() {
   })
 
   const summary = useMemo(() => {
-    const leads = leadsQuery.data ?? []
     let overdue = 0
     let activeContacts = 0
 
-    for (const lead of leads) {
+    for (const lead of filteredLeads) {
       if (new Date(lead.next_action_at).getTime() < Date.now()) overdue++
       if (lead.status === 'active' && ['contacted', 'replied', 'proposal'].includes(lead.stage)) activeContacts++
     }
 
     return {
-      total: leads.length,
+      total: filteredLeads.length,
       overdue,
       activeContacts,
     }
-  }, [leadsQuery.data])
+  }, [filteredLeads])
+
+  function applySmartView(next: SmartView) {
+    setSmartView(next)
+    setSelectedSavedViewId('')
+
+    if (next === 'overdue') {
+      setDue('all')
+      setStage('all')
+    }
+    if (next === 'active_contacts') {
+      setStage('all')
+    }
+    if (next === 'proposal') {
+      setStage('all')
+    }
+    if (next === 'new') {
+      setStage('all')
+    }
+  }
+
+  function applySavedView(view: SavedLeadView) {
+    setSelectedSavedViewId(view.id)
+    setSmartView(view.smartView)
+    setSearch(view.search)
+    setStage(view.stage)
+    setDue(view.due)
+    setNiche(view.niche)
+    setCity(view.city)
+  }
+
+  function saveCurrentView() {
+    const name = window.prompt(t('leads.smartViews.namePrompt'))
+    if (!name?.trim()) return
+
+    const nextView: SavedLeadView = {
+      id: `view_${Math.random().toString(16).slice(2)}`,
+      name: name.trim(),
+      smartView,
+      search,
+      stage,
+      due,
+      niche,
+      city,
+    }
+
+    setSavedViews((prev) => [nextView, ...prev].slice(0, 20))
+    setSelectedSavedViewId(nextView.id)
+  }
+
+  function deleteSelectedView() {
+    if (!selectedSavedViewId) return
+    const ok = window.confirm(t('leads.smartViews.deleteConfirm'))
+    if (!ok) return
+
+    setSavedViews((prev) => prev.filter((v) => v.id !== selectedSavedViewId))
+    setSelectedSavedViewId('')
+  }
 
   return (
     <section>
@@ -122,13 +271,78 @@ export function LeadsPage() {
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.4fr)_220px_220px]">
+      <div className="mt-5 rounded-2xl border border-zinc-200 bg-white p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-xs text-zinc-500">{t('leads.smartViews.title')}</div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {smartViewValues.map((view) => (
+                <button
+                  key={view}
+                  type="button"
+                  onClick={() => applySmartView(view)}
+                  className={`rounded-xl border px-3 py-2 text-sm transition ${
+                    smartView === view
+                      ? 'border-zinc-200 bg-zinc-100 text-zinc-900'
+                      : 'border-zinc-200 text-zinc-700 hover:bg-zinc-50'
+                  }`}
+                >
+                  {t(`leads.smartViews.${view}`)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="min-w-[220px]">
+              <div className="mb-1 text-xs text-zinc-500">{t('leads.smartViews.savedLabel')}</div>
+              <select
+                value={selectedSavedViewId}
+                onChange={(e) => {
+                  const id = e.target.value
+                  setSelectedSavedViewId(id)
+                  const view = savedViews.find((v) => v.id === id)
+                  if (view) applySavedView(view)
+                }}
+                className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm"
+              >
+                <option value="">{t('leads.smartViews.selectPlaceholder')}</option>
+                {savedViews.map((view) => (
+                  <option key={view.id} value={view.id}>
+                    {view.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              type="button"
+              onClick={saveCurrentView}
+              className="rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
+            >
+              {t('leads.smartViews.save')}
+            </button>
+
+            <button
+              type="button"
+              onClick={deleteSelectedView}
+              disabled={!selectedSavedViewId}
+              className="rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+            >
+              {t('leads.smartViews.delete')}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.4fr)_180px_180px_220px_220px]">
         <input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder={t('leads.searchPlaceholder')}
           className="rounded-xl border border-zinc-200 px-3 py-2 text-sm"
         />
+
         <select
           value={stage}
           onChange={(event) => setStage(event.target.value as LeadStage | 'all')}
@@ -140,6 +354,7 @@ export function LeadsPage() {
             </option>
           ))}
         </select>
+
         <select
           value={due}
           onChange={(event) => setDue(event.target.value as LeadDueFilter | 'all')}
@@ -148,6 +363,34 @@ export function LeadsPage() {
           {dueValues.map((option) => (
             <option key={option} value={option}>
               {t(`leads.filter.due.${option}`)}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={niche}
+          onChange={(event) => setNiche(event.target.value)}
+          className="rounded-xl border border-zinc-200 px-3 py-2 text-sm"
+        >
+          <option value="__all">{t('leads.filter.nicheAll')}</option>
+          <option value="__unspecified">{t('leads.filter.nicheUnspecified')}</option>
+          {nicheOptions.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={city}
+          onChange={(event) => setCity(event.target.value)}
+          className="rounded-xl border border-zinc-200 px-3 py-2 text-sm"
+        >
+          <option value="__all">{t('leads.filter.cityAll')}</option>
+          <option value="__unspecified">{t('leads.filter.cityUnspecified')}</option>
+          {cityOptions.map((item) => (
+            <option key={item} value={item}>
+              {item}
             </option>
           ))}
         </select>
@@ -187,7 +430,7 @@ export function LeadsPage() {
           </thead>
 
           <tbody className="divide-y divide-zinc-200 bg-white text-zinc-700">
-            {leadsQuery.data?.map((lead) => {
+            {filteredLeads.map((lead) => {
               const checked = selectedIds.includes(lead.id)
               const overdue = new Date(lead.next_action_at).getTime() < Date.now()
 
@@ -213,6 +456,7 @@ export function LeadsPage() {
                       {lead.email ? <div>{lead.email}</div> : null}
                       {lead.website_domain || lead.website ? <div>{lead.website_domain ?? lead.website}</div> : null}
                       {lead.niche ? <div>{lead.niche}</div> : null}
+                      {lead.country_city ? <div>{lead.country_city}</div> : null}
                     </div>
                   </td>
 
@@ -238,7 +482,7 @@ export function LeadsPage() {
               )
             })}
 
-            {!leadsQuery.data?.length ? (
+            {!filteredLeads.length ? (
               <tr>
                 <td className="px-4 py-8 text-center text-sm text-zinc-500" colSpan={6}>
                   {t('leads.empty')}
