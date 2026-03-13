@@ -10,6 +10,7 @@ const es: Record<string, string> = {
   'common.error': 'Ha ocurrido un error.',
 
   'nav.today': 'Hoy',
+  'nav.activeContacts': 'Contactos activos',
   'nav.leads': 'Leads',
   'nav.imports': 'Importación',
   'nav.pipeline': 'Pipeline',
@@ -126,6 +127,28 @@ const es: Record<string, string> = {
   'leads.bulk.applyStage': 'Aplicar etapa',
   'leads.bulk.applyNext': 'Aplicar acción',
   'leads.bulk.markInactive': 'Marcar inactivo',
+
+  'activeContacts.title': 'Contactos activos',
+  'activeContacts.subtitle': 'Leads calientes ya en progreso: contacted, replied o proposal.',
+  'activeContacts.searchPlaceholder': 'Buscar empresa, email, web?',
+
+  'activeContacts.kpi.total': 'Contactos activos',
+  'activeContacts.kpi.contacted': 'Contacted',
+  'activeContacts.kpi.replied': 'Replied',
+  'activeContacts.kpi.proposal': 'Proposal',
+  'activeContacts.kpi.overdue': 'Atrasados',
+
+  'activeContacts.filter.nicheAll': 'Todos los nichos',
+  'activeContacts.filter.nicheUnspecified': 'Nicho sin especificar',
+
+  'activeContacts.table.company': 'Empresa',
+  'activeContacts.table.email': 'Email',
+  'activeContacts.table.stage': 'Etapa',
+  'activeContacts.table.nextActionAt': 'Siguiente acci?n',
+  'activeContacts.table.lastTouch': '?ltimo contacto',
+  'activeContacts.table.overdue': 'Atrasado',
+
+  'activeContacts.empty': 'Todav?a no hay contactos activos.',
 
   'drawer.close': 'Cerrar',
   'drawer.leadId': 'ID:',

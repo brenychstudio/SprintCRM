@@ -10,6 +10,7 @@ const en: Record<string, string> = {
   'common.error': 'Something went wrong.',
 
   'nav.today': 'Today',
+  'nav.activeContacts': 'Active Contacts',
   'nav.leads': 'Leads',
   'nav.imports': 'Imports',
   'nav.pipeline': 'Pipeline',
@@ -126,6 +127,28 @@ const en: Record<string, string> = {
   'leads.bulk.applyStage': 'Apply stage',
   'leads.bulk.applyNext': 'Apply next action',
   'leads.bulk.markInactive': 'Mark inactive',
+
+  'activeContacts.title': 'Active Contacts',
+  'activeContacts.subtitle': 'Warm leads already in progress: contacted, replied, or proposal stage.',
+  'activeContacts.searchPlaceholder': 'Search company, email, website…',
+
+  'activeContacts.kpi.total': 'Active contacts',
+  'activeContacts.kpi.contacted': 'Contacted',
+  'activeContacts.kpi.replied': 'Replied',
+  'activeContacts.kpi.proposal': 'Proposal',
+  'activeContacts.kpi.overdue': 'Overdue',
+
+  'activeContacts.filter.nicheAll': 'All niches',
+  'activeContacts.filter.nicheUnspecified': 'Unspecified niche',
+
+  'activeContacts.table.company': 'Company',
+  'activeContacts.table.email': 'Email',
+  'activeContacts.table.stage': 'Stage',
+  'activeContacts.table.nextActionAt': 'Next action at',
+  'activeContacts.table.lastTouch': 'Last touch',
+  'activeContacts.table.overdue': 'Overdue',
+
+  'activeContacts.empty': 'No active contacts yet.',
 
   'drawer.close': 'Close drawer',
   'drawer.leadId': 'Lead ID:',

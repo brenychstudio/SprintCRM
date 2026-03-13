@@ -4,6 +4,7 @@ import { RequireAuth } from './app/auth/RequireAuth'
 import { AppShell } from './app/layout/AppShell'
 import { LeadsPage } from './app/pages/leads/LeadsPage'
 import { TodayPage } from './app/pages/today/TodayPage'
+import { ActiveContactsPage } from './app/pages/active-contacts/ActiveContactsPage'
 import { ImportsPage } from './app/pages/imports/ImportsPage'
 import { PipelinePage } from './app/pages/pipeline/PipelinePage'
 import { ReportsPage } from "./app/pages/reports/ReportsPage";
@@ -17,6 +18,7 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route path="/" element={<Navigate to="/today" replace />} />
           <Route path="/today" element={<TodayPage />} />
+          <Route path="/active-contacts" element={<ActiveContactsPage />} />
           <Route path="/leads" element={<LeadsPage />} />
           <Route path="/imports" element={<ImportsPage />} />
           <Route path="/pipeline" element={<PipelinePage />} />

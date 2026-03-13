@@ -12,6 +12,7 @@ export function AppShell() {
   const navItems = useMemo(
     () => [
       { to: '/today', label: t('nav.today') },
+      { to: '/active-contacts', label: t('nav.activeContacts') },
       { to: '/leads', label: t('nav.leads') },
       { to: '/imports', label: t('nav.imports') },
       { to: '/pipeline', label: t('nav.pipeline') },
