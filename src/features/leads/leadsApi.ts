@@ -14,6 +14,7 @@ import type {
 import { cleanNullable, deriveWebsiteDomain, normalizeEmail, normalizePhone } from '../../lib/normalize'
 
 export type LeadFilters = {
+  scope?: string
   q?: string
   stage?: LeadStage
   due?: LeadDueFilter
@@ -97,6 +98,14 @@ export async function updateLead(id: string, patch: UpdateLeadInput): Promise<Le
   const { data, error } = await supabase.from('leads').update(nextPatch).eq('id', id).select('*').single()
   if (error) throw error
   return data as Lead
+}
+
+export async function deleteLeadPermanently(id: string): Promise<void> {
+  const { error: activitiesError } = await supabase.from('activities').delete().eq('lead_id', id)
+  if (activitiesError) throw activitiesError
+
+  const { error: leadError } = await supabase.from('leads').delete().eq('id', id)
+  if (leadError) throw leadError
 }
 
 export async function listActivities(leadId: string): Promise<Activity[]> {

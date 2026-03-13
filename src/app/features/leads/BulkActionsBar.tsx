@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useI18n } from '../../../i18n/i18n'
 import { isoAtMadridNineAMForDateInput, isoAtMadridNineAMInDays } from '../../../lib/dates'
-import { defaultNextForStage, leadsQueryKeys, logActivity, updateLead } from '../../../features/leads/leadsApi'
+import { defaultNextForStage, deleteLeadPermanently, leadsQueryKeys, logActivity, updateLead } from '../../../features/leads/leadsApi'
 import type { Lead, LeadStage, NextAction } from '../../../features/leads/types'
 
 type Props = {
@@ -63,10 +63,6 @@ export function BulkActionsBar({ selectedIds, leadsById, onClear }: Props) {
 
   const bulkStageMutation = useMutation({
     mutationFn: async () => {
-      if ((stageTo === 'won' || stageTo === 'lost') && !window.confirm(t('leads.bulk.archiveConfirm', { count: activeSelected.length }))) {
-        return
-      }
-
       const nowIso = new Date().toISOString()
 
       await runWithLimit(activeSelected, 10, async (lead) => {
@@ -120,7 +116,8 @@ export function BulkActionsBar({ selectedIds, leadsById, onClear }: Props) {
 
   const bulkArchiveMutation = useMutation({
     mutationFn: async () => {
-      if (!window.confirm(t('leads.bulk.archiveConfirm', { count: activeSelected.length }))) return
+      const ok = window.confirm(t('leads.bulk.archiveConfirm', { count: activeSelected.length }))
+      if (!ok) return
 
       await runWithLimit(activeSelected, 10, async (lead) => {
         await updateLead(lead.id, { status: 'archived' })
@@ -134,10 +131,26 @@ export function BulkActionsBar({ selectedIds, leadsById, onClear }: Props) {
 
   const bulkRestoreMutation = useMutation({
     mutationFn: async () => {
-      if (!window.confirm(t('leads.bulk.restoreConfirm', { count: archivedSelected.length }))) return
+      const ok = window.confirm(t('leads.bulk.restoreConfirm', { count: archivedSelected.length }))
+      if (!ok) return
 
       await runWithLimit(archivedSelected, 10, async (lead) => {
         await updateLead(lead.id, { status: 'active' })
+      })
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: leadsQueryKeys.all })
+      onClear()
+    },
+  })
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async () => {
+      const ok = window.confirm(t('leads.bulk.deleteConfirm', { count: archivedSelected.length }))
+      if (!ok) return
+
+      await runWithLimit(archivedSelected, 10, async (lead) => {
+        await deleteLeadPermanently(lead.id)
       })
     },
     onSuccess: () => {
@@ -151,7 +164,8 @@ export function BulkActionsBar({ selectedIds, leadsById, onClear }: Props) {
     bulkStageMutation.isPending ||
     bulkNextMutation.isPending ||
     bulkArchiveMutation.isPending ||
-    bulkRestoreMutation.isPending
+    bulkRestoreMutation.isPending ||
+    bulkDeleteMutation.isPending
 
   return (
     <div className="mb-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
@@ -265,6 +279,15 @@ export function BulkActionsBar({ selectedIds, leadsById, onClear }: Props) {
             disabled={busy || archivedSelected.length === 0}
           >
             {t('leads.bulk.restore')}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => bulkDeleteMutation.mutate()}
+            className="rounded-xl border border-red-300 px-3 py-2 text-sm text-red-700 hover:bg-red-100 disabled:opacity-60"
+            disabled={busy || archivedSelected.length === 0}
+          >
+            {t('leads.bulk.deletePermanent')}
           </button>
         </div>
       </div>

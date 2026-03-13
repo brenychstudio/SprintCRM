@@ -133,6 +133,8 @@ const ru: Record<string, string> = {
   'leads.bulk.activeCount': 'Выбрано active',
   'leads.bulk.archiveConfirm': 'Архивировать {{count}} выбранных лидов?',
   'leads.bulk.restoreConfirm': 'Восстановить {{count}} архивных лидов в active?',
+  'leads.bulk.deletePermanent': 'Удалить навсегда',
+  'leads.bulk.deleteConfirm': 'Удалить {{count}} архивных лидов навсегда? Это действие нельзя отменить.',
 
   'leads.smartViews.title': 'Умные представления',
   'leads.smartViews.all': 'Все',
@@ -184,6 +186,14 @@ const ru: Record<string, string> = {
   'drawer.activityTitle': 'История',
   'drawer.loadingActivities': 'Загрузка…',
   'drawer.noActivities': 'Пока нет событий.',
+  'drawer.status': 'Статус',
+  'drawer.archive': 'Архивировать',
+  'drawer.restore': 'Восстановить',
+  'drawer.dangerTitle': 'Опасная зона',
+  'drawer.deletePermanent': 'Удалить навсегда',
+  'drawer.deleteHintArchiveFirst': 'Сначала архивируйте этот лид, а затем удаляйте навсегда.',
+  'drawer.deleteHintArchived': 'Этот архивный лид теперь можно удалить навсегда. Будет удалён лид и вся его история активности.',
+  'drawer.deleteConfirm': 'Удалить этот лид навсегда? Это действие нельзя отменить.',
 
   'action.follow_up': 'Фоллоу-ап',
   'action.send_proposal': 'Отправить предложение',

@@ -133,6 +133,8 @@ const es: Record<string, string> = {
   'leads.bulk.activeCount': 'Activos seleccionados',
   'leads.bulk.archiveConfirm': '¿Archivar {{count}} leads seleccionados?',
   'leads.bulk.restoreConfirm': '¿Restaurar {{count}} leads archivados a activos?',
+  'leads.bulk.deletePermanent': 'Eliminar definitivamente',
+  'leads.bulk.deleteConfirm': '¿Eliminar definitivamente {{count}} leads archivados? Esta acción no se puede deshacer.',
 
   'leads.smartViews.title': 'Vistas inteligentes',
   'leads.smartViews.all': 'Todos',
@@ -184,6 +186,14 @@ const es: Record<string, string> = {
   'drawer.activityTitle': 'Actividad',
   'drawer.loadingActivities': 'Cargando…',
   'drawer.noActivities': 'Sin actividad.',
+  'drawer.status': 'Estado',
+  'drawer.archive': 'Archivar',
+  'drawer.restore': 'Restaurar',
+  'drawer.dangerTitle': 'Zona peligrosa',
+  'drawer.deletePermanent': 'Eliminar definitivamente',
+  'drawer.deleteHintArchiveFirst': 'Primero archiva este lead antes de eliminarlo definitivamente.',
+  'drawer.deleteHintArchived': 'Este lead archivado ahora puede eliminarse definitivamente. Esto borrará el lead y su historial de actividad.',
+  'drawer.deleteConfirm': '¿Eliminar este lead definitivamente? Esta acción no se puede deshacer.',
 
   'action.follow_up': 'Follow up',
   'action.send_proposal': 'Enviar propuesta',

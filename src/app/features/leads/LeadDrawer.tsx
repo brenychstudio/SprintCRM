@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { defaultNextForStage, leadsQueryKeys, listActivities, logActivity, updateLead } from '../../../features/leads/leadsApi'
+import {
+  defaultNextForStage,
+  deleteLeadPermanently,
+  leadsQueryKeys,
+  listActivities,
+  logActivity,
+  updateLead,
+} from '../../../features/leads/leadsApi'
 import type { Lead, LeadStage, NextAction } from '../../../features/leads/types'
 import { useI18n } from '../../../i18n/i18n'
 import { isoAtMadridNineAMForDateInput, isoAtMadridNineAMInDays } from '../../../lib/dates'
@@ -61,6 +68,12 @@ export function LeadDrawer({
     onLeadChange?.(updatedLead)
     queryClient.invalidateQueries({ queryKey: leadsQueryKeys.all })
     queryClient.invalidateQueries({ queryKey: leadsQueryKeys.activities(lead.id) })
+  }
+
+  const handleDeleted = () => {
+    queryClient.invalidateQueries({ queryKey: leadsQueryKeys.all })
+    queryClient.invalidateQueries({ queryKey: leadsQueryKeys.activities(lead.id) })
+    onClose()
   }
 
   const saveMutation = useMutation({
@@ -144,7 +157,36 @@ export function LeadDrawer({
     onSuccess: handleChanged,
   })
 
-  const isBusy = saveMutation.isPending || touchMutation.isPending || moveMutation.isPending
+  const archiveMutation = useMutation({
+    mutationFn: async () => {
+      const nextStatus = lead.status === 'archived' ? 'active' : 'archived'
+      return updateLead(lead.id, { status: nextStatus })
+    },
+    onSuccess: handleChanged,
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (lead.status !== 'archived') {
+        throw new Error('Lead must be archived before permanent delete')
+      }
+
+      const ok = window.confirm(t('drawer.deleteConfirm'))
+      if (!ok) return
+
+      await deleteLeadPermanently(lead.id)
+    },
+    onSuccess: () => {
+      handleDeleted()
+    },
+  })
+
+  const isBusy =
+    saveMutation.isPending ||
+    touchMutation.isPending ||
+    moveMutation.isPending ||
+    archiveMutation.isPending ||
+    deleteMutation.isPending
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-zinc-900/30">
@@ -169,7 +211,7 @@ export function LeadDrawer({
         </div>
 
         <div className="px-6 py-5">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-4">
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
               <div className="text-xs text-zinc-500">{t('drawer.stage')}</div>
               <div className="mt-2 text-sm font-medium text-zinc-900">{t(`leads.filter.stage.${lead.stage}`)}</div>
@@ -183,6 +225,13 @@ export function LeadDrawer({
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
               <div className="text-xs text-zinc-500">{t('drawer.nextDate')}</div>
               <div className="mt-2 text-sm font-medium text-zinc-900">{new Date(lead.next_action_at).toLocaleString()}</div>
+            </div>
+
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+              <div className="text-xs text-zinc-500">{t('drawer.status')}</div>
+              <div className="mt-2 text-sm font-medium text-zinc-900">
+                {lead.status === 'archived' ? t('leads.smartViews.archived') : t('reports.kpi.active')}
+              </div>
             </div>
           </div>
 
@@ -257,6 +306,37 @@ export function LeadDrawer({
                 </li>
               ))}
             </ul>
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4">
+            <div className="text-sm font-semibold text-red-800">{t('drawer.dangerTitle')}</div>
+            <p className="mt-2 text-sm text-red-700">
+              {lead.status === 'archived' ? t('drawer.deleteHintArchived') : t('drawer.deleteHintArchiveFirst')}
+            </p>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => archiveMutation.mutate()}
+                disabled={isBusy}
+                className={`rounded-xl px-3 py-2 text-sm transition disabled:opacity-60 ${
+                  lead.status === 'archived'
+                    ? 'border border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                    : 'border border-zinc-200 text-zinc-700 hover:bg-zinc-50'
+                }`}
+              >
+                {lead.status === 'archived' ? t('drawer.restore') : t('drawer.archive')}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => deleteMutation.mutate()}
+                disabled={isBusy || lead.status !== 'archived'}
+                className="rounded-xl border border-red-300 px-3 py-2 text-sm text-red-700 hover:bg-red-100 disabled:opacity-50"
+              >
+                {t('drawer.deletePermanent')}
+              </button>
+            </div>
           </div>
         </div>
 
