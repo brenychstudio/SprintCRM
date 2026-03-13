@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../../../i18n/i18n'
 import { supabase } from '../../../lib/supabase'
 import { isoAtMadridNineAMInDays } from '../../../lib/dates'
@@ -261,6 +261,8 @@ export function ImportsPage() {
   const [presets, setPresets] = useState<Preset[]>(() => loadPresets())
   const [presetName, setPresetName] = useState('')
   const [selectedPresetId, setSelectedPresetId] = useState<string>('')
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
 
   useEffect(() => {
     savePresets(presets)
@@ -286,6 +288,10 @@ export function ImportsPage() {
   useEffect(() => {
     if (view === 'history') loadHistory()
   }, [view])
+
+  function openFilePicker() {
+    fileInputRef.current?.click()
+  }
 
   async function handleFile(f: File) {
     setError(null)
@@ -757,19 +763,90 @@ export function ImportsPage() {
 
           {step === 'upload' ? (
             <div className="mt-4">
-              <label className="block">
-                <span className="text-sm font-medium text-zinc-900">{t('imports.chooseFile')}</span>
-                <input
-                  type="file"
-                  accept=".xlsx,.csv"
-                  className="mt-2 block w-full text-sm"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0]
-                    if (f) handleFile(f)
-                  }}
-                />
-              </label>
-              <p className="mt-2 text-xs text-zinc-500">{t('imports.fileHint')}</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.csv"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) handleFile(f)
+                }}
+              />
+
+              <div
+                onDragEnter={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setIsDragging(true)
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setIsDragging(true)
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setIsDragging(false)
+                }}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setIsDragging(false)
+                  const f = e.dataTransfer.files?.[0]
+                  if (f) handleFile(f)
+                }}
+                className={`rounded-2xl border-2 border-dashed p-8 transition ${
+                  isDragging
+                    ? 'border-zinc-900 bg-zinc-100'
+                    : 'border-zinc-300 bg-zinc-50 hover:border-zinc-400 hover:bg-zinc-100/60'
+                }`}
+              >
+                <div className="mx-auto flex max-w-2xl flex-col items-center text-center">
+                  <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-xs font-medium tracking-wide text-zinc-500">
+                    CSV / XLSX
+                  </div>
+
+                  <h2 className="mt-4 text-2xl font-semibold text-zinc-900">{t('imports.dropzoneTitle')}</h2>
+                  <p className="mt-2 max-w-xl text-sm text-zinc-600">{t('imports.dropzoneSubtitle')}</p>
+
+                  <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={openFilePicker}
+                      className="rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-zinc-800"
+                    >
+                      {t('imports.uploadCta')}
+                    </button>
+
+                    <span className="text-sm text-zinc-400">{t('imports.dropzoneOr')}</span>
+
+                    <span className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700">
+                      {t('imports.dropzoneBrowse')}
+                    </span>
+                  </div>
+
+                  <div className="mt-6 grid w-full gap-3 text-left sm:grid-cols-3">
+                    <div className="rounded-xl border border-zinc-200 bg-white p-4">
+                      <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">{t('imports.dropzoneFormats')}</div>
+                      <div className="mt-2 text-sm text-zinc-700">.csv, .xlsx</div>
+                    </div>
+
+                    <div className="rounded-xl border border-zinc-200 bg-white p-4">
+                      <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">{t('imports.step.dedup')}</div>
+                      <div className="mt-2 text-sm text-zinc-700">{t('imports.dropzoneDedupHint')}</div>
+                    </div>
+
+                    <div className="rounded-xl border border-zinc-200 bg-white p-4">
+                      <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">{t('imports.dropzoneSafe')}</div>
+                      <div className="mt-2 text-sm text-zinc-700">{t('imports.dropzoneUndoHint')}</div>
+                    </div>
+                  </div>
+
+                  <p className="mt-4 text-xs text-zinc-500">{t('imports.fileHint')}</p>
+                </div>
+              </div>
             </div>
           ) : null}
 
