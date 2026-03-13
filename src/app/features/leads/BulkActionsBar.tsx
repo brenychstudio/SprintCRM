@@ -116,9 +116,6 @@ export function BulkActionsBar({ selectedIds, leadsById, onClear }: Props) {
 
   const bulkArchiveMutation = useMutation({
     mutationFn: async () => {
-      const ok = window.confirm(t('leads.bulk.archiveConfirm', { count: activeSelected.length }))
-      if (!ok) return
-
       await runWithLimit(activeSelected, 10, async (lead) => {
         await updateLead(lead.id, { status: 'archived' })
       })
@@ -131,9 +128,6 @@ export function BulkActionsBar({ selectedIds, leadsById, onClear }: Props) {
 
   const bulkRestoreMutation = useMutation({
     mutationFn: async () => {
-      const ok = window.confirm(t('leads.bulk.restoreConfirm', { count: archivedSelected.length }))
-      if (!ok) return
-
       await runWithLimit(archivedSelected, 10, async (lead) => {
         await updateLead(lead.id, { status: 'active' })
       })
@@ -146,9 +140,6 @@ export function BulkActionsBar({ selectedIds, leadsById, onClear }: Props) {
 
   const bulkDeleteMutation = useMutation({
     mutationFn: async () => {
-      const ok = window.confirm(t('leads.bulk.deleteConfirm', { count: archivedSelected.length }))
-      if (!ok) return
-
       await runWithLimit(archivedSelected, 10, async (lead) => {
         await deleteLeadPermanently(lead.id)
       })
@@ -158,6 +149,27 @@ export function BulkActionsBar({ selectedIds, leadsById, onClear }: Props) {
       onClear()
     },
   })
+
+  function handleBulkArchive() {
+    if (!activeSelected.length) return
+    const ok = window.confirm(t('leads.bulk.archiveConfirm', { count: activeSelected.length }))
+    if (!ok) return
+    bulkArchiveMutation.mutate()
+  }
+
+  function handleBulkRestore() {
+    if (!archivedSelected.length) return
+    const ok = window.confirm(t('leads.bulk.restoreConfirm', { count: archivedSelected.length }))
+    if (!ok) return
+    bulkRestoreMutation.mutate()
+  }
+
+  function handleBulkDelete() {
+    if (!archivedSelected.length) return
+    const ok = window.confirm(t('leads.bulk.deleteConfirm', { count: archivedSelected.length }))
+    if (!ok) return
+    bulkDeleteMutation.mutate()
+  }
 
   const busy =
     bulkTouchMutation.isPending ||
@@ -265,7 +277,7 @@ export function BulkActionsBar({ selectedIds, leadsById, onClear }: Props) {
 
           <button
             type="button"
-            onClick={() => bulkArchiveMutation.mutate()}
+            onClick={handleBulkArchive}
             className="rounded-xl border border-red-200 px-3 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-60"
             disabled={busy || activeSelected.length === 0}
           >
@@ -274,7 +286,7 @@ export function BulkActionsBar({ selectedIds, leadsById, onClear }: Props) {
 
           <button
             type="button"
-            onClick={() => bulkRestoreMutation.mutate()}
+            onClick={handleBulkRestore}
             className="rounded-xl border border-emerald-200 px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
             disabled={busy || archivedSelected.length === 0}
           >
@@ -283,7 +295,7 @@ export function BulkActionsBar({ selectedIds, leadsById, onClear }: Props) {
 
           <button
             type="button"
-            onClick={() => bulkDeleteMutation.mutate()}
+            onClick={handleBulkDelete}
             className="rounded-xl border border-red-300 px-3 py-2 text-sm text-red-700 hover:bg-red-100 disabled:opacity-60"
             disabled={busy || archivedSelected.length === 0}
           >

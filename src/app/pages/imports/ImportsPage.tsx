@@ -330,7 +330,7 @@ export function ImportsPage() {
       if (e) throw e
       setHistory(((data ?? []) as any[]) as ImportRow[])
     } catch {
-      setError('Failed to load import history.')
+      setError(t('imports.history.loadError'))
     } finally {
       setHistoryLoading(false)
     }
@@ -418,7 +418,8 @@ export function ImportsPage() {
     const m = row.mapping_json as Mapping | undefined
     if (!m) return
     const id = `p_${Math.random().toString(16).slice(2)}`
-    const name = (row.file_name ? `From ${row.file_name}` : 'From import') + ` (${new Date().toLocaleDateString()})`
+    const baseName = row.file_name ? t('imports.preset.fromFile', { file: row.file_name }) : t('imports.preset.fromImport')
+    const name = `${baseName} (${new Date().toLocaleDateString()})`
     const preset: Preset = { id, name, mapping: m, createdAt: new Date().toISOString() }
     setPresets((prev) => [preset, ...prev].slice(0, 20))
     setSelectedPresetId(id)
@@ -426,7 +427,7 @@ export function ImportsPage() {
 
   async function undoImport(importId: string) {
     if (!importId) return
-    const ok = window.confirm('Undo this import? This will delete all leads created by that import.')
+    const ok = window.confirm(t('imports.history.undoConfirm'))
     if (!ok) return
 
     setUndoingId(importId)
@@ -462,7 +463,7 @@ export function ImportsPage() {
       setStep('upload')
       setView('history')
     } catch {
-      setError('Failed to undo import. Ensure DB has leads.source_import_id and your RLS allows delete within org.')
+      setError(t('imports.history.undoError'))
     } finally {
       setUndoingId(null)
     }
@@ -749,7 +750,7 @@ export function ImportsPage() {
               view === 'wizard' ? 'border-zinc-200 bg-zinc-100 text-zinc-900' : 'border-zinc-200 text-zinc-700 hover:bg-zinc-50'
             }`}
           >
-            Wizard
+            {t('imports.view.wizard')}
           </button>
           <button
             type="button"
@@ -758,7 +759,7 @@ export function ImportsPage() {
               view === 'history' ? 'border-zinc-200 bg-zinc-100 text-zinc-900' : 'border-zinc-200 text-zinc-700 hover:bg-zinc-50'
             }`}
           >
-            History
+            {t('imports.view.history')}
           </button>
 
           {view === 'wizard' && step !== 'upload' ? (
@@ -780,31 +781,31 @@ export function ImportsPage() {
       {view === 'history' ? (
         <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-5">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-zinc-700">Recent imports</p>
+            <p className="text-sm text-zinc-700">{t('imports.history.title')}</p>
             <button
               type="button"
               onClick={loadHistory}
               className="rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
               disabled={historyLoading}
             >
-              Refresh
+              {t('imports.history.refresh')}
             </button>
           </div>
 
-          {historyLoading ? <p className="mt-4 text-sm text-zinc-500">Loading…</p> : null}
-          {!historyLoading && !history.length ? <p className="mt-4 text-sm text-zinc-500">No imports yet.</p> : null}
+          {historyLoading ? <p className="mt-4 text-sm text-zinc-500">{t('imports.history.loading')}</p> : null}
+          {!historyLoading && !history.length ? <p className="mt-4 text-sm text-zinc-500">{t('imports.history.empty')}</p> : null}
 
           {!!history.length ? (
             <div className="mt-4 overflow-hidden rounded-xl border border-zinc-200">
               <table className="min-w-full divide-y divide-zinc-200 text-sm">
                 <thead className="bg-zinc-50 text-left text-xs uppercase tracking-wide text-zinc-500">
                   <tr>
-                    <th className="px-3 py-2 font-medium">File</th>
-                    <th className="px-3 py-2 font-medium">Created</th>
-                    <th className="px-3 py-2 font-medium">Imported</th>
-                    <th className="px-3 py-2 font-medium">Skipped</th>
-                    <th className="px-3 py-2 font-medium">Status</th>
-                    <th className="px-3 py-2 font-medium text-right">Actions</th>
+                    <th className="px-3 py-2 font-medium">{t('imports.history.table.file')}</th>
+                    <th className="px-3 py-2 font-medium">{t('imports.history.table.created')}</th>
+                    <th className="px-3 py-2 font-medium">{t('imports.history.table.imported')}</th>
+                    <th className="px-3 py-2 font-medium">{t('imports.history.table.skipped')}</th>
+                    <th className="px-3 py-2 font-medium">{t('imports.history.table.status')}</th>
+                    <th className="px-3 py-2 font-medium text-right">{t('imports.history.table.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-200 bg-white text-zinc-700">
@@ -817,7 +818,7 @@ export function ImportsPage() {
                         <td className="px-3 py-2">{formatDateTime(row.created_at)}</td>
                         <td className="px-3 py-2">{row.rows_imported ?? 0}</td>
                         <td className="px-3 py-2">{row.rows_skipped ?? 0}</td>
-                        <td className="px-3 py-2">{reverted ? 'Reverted' : 'OK'}</td>
+                        <td className="px-3 py-2">{reverted ? t('imports.history.status.reverted') : t('imports.history.status.ok')}</td>
                         <td className="px-3 py-2">
                           <div className="flex justify-end gap-2">
                             <button
@@ -826,7 +827,7 @@ export function ImportsPage() {
                               className="rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
                               disabled={!row.mapping_json}
                             >
-                              Save preset
+                              {t('imports.preset.save')}
                             </button>
                             <button
                               type="button"
@@ -834,7 +835,7 @@ export function ImportsPage() {
                               className="rounded-xl border border-red-200 px-3 py-2 text-sm text-red-700 transition hover:bg-red-50 disabled:opacity-60"
                               disabled={reverted || undoingId === id}
                             >
-                              {undoingId === id ? 'Undoing…' : 'Undo'}
+                              {undoingId === id ? t('imports.history.undoing') : t('imports.history.undo')}
                             </button>
                           </div>
                         </td>
@@ -904,7 +905,7 @@ export function ImportsPage() {
               >
                 <div className="mx-auto flex max-w-2xl flex-col items-center text-center">
                   <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-xs font-medium tracking-wide text-zinc-500">
-                    CSV / XLSX
+                    {t('imports.fileBadge')}
                   </div>
 
                   <h2 className="mt-4 text-2xl font-semibold text-zinc-900">{t('imports.dropzoneTitle')}</h2>
@@ -1005,14 +1006,14 @@ export function ImportsPage() {
 
               <div className="mb-4 grid gap-3 md:grid-cols-3">
                 <div className="md:col-span-2">
-                  <div className="text-xs text-zinc-500">Mapping presets</div>
+                  <div className="text-xs text-zinc-500">{t('imports.presets.mappingTitle')}</div>
                   <div className="mt-1 flex gap-2">
                     <select
                       value={selectedPresetId}
                       onChange={(e) => setSelectedPresetId(e.target.value)}
                       className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-200"
                     >
-                      <option value="">Select preset…</option>
+                      <option value="">{t('imports.presets.selectPlaceholder')}</option>
                       {presets.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.name}
@@ -1025,18 +1026,18 @@ export function ImportsPage() {
                       disabled={!selectedPresetId}
                       className="rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
                     >
-                      Apply
+                      {t('imports.preset.apply')}
                     </button>
                   </div>
                 </div>
 
                 <div>
-                  <div className="text-xs text-zinc-500">Save preset</div>
+                  <div className="text-xs text-zinc-500">{t('imports.preset.saveLabel')}</div>
                   <div className="mt-1 flex gap-2">
                     <input
                       value={presetName}
                       onChange={(e) => setPresetName(e.target.value)}
-                      placeholder="Preset name…"
+                      placeholder={t('imports.preset.namePlaceholder')}
                       className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-200"
                     />
                     <button
@@ -1044,7 +1045,7 @@ export function ImportsPage() {
                       onClick={saveCurrentMappingAsPreset}
                       className="rounded-xl bg-zinc-900 px-3 py-2 text-sm text-white transition hover:bg-zinc-800"
                     >
-                      Save
+                      {t('imports.preset.saveButton')}
                     </button>
                   </div>
                 </div>
@@ -1183,7 +1184,7 @@ export function ImportsPage() {
                     className="rounded-xl border border-red-200 px-3 py-2 text-sm text-red-700 transition hover:bg-red-50"
                     onClick={() => undoImport(report.importId as string)}
                   >
-                    Undo this import
+                    {t('imports.report.undoThisImport')}
                   </button>
                 ) : null}
 
@@ -1192,7 +1193,7 @@ export function ImportsPage() {
                   className="rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
                   onClick={() => setView('history')}
                 >
-                  Open history
+                  {t('imports.report.openHistory')}
                 </button>
 
                 <button

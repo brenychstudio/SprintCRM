@@ -54,9 +54,16 @@ export function TodayPage() {
   const endOfToday = useMemo(() => endOfTodayISO(), [])
 
   const queueQuery = useQuery({
-    queryKey: leadsQueryKeys.list({ due: 'today' }),
+    queryKey: leadsQueryKeys.list({ scope: 'today-queue' }),
     queryFn: () => listLeads(),
-    select: (leads) => leads.filter((lead) => lead.next_action_at <= endOfToday),
+    select: (leads) =>
+      leads.filter(
+        (lead) =>
+          lead.status === 'active' &&
+          lead.stage !== 'won' &&
+          lead.stage !== 'lost' &&
+          lead.next_action_at <= endOfToday,
+      ),
   })
 
   const doneMutation = useMutation({
@@ -69,6 +76,18 @@ export function TodayPage() {
         next_action: next.next_action,
         next_action_at: nextActionAt,
       })
+
+      if (updatedLead.next_action !== lead.next_action || updatedLead.next_action_at !== lead.next_action_at) {
+        await logActivity({
+          lead_id: lead.id,
+          type: 'next_action_set',
+          meta: {
+            stage: lead.stage,
+            next_action: updatedLead.next_action,
+            next_action_at: updatedLead.next_action_at,
+          },
+        })
+      }
 
       return updatedLead
     },

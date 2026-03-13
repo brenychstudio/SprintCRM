@@ -98,8 +98,6 @@ export function LeadsPage() {
       const leadNiche = lead.niche?.trim() ?? ''
       const leadCity = lead.country_city?.trim() ?? ''
 
-      // Safety polish:
-      // archived leads are hidden from normal work views unless Archived smart view is selected
       if (smartView === 'archived') {
         if (lead.status !== 'archived') return false
       } else {
@@ -166,7 +164,7 @@ export function LeadsPage() {
   const clearSelection = () => setSelectedIds([])
 
   const createMutation = useMutation({
-    mutationFn: () => createLead({ company_name: 'New company' }),
+    mutationFn: () => createLead({ company_name: t('leads.newCompanyDefault') }),
     onSuccess: (createdLead) => {
       queryClient.invalidateQueries({ queryKey: leadsQueryKeys.all })
       setSelectedLead(createdLead)
@@ -430,7 +428,7 @@ export function LeadsPage() {
                   checked={allSelected}
                   onChange={toggleAll}
                   className="h-4 w-4 rounded border-zinc-300"
-                  aria-label="Select all"
+                  aria-label={t('leads.a11y.selectAll')}
                 />
               </th>
               <th className="px-4 py-3 font-medium">{t('leads.table.company')}</th>
@@ -458,20 +456,12 @@ export function LeadsPage() {
                       checked={checked}
                       onChange={() => toggleOne(lead.id)}
                       className="h-4 w-4 rounded border-zinc-300"
-                      aria-label="Select lead"
+                      aria-label={t('leads.a11y.selectLead')}
                     />
                   </td>
 
                   <td className="px-4 py-3 align-top">
-                    <div className="flex items-center gap-2">
-                      <div className="font-medium text-zinc-900">{lead.company_name}</div>
-                      {lead.status === 'archived' ? (
-                        <span className="rounded-full bg-zinc-100 px-2 py-1 text-[11px] text-zinc-600">
-                          {t('leads.smartViews.archived')}
-                        </span>
-                      ) : null}
-                    </div>
-
+                    <div className="font-medium text-zinc-900">{lead.company_name}</div>
                     <div className="mt-1 space-y-1 text-xs text-zinc-500">
                       {lead.email ? <div>{lead.email}</div> : null}
                       {lead.website_domain || lead.website ? <div>{lead.website_domain ?? lead.website}</div> : null}

@@ -180,11 +180,11 @@ export function PipelinePage() {
 
       <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <div className="rounded-2xl border border-zinc-200 bg-white p-4 xl:col-span-2">
-          <div className="text-xs text-zinc-500">Active work</div>
+          <div className="text-xs text-zinc-500">{t('pipeline.kpi.activeWork')}</div>
           <div className="mt-1 text-2xl font-semibold text-zinc-900">{summary.activeWork}</div>
         </div>
         <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-          <div className="text-xs text-zinc-500">Overdue</div>
+          <div className="text-xs text-zinc-500">{t('pipeline.kpi.overdue')}</div>
           <div className="mt-1 text-2xl font-semibold text-zinc-900">{summary.overdue}</div>
         </div>
         <div className="rounded-2xl border border-zinc-200 bg-white p-4">
@@ -235,8 +235,8 @@ export function PipelinePage() {
       <div className="grid gap-5 xl:grid-cols-[1.6fr_1fr]">
         <div className="rounded-2xl border border-zinc-200 bg-white p-4">
           <div className="mb-4">
-            <h2 className="text-base font-semibold text-zinc-900">Active pipeline</h2>
-            <p className="mt-1 text-sm text-zinc-500">Focus on live conversations and proposals.</p>
+            <h2 className="text-base font-semibold text-zinc-900">{t('pipeline.section.active.title')}</h2>
+            <p className="mt-1 text-sm text-zinc-500">{t('pipeline.section.active.subtitle')}</p>
           </div>
 
           <div className="grid h-[72vh] min-h-[560px] max-h-[820px] gap-4 xl:grid-cols-3">
@@ -324,7 +324,7 @@ export function PipelinePage() {
 
                     {!grouped[stage].length ? (
                       <div className="rounded-xl border border-dashed border-zinc-200 px-3 py-6 text-center text-sm text-zinc-400">
-                        No leads in this stage.
+                        {t('pipeline.emptyStage')}
                       </div>
                     ) : null}
                   </div>
@@ -336,8 +336,8 @@ export function PipelinePage() {
 
         <div className="rounded-2xl border border-zinc-200 bg-white p-4">
           <div className="mb-4">
-            <h2 className="text-base font-semibold text-zinc-900">Secondary stages</h2>
-            <p className="mt-1 text-sm text-zinc-500">Reference stages outside the main working flow.</p>
+            <h2 className="text-base font-semibold text-zinc-900">{t('pipeline.section.secondary.title')}</h2>
+            <p className="mt-1 text-sm text-zinc-500">{t('pipeline.section.secondary.subtitle')}</p>
           </div>
 
           <div className="space-y-4">
@@ -370,12 +370,12 @@ export function PipelinePage() {
 
                   {!grouped[stage].length ? (
                     <div className="rounded-xl border border-dashed border-zinc-200 px-3 py-4 text-center text-sm text-zinc-400">
-                      Empty
+                      {t('pipeline.secondary.empty')}
                     </div>
                   ) : null}
 
                   {grouped[stage].length > 5 ? (
-                    <div className="text-xs text-zinc-500">+ {grouped[stage].length - 5} more</div>
+                    <div className="text-xs text-zinc-500">{t('pipeline.secondary.more', { count: grouped[stage].length - 5 })}</div>
                   ) : null}
                 </div>
               </section>

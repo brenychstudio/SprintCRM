@@ -62,7 +62,7 @@ export function LeadDrawer({
     queryFn: () => listActivities(lead.id),
   })
 
-  const recentActivities = useMemo(() => (activitiesQuery.data ?? []).slice(0, 8), [activitiesQuery.data])
+  const recentActivities = useMemo(() => (activitiesQuery.data ?? []).slice(0, 5), [activitiesQuery.data])
 
   const handleChanged = (updatedLead: Lead) => {
     onLeadChange?.(updatedLead)
@@ -167,19 +167,17 @@ export function LeadDrawer({
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      if (lead.status !== 'archived') {
-        throw new Error('Lead must be archived before permanent delete')
-      }
-
-      const ok = window.confirm(t('drawer.deleteConfirm'))
-      if (!ok) return
-
       await deleteLeadPermanently(lead.id)
     },
-    onSuccess: () => {
-      handleDeleted()
-    },
+    onSuccess: handleDeleted,
   })
+
+  function handlePermanentDelete() {
+    if (lead.status !== 'archived') return
+    const ok = window.confirm(t('drawer.deleteConfirm'))
+    if (!ok) return
+    deleteMutation.mutate()
+  }
 
   const isBusy =
     saveMutation.isPending ||
@@ -281,7 +279,7 @@ export function LeadDrawer({
             <label className="space-y-1">
               <span className="text-xs text-zinc-500">{t('drawer.notes')}</span>
               <textarea
-                rows={5}
+                rows={3}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 className="w-full rounded-2xl border border-zinc-200 px-3 py-3 text-sm"
@@ -289,23 +287,36 @@ export function LeadDrawer({
             </label>
           </div>
 
-          <div className="mt-5 rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-            <div className="text-xs text-zinc-500">{t('drawer.activityTitle')}</div>
+          <div className="mt-6 rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold text-zinc-900">{t('drawer.activityTitle')}</h3>
+              {!!activitiesQuery.data?.length ? (
+                <span className="text-xs text-zinc-500">
+                  {recentActivities.length} / {activitiesQuery.data?.length}
+                </span>
+              ) : null}
+            </div>
 
-            {activitiesQuery.isLoading ? <p className="mt-3 text-sm text-zinc-500">{t('drawer.loadingActivities')}</p> : null}
+            {activitiesQuery.isLoading ? (
+              <p className="mt-3 text-sm text-zinc-500">{t('drawer.loadingActivities')}</p>
+            ) : null}
 
             {!activitiesQuery.isLoading && !recentActivities.length ? (
               <p className="mt-3 text-sm text-zinc-500">{t('drawer.noActivities')}</p>
             ) : null}
 
-            <ul className="mt-3 space-y-2">
-              {recentActivities.map((activity) => (
-                <li key={activity.id} className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm">
-                  <p className="font-medium text-zinc-800">{t(`activity.${activity.type}`)}</p>
-                  <p className="text-xs text-zinc-500">{new Date(activity.at).toLocaleString()}</p>
-                </li>
-              ))}
-            </ul>
+            {!!recentActivities.length ? (
+              <div className="mt-3 max-h-64 overflow-y-auto pr-1">
+                <ul className="space-y-2">
+                  {recentActivities.map((activity) => (
+                    <li key={activity.id} className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+                      <p className="text-sm font-medium leading-tight text-zinc-800">{t(`activity.${activity.type}`)}</p>
+                      <p className="mt-1 text-xs text-zinc-500">{new Date(activity.at).toLocaleString()}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
 
           <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4">
@@ -328,14 +339,16 @@ export function LeadDrawer({
                 {lead.status === 'archived' ? t('drawer.restore') : t('drawer.archive')}
               </button>
 
-              <button
-                type="button"
-                onClick={() => deleteMutation.mutate()}
-                disabled={isBusy || lead.status !== 'archived'}
-                className="rounded-xl border border-red-300 px-3 py-2 text-sm text-red-700 hover:bg-red-100 disabled:opacity-50"
-              >
-                {t('drawer.deletePermanent')}
-              </button>
+              {lead.status === 'archived' ? (
+                <button
+                  type="button"
+                  onClick={handlePermanentDelete}
+                  disabled={isBusy}
+                  className="rounded-xl border border-red-300 px-3 py-2 text-sm text-red-700 hover:bg-red-100 disabled:opacity-50"
+                >
+                  {t('drawer.deletePermanent')}
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
