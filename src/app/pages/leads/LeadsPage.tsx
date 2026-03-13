@@ -42,7 +42,6 @@ export function LeadsPage() {
 
   const allIds = useMemo(() => (leadsQuery.data ?? []).map((l) => l.id), [leadsQuery.data])
 
-  // If filters change, drop selections that are no longer visible
   useEffect(() => {
     setSelectedIds((prev) => prev.filter((id) => leadsById[id]))
   }, [leadsById])
@@ -73,6 +72,23 @@ export function LeadsPage() {
     },
   })
 
+  const summary = useMemo(() => {
+    const leads = leadsQuery.data ?? []
+    let overdue = 0
+    let activeContacts = 0
+
+    for (const lead of leads) {
+      if (new Date(lead.next_action_at).getTime() < Date.now()) overdue++
+      if (lead.status === 'active' && ['contacted', 'replied', 'proposal'].includes(lead.stage)) activeContacts++
+    }
+
+    return {
+      total: leads.length,
+      overdue,
+      activeContacts,
+    }
+  }, [leadsQuery.data])
+
   return (
     <section>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -80,6 +96,7 @@ export function LeadsPage() {
           <h1 className="text-2xl font-semibold text-zinc-900">{t('leads.title')}</h1>
           <p className="mt-1 text-sm text-zinc-600">{t('leads.subtitle')}</p>
         </div>
+
         <button
           type="button"
           onClick={() => createMutation.mutate()}
@@ -90,7 +107,22 @@ export function LeadsPage() {
         </button>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+          <div className="text-xs text-zinc-500">{t('reports.kpi.active')}</div>
+          <div className="mt-1 text-2xl font-semibold text-zinc-900">{summary.total}</div>
+        </div>
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+          <div className="text-xs text-zinc-500">{t('activeContacts.kpi.total')}</div>
+          <div className="mt-1 text-2xl font-semibold text-zinc-900">{summary.activeContacts}</div>
+        </div>
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+          <div className="text-xs text-zinc-500">{t('activeContacts.kpi.overdue')}</div>
+          <div className="mt-1 text-2xl font-semibold text-zinc-900">{summary.overdue}</div>
+        </div>
+      </div>
+
+      <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.4fr)_220px_220px]">
         <input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
@@ -127,11 +159,12 @@ export function LeadsPage() {
       {leadsQuery.isLoading ? (
         <div className="mt-4 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">{t('leads.loading')}</div>
       ) : null}
+
       {leadsQuery.isError ? (
         <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{t('leads.error')}</div>
       ) : null}
 
-      <div className="mt-5 overflow-hidden rounded-2xl border border-zinc-200">
+      <div className="mt-5 overflow-hidden rounded-2xl border border-zinc-200 bg-white">
         <table className="min-w-full divide-y divide-zinc-200 text-sm">
           <thead className="bg-zinc-50 text-left text-xs uppercase tracking-wide text-zinc-500">
             <tr>
@@ -146,23 +179,25 @@ export function LeadsPage() {
                 />
               </th>
               <th className="px-4 py-3 font-medium">{t('leads.table.company')}</th>
-              <th className="px-4 py-3 font-medium">{t('leads.table.email')}</th>
-              <th className="px-4 py-3 font-medium">{t('leads.table.website')}</th>
               <th className="px-4 py-3 font-medium">{t('leads.table.stage')}</th>
+              <th className="px-4 py-3 font-medium">{t('drawer.nextAction')}</th>
               <th className="px-4 py-3 font-medium">{t('leads.table.nextActionAt')}</th>
+              <th className="px-4 py-3 font-medium">{t('activeContacts.table.lastTouch')}</th>
             </tr>
           </thead>
 
           <tbody className="divide-y divide-zinc-200 bg-white text-zinc-700">
             {leadsQuery.data?.map((lead) => {
               const checked = selectedIds.includes(lead.id)
+              const overdue = new Date(lead.next_action_at).getTime() < Date.now()
+
               return (
                 <tr
                   key={lead.id}
                   onClick={() => setSelectedLead(lead)}
                   className={`cursor-pointer transition hover:bg-zinc-50 ${checked ? 'bg-zinc-50' : ''}`}
                 >
-                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-4 py-3 align-top" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={checked}
@@ -171,18 +206,41 @@ export function LeadsPage() {
                       aria-label="Select lead"
                     />
                   </td>
-                  <td className="px-4 py-3 text-zinc-900">{lead.company_name}</td>
-                  <td className="px-4 py-3">{lead.email ?? '—'}</td>
-                  <td className="px-4 py-3">{lead.website_domain ?? lead.website ?? '—'}</td>
-                  <td className="px-4 py-3">{t(`leads.filter.stage.${lead.stage}`)}</td>
-                  <td className="px-4 py-3">{new Date(lead.next_action_at).toLocaleString()}</td>
+
+                  <td className="px-4 py-3 align-top">
+                    <div className="font-medium text-zinc-900">{lead.company_name}</div>
+                    <div className="mt-1 space-y-1 text-xs text-zinc-500">
+                      {lead.email ? <div>{lead.email}</div> : null}
+                      {lead.website_domain || lead.website ? <div>{lead.website_domain ?? lead.website}</div> : null}
+                      {lead.niche ? <div>{lead.niche}</div> : null}
+                    </div>
+                  </td>
+
+                  <td className="px-4 py-3 align-top">
+                    <span className="rounded-full bg-zinc-100 px-2 py-1 text-xs text-zinc-700">
+                      {t(`leads.filter.stage.${lead.stage}`)}
+                    </span>
+                  </td>
+
+                  <td className="px-4 py-3 align-top text-zinc-700">{t(`action.${lead.next_action}`)}</td>
+
+                  <td className="px-4 py-3 align-top">
+                    <div className={overdue ? 'text-red-700' : 'text-zinc-700'}>
+                      {new Date(lead.next_action_at).toLocaleString()}
+                    </div>
+                    {overdue ? <div className="mt-1 text-xs text-red-700">{t('activeContacts.table.overdue')}</div> : null}
+                  </td>
+
+                  <td className="px-4 py-3 align-top">
+                    {lead.last_touch_at ? new Date(lead.last_touch_at).toLocaleString() : '—'}
+                  </td>
                 </tr>
               )
             })}
 
             {!leadsQuery.data?.length ? (
               <tr>
-                <td className="px-4 py-6 text-center text-sm text-zinc-500" colSpan={6}>
+                <td className="px-4 py-8 text-center text-sm text-zinc-500" colSpan={6}>
                   {t('leads.empty')}
                 </td>
               </tr>
