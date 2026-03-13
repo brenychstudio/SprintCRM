@@ -37,6 +37,15 @@ type Report = {
   skippedReasons: Record<SkipReason, number>
 }
 
+type SanitySummary = {
+  rowsWithContact: number
+  rowsWithoutContact: number
+  rowsWithoutNiche: number
+  rowsWithoutLocation: number
+  rowsWithInvalidWebsite: number
+  noContactColumnsMapped: boolean
+}
+
 type ImportRow = {
   id: string
   file_name?: string | null
@@ -90,6 +99,47 @@ function extractDomain(input: string) {
   } catch {
     const cleaned = s.replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, '')
     return cleaned || ''
+  }
+}
+
+function analyzeSanity(parsed: Parsed | null, mapping: Mapping | null): SanitySummary | null {
+  if (!parsed || !mapping) return null
+
+  const noContactColumnsMapped = !mapping.email && !mapping.phone && !mapping.website
+
+  let rowsWithContact = 0
+  let rowsWithoutContact = 0
+  let rowsWithoutNiche = 0
+  let rowsWithoutLocation = 0
+  let rowsWithInvalidWebsite = 0
+
+  for (const row of parsed.rows) {
+    const emailRaw = mapping.email ? String(row[mapping.email] ?? '').trim() : ''
+    const phoneRaw = mapping.phone ? String(row[mapping.phone] ?? '').trim() : ''
+    const websiteRaw = mapping.website ? String(row[mapping.website] ?? '').trim() : ''
+    const nicheRaw = mapping.niche ? String(row[mapping.niche] ?? '').trim() : ''
+    const locationRaw = mapping.country_city ? String(row[mapping.country_city] ?? '').trim() : ''
+
+    const email = emailRaw ? normalizeEmail(emailRaw) : ''
+    const phone = phoneRaw ? normalizePhone(phoneRaw) : ''
+    const domain = websiteRaw ? extractDomain(websiteRaw) : ''
+
+    const hasContact = !!(email || phone || domain)
+    if (hasContact) rowsWithContact++
+    else rowsWithoutContact++
+
+    if (!nicheRaw) rowsWithoutNiche++
+    if (!locationRaw) rowsWithoutLocation++
+    if (websiteRaw && !domain) rowsWithInvalidWebsite++
+  }
+
+  return {
+    rowsWithContact,
+    rowsWithoutContact,
+    rowsWithoutNiche,
+    rowsWithoutLocation,
+    rowsWithInvalidWebsite,
+    noContactColumnsMapped,
   }
 }
 
@@ -270,6 +320,7 @@ export function ImportsPage() {
 
   const headers = parsed?.headers ?? []
   const previewRows = useMemo(() => parsed?.rows.slice(0, 10) ?? [], [parsed])
+  const sanitySummary = useMemo(() => analyzeSanity(parsed, mapping), [parsed, mapping])
 
   async function loadHistory() {
     setHistoryLoading(true)
@@ -634,6 +685,54 @@ export function ImportsPage() {
     setPresetName('')
   }
 
+  function renderSanitySummary() {
+    if (!sanitySummary) return null
+
+    return (
+      <div className="mt-4 rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-sm font-medium text-zinc-900">{t('imports.sanity.title')}</div>
+            <div className="mt-1 text-xs text-zinc-500">{t('imports.sanity.subtitle')}</div>
+          </div>
+
+          {sanitySummary.noContactColumnsMapped ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+              {t('imports.sanity.noContactColumnsMapped')}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-xl border border-zinc-200 bg-white p-3">
+            <div className="text-xs text-zinc-500">{t('imports.sanity.rowsWithContact')}</div>
+            <div className="mt-1 text-lg font-semibold text-zinc-900">{sanitySummary.rowsWithContact}</div>
+          </div>
+
+          <div className="rounded-xl border border-zinc-200 bg-white p-3">
+            <div className="text-xs text-zinc-500">{t('imports.sanity.rowsWithoutContact')}</div>
+            <div className="mt-1 text-lg font-semibold text-zinc-900">{sanitySummary.rowsWithoutContact}</div>
+          </div>
+
+          <div className="rounded-xl border border-zinc-200 bg-white p-3">
+            <div className="text-xs text-zinc-500">{t('imports.sanity.rowsWithoutNiche')}</div>
+            <div className="mt-1 text-lg font-semibold text-zinc-900">{sanitySummary.rowsWithoutNiche}</div>
+          </div>
+
+          <div className="rounded-xl border border-zinc-200 bg-white p-3">
+            <div className="text-xs text-zinc-500">{t('imports.sanity.rowsWithoutLocation')}</div>
+            <div className="mt-1 text-lg font-semibold text-zinc-900">{sanitySummary.rowsWithoutLocation}</div>
+          </div>
+
+          <div className="rounded-xl border border-zinc-200 bg-white p-3">
+            <div className="text-xs text-zinc-500">{t('imports.sanity.rowsWithInvalidWebsite')}</div>
+            <div className="mt-1 text-lg font-semibold text-zinc-900">{sanitySummary.rowsWithInvalidWebsite}</div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <section>
       <div className="flex items-start justify-between gap-4">
@@ -902,6 +1001,8 @@ export function ImportsPage() {
 
           {step === 'mapping' && parsed && mapping ? (
             <div className="mt-4">
+              {renderSanitySummary()}
+
               <div className="mb-4 grid gap-3 md:grid-cols-3">
                 <div className="md:col-span-2">
                   <div className="text-xs text-zinc-500">Mapping presets</div>
@@ -993,6 +1094,8 @@ export function ImportsPage() {
 
           {step === 'dedup' && parsed && mapping ? (
             <div className="mt-4">
+              {renderSanitySummary()}
+
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
                   <div className="text-xs text-zinc-500">{t('imports.summary.total')}</div>
@@ -1031,6 +1134,8 @@ export function ImportsPage() {
 
           {step === 'report' && report ? (
             <div className="mt-4">
+              {renderSanitySummary()}
+
               <div className="text-sm text-zinc-700">
                 <span className="font-medium">{report.fileName}</span>
                 {report.importId ? <span className="ml-2 text-xs text-zinc-500">({report.importId})</span> : null}
