@@ -39,21 +39,37 @@ export function BulkActionsBar({ selectedIds, leadsById, onClear }: Props) {
   const qc = useQueryClient()
 
   const selectedLeads = useMemo(() => selectedIds.map((id) => leadsById[id]).filter(Boolean), [selectedIds, leadsById])
+  const activeSelected = useMemo(() => selectedLeads.filter((lead) => lead.status === 'active'), [selectedLeads])
+  const archivedSelected = useMemo(() => selectedLeads.filter((lead) => lead.status === 'archived'), [selectedLeads])
 
   const [stageTo, setStageTo] = useState<LeadStage>('contacted')
   const [nextAction, setNextAction] = useState<NextAction>('follow_up')
   const [nextDate, setNextDate] = useState<string>(() => new Date().toISOString().slice(0, 10))
 
+  const bulkTouchMutation = useMutation({
+    mutationFn: async () => {
+      const nowIso = new Date().toISOString()
+
+      await runWithLimit(activeSelected, 10, async (lead) => {
+        await updateLead(lead.id, { last_touch_at: nowIso })
+        await logActivity({ lead_id: lead.id, type: 'contacted', channel: 'email' })
+      })
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: leadsQueryKeys.all })
+      onClear()
+    },
+  })
+
   const bulkStageMutation = useMutation({
     mutationFn: async () => {
-      if ((stageTo === 'won' || stageTo === 'lost') && !window.confirm(`Apply stage "${stageTo}" to ${selectedIds.length} leads?`)) {
+      if ((stageTo === 'won' || stageTo === 'lost') && !window.confirm(t('leads.bulk.archiveConfirm', { count: activeSelected.length }))) {
         return
       }
 
       const nowIso = new Date().toISOString()
 
-      await runWithLimit(selectedLeads, 10, async (lead) => {
-        if (!lead) return
+      await runWithLimit(activeSelected, 10, async (lead) => {
         if (lead.stage === stageTo) return
 
         const next = defaultNextForStage(stageTo)
@@ -86,9 +102,7 @@ export function BulkActionsBar({ selectedIds, leadsById, onClear }: Props) {
     mutationFn: async () => {
       const atIso = isoAtMadridNineAMForDateInput(nextDate)
 
-      await runWithLimit(selectedLeads, 10, async (lead) => {
-        if (!lead) return
-
+      await runWithLimit(activeSelected, 10, async (lead) => {
         await updateLead(lead.id, { next_action: nextAction, next_action_at: atIso })
 
         await logActivity({
@@ -104,13 +118,12 @@ export function BulkActionsBar({ selectedIds, leadsById, onClear }: Props) {
     },
   })
 
-  const bulkInactiveMutation = useMutation({
+  const bulkArchiveMutation = useMutation({
     mutationFn: async () => {
-      if (!window.confirm(`Mark ${selectedIds.length} leads as inactive?`)) return
+      if (!window.confirm(t('leads.bulk.archiveConfirm', { count: activeSelected.length }))) return
 
-      await runWithLimit(selectedLeads, 10, async (lead) => {
-        if (!lead) return
-        await updateLead(lead.id, { status: 'inactive' as any })
+      await runWithLimit(activeSelected, 10, async (lead) => {
+        await updateLead(lead.id, { status: 'archived' })
       })
     },
     onSuccess: () => {
@@ -119,14 +132,38 @@ export function BulkActionsBar({ selectedIds, leadsById, onClear }: Props) {
     },
   })
 
-  const busy = bulkStageMutation.isPending || bulkNextMutation.isPending || bulkInactiveMutation.isPending
+  const bulkRestoreMutation = useMutation({
+    mutationFn: async () => {
+      if (!window.confirm(t('leads.bulk.restoreConfirm', { count: archivedSelected.length }))) return
+
+      await runWithLimit(archivedSelected, 10, async (lead) => {
+        await updateLead(lead.id, { status: 'active' })
+      })
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: leadsQueryKeys.all })
+      onClear()
+    },
+  })
+
+  const busy =
+    bulkTouchMutation.isPending ||
+    bulkStageMutation.isPending ||
+    bulkNextMutation.isPending ||
+    bulkArchiveMutation.isPending ||
+    bulkRestoreMutation.isPending
 
   return (
     <div className="mb-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-sm text-zinc-700">
-          <span className="font-medium text-zinc-900">{t('leads.bulk.selected')}</span>:{' '}
-          <span className="font-semibold text-zinc-900">{selectedIds.length}</span>
+        <div className="space-y-1 text-sm text-zinc-700">
+          <div>
+            <span className="font-medium text-zinc-900">{t('leads.bulk.selected')}</span>:{' '}
+            <span className="font-semibold text-zinc-900">{selectedIds.length}</span>
+          </div>
+          <div className="text-xs text-zinc-500">
+            {t('leads.bulk.activeCount')}: {activeSelected.length} · {t('leads.smartViews.archived')}: {archivedSelected.length}
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -141,12 +178,23 @@ export function BulkActionsBar({ selectedIds, leadsById, onClear }: Props) {
 
           <span className="h-5 w-px bg-zinc-200" aria-hidden="true" />
 
+          <button
+            type="button"
+            onClick={() => bulkTouchMutation.mutate()}
+            className="rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 disabled:opacity-60"
+            disabled={busy || activeSelected.length === 0}
+          >
+            {t('leads.bulk.logTouch')}
+          </button>
+
+          <span className="h-5 w-px bg-zinc-200" aria-hidden="true" />
+
           <div className="flex flex-wrap items-center gap-2">
             <select
               value={stageTo}
               onChange={(e) => setStageTo(e.target.value as LeadStage)}
               className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-200"
-              disabled={busy}
+              disabled={busy || activeSelected.length === 0}
             >
               {stageOptions.map((s) => (
                 <option key={s} value={s}>
@@ -159,7 +207,7 @@ export function BulkActionsBar({ selectedIds, leadsById, onClear }: Props) {
               type="button"
               onClick={() => bulkStageMutation.mutate()}
               className="rounded-xl bg-zinc-900 px-3 py-2 text-sm text-white hover:bg-zinc-800 disabled:opacity-60"
-              disabled={busy}
+              disabled={busy || activeSelected.length === 0}
             >
               {t('leads.bulk.applyStage')}
             </button>
@@ -172,7 +220,7 @@ export function BulkActionsBar({ selectedIds, leadsById, onClear }: Props) {
               value={nextAction}
               onChange={(e) => setNextAction(e.target.value as NextAction)}
               className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-200"
-              disabled={busy}
+              disabled={busy || activeSelected.length === 0}
             >
               {nextActionOptions.map((a) => (
                 <option key={a} value={a}>
@@ -186,14 +234,14 @@ export function BulkActionsBar({ selectedIds, leadsById, onClear }: Props) {
               value={nextDate}
               onChange={(e) => setNextDate(e.target.value)}
               className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-200"
-              disabled={busy}
+              disabled={busy || activeSelected.length === 0}
             />
 
             <button
               type="button"
               onClick={() => bulkNextMutation.mutate()}
               className="rounded-xl bg-zinc-900 px-3 py-2 text-sm text-white hover:bg-zinc-800 disabled:opacity-60"
-              disabled={busy}
+              disabled={busy || activeSelected.length === 0}
             >
               {t('leads.bulk.applyNext')}
             </button>
@@ -203,11 +251,20 @@ export function BulkActionsBar({ selectedIds, leadsById, onClear }: Props) {
 
           <button
             type="button"
-            onClick={() => bulkInactiveMutation.mutate()}
+            onClick={() => bulkArchiveMutation.mutate()}
             className="rounded-xl border border-red-200 px-3 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-60"
-            disabled={busy}
+            disabled={busy || activeSelected.length === 0}
           >
-            {t('leads.bulk.markInactive')}
+            {t('leads.bulk.archive')}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => bulkRestoreMutation.mutate()}
+            className="rounded-xl border border-emerald-200 px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
+            disabled={busy || archivedSelected.length === 0}
+          >
+            {t('leads.bulk.restore')}
           </button>
         </div>
       </div>

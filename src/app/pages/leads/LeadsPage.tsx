@@ -9,7 +9,7 @@ import { endOfTodayISO, startOfTodayISO } from '../../../lib/dates'
 
 const stageValues: Array<LeadStage | 'all'> = ['all', 'new', 'contacted', 'replied', 'proposal', 'won', 'lost']
 const dueValues: Array<LeadDueFilter | 'all'> = ['all', 'today', 'overdue']
-const smartViewValues = ['all', 'overdue', 'active_contacts', 'proposal', 'new'] as const
+const smartViewValues = ['all', 'overdue', 'active_contacts', 'proposal', 'new', 'archived'] as const
 type SmartView = (typeof smartViewValues)[number]
 
 type SavedLeadView = {
@@ -97,6 +97,14 @@ export function LeadsPage() {
       const nextAt = new Date(lead.next_action_at).getTime()
       const leadNiche = lead.niche?.trim() ?? ''
       const leadCity = lead.country_city?.trim() ?? ''
+
+      // Safety polish:
+      // archived leads are hidden from normal work views unless Archived smart view is selected
+      if (smartView === 'archived') {
+        if (lead.status !== 'archived') return false
+      } else {
+        if (lead.status !== 'active') return false
+      }
 
       // Smart view base
       if (smartView === 'overdue' && !(nextAt < startToday)) return false
@@ -196,6 +204,10 @@ export function LeadsPage() {
       setStage('all')
     }
     if (next === 'new') {
+      setStage('all')
+    }
+    if (next === 'archived') {
+      setDue('all')
       setStage('all')
     }
   }
@@ -451,7 +463,15 @@ export function LeadsPage() {
                   </td>
 
                   <td className="px-4 py-3 align-top">
-                    <div className="font-medium text-zinc-900">{lead.company_name}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium text-zinc-900">{lead.company_name}</div>
+                      {lead.status === 'archived' ? (
+                        <span className="rounded-full bg-zinc-100 px-2 py-1 text-[11px] text-zinc-600">
+                          {t('leads.smartViews.archived')}
+                        </span>
+                      ) : null}
+                    </div>
+
                     <div className="mt-1 space-y-1 text-xs text-zinc-500">
                       {lead.email ? <div>{lead.email}</div> : null}
                       {lead.website_domain || lead.website ? <div>{lead.website_domain ?? lead.website}</div> : null}
