@@ -47,3 +47,85 @@ body,
     filter: blur(0);
   }
 }
+
+
+.crm-shell {
+  background:
+    radial-gradient(circle at 16% 8%, rgba(255, 255, 255, 0.94), transparent 26%),
+    radial-gradient(circle at 78% 12%, rgba(228, 228, 231, 0.62), transparent 28%),
+    linear-gradient(135deg, #f7f7f8 0%, #f4f4f5 45%, #eeeeef 100%);
+}
+
+.crm-shell-inner {
+  position: relative;
+}
+
+.crm-shell-inner::before {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  pointer-events: none;
+  border-radius: 34px;
+  background:
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.62), transparent),
+    radial-gradient(circle at 74% 0%, rgba(255, 255, 255, 0.72), transparent 34%);
+  opacity: 0.45;
+}
+
+.crm-sidebar,
+.crm-main {
+  position: relative;
+  z-index: 1;
+}
+
+.crm-sidebar {
+  min-height: calc(100vh - 2.5rem);
+}
+
+.crm-main {
+  scrollbar-gutter: stable;
+}
+
+.crm-main::-webkit-scrollbar,
+.crm-sidebar nav::-webkit-scrollbar {
+  width: 10px;
+}
+
+.crm-main::-webkit-scrollbar-track,
+.crm-sidebar nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.crm-main::-webkit-scrollbar-thumb,
+.crm-sidebar nav::-webkit-scrollbar-thumb {
+  background: rgba(161, 161, 170, 0.38);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+
+.crm-main::-webkit-scrollbar-thumb:hover,
+.crm-sidebar nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(113, 113, 122, 0.48);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+button,
+select,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+::selection {
+  background: rgba(24, 24, 27, 0.12);
+}

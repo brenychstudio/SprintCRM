@@ -31,17 +31,17 @@ export function AppShell() {
   }
 
   return (
-    <div className="crm-workspace-enter h-screen overflow-hidden bg-zinc-50 text-zinc-900">
-      <div className="mx-auto flex h-full w-full max-w-screen-2xl gap-6 overflow-hidden p-4 sm:p-6">
-        <aside className="flex w-64 shrink-0 flex-col rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <p className="mb-4 text-sm font-semibold tracking-wide text-zinc-500">{t('app.name')}</p>
+    <div className="crm-workspace-enter crm-shell h-screen overflow-hidden bg-zinc-50 text-zinc-900">
+      <div className="crm-shell-inner mx-auto flex h-full w-full max-w-screen-2xl gap-5 overflow-hidden p-3 sm:p-5">
+        <aside className="crm-sidebar flex w-64 shrink-0 flex-col rounded-[1.75rem] border border-zinc-200/80 bg-white/90 p-4 shadow-[0_18px_60px_rgba(24,24,27,0.08)] backdrop-blur-xl">
+          <p className="mb-5 text-sm font-semibold tracking-wide text-zinc-700">{t('app.name')}</p>
 
-          <label className="mb-4 block space-y-1">
-            <span className="text-xs text-zinc-500">{t('lang.label')}</span>
+          <label className="mb-5 block space-y-1.5">
+            <span className="text-xs font-medium text-zinc-500">{t('lang.label')}</span>
             <select
               value={lang}
               onChange={(event) => setLang(event.target.value as SupportedLang)}
-              className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-200"
+              className="w-full rounded-xl border border-zinc-200/90 bg-white/80 px-3 py-2 text-sm outline-none transition focus:border-zinc-300 focus:bg-white focus:ring-4 focus:ring-zinc-200/60"
             >
               <option value="en">{t('lang.en')}</option>
               <option value="uk">{t('lang.uk')}</option>
@@ -56,8 +56,8 @@ export function AppShell() {
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `block rounded-xl px-3 py-2 text-sm transition ${
-                    isActive ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-600 hover:bg-zinc-100'
+                  `block rounded-xl px-3 py-2.5 text-sm font-medium transition duration-200 ${
+                    isActive ? 'bg-zinc-950 text-white shadow-[0_10px_28px_rgba(24,24,27,0.12)]' : 'text-zinc-600 hover:bg-zinc-100/80 hover:text-zinc-900'
                   }`
                 }
               >
@@ -70,13 +70,13 @@ export function AppShell() {
             type="button"
             onClick={handleSignOut}
             disabled={isSigningOut}
-            className="mt-4 shrink-0 rounded-xl border border-zinc-200 px-3 py-2 text-left text-sm text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+            className="mt-4 shrink-0 rounded-xl border border-zinc-200/90 bg-white/70 px-3 py-2.5 text-left text-sm font-medium text-zinc-700 transition duration-200 hover:bg-zinc-50 hover:text-zinc-950 disabled:opacity-60"
           >
             {isSigningOut ? t('auth.signingOut') : t('auth.signOut')}
           </button>
         </aside>
 
-        <main className="min-w-0 flex-1 overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <main className="crm-main min-w-0 flex-1 overflow-y-auto rounded-[1.75rem] border border-zinc-200/80 bg-white/92 p-6 shadow-[0_24px_80px_rgba(24,24,27,0.08)] backdrop-blur-xl">
           <Outlet />
         </main>
       </div>
