@@ -53,6 +53,15 @@ function madridDateAtNineIso(year: number, month: number, day: number): string {
   return new Date(utcMillisForMadridNine).toISOString()
 }
 
+function madridDateAtTimeIso(year: number, month: number, day: number, hour: number, minute: number): string {
+  const middayUtc = new Date(Date.UTC(year, month - 1, day, 12, 0, 0))
+  const offsetMinutes = getOffsetMinutes(MADRID_TIME_ZONE, middayUtc)
+  const utcMillisForMadridTime =
+    Date.UTC(year, month - 1, day, hour, minute, 0) - offsetMinutes * 60_000
+
+  return new Date(utcMillisForMadridTime).toISOString()
+}
+
 export function isoAtMadridNineAMInDays(daysFromNow: number): string {
   const madridToday = getMadridDateParts(new Date())
   const targetDayUtc = new Date(Date.UTC(madridToday.year, madridToday.month - 1, madridToday.day) + daysFromNow * DAY_MS)
@@ -65,6 +74,47 @@ export function isoAtMadridNineAMInDays(daysFromNow: number): string {
 }
 
 export function isoAtMadridNineAMForDateInput(dateInput: string): string {
+  return isoAtMadridTimeForDateInput(dateInput, '09:00')
+}
+
+export function isoAtMadridTimeForDateInput(dateInput: string, timeInput: string): string {
   const [yearText, monthText, dayText] = dateInput.split('-')
-  return madridDateAtNineIso(Number(yearText), Number(monthText), Number(dayText))
+  const [hourText = '9', minuteText = '0'] = timeInput.split(':')
+
+  const hour = Number(hourText)
+  const minute = Number(minuteText)
+
+  return madridDateAtTimeIso(
+    Number(yearText),
+    Number(monthText),
+    Number(dayText),
+    Number.isFinite(hour) ? hour : 9,
+    Number.isFinite(minute) ? minute : 0,
+  )
+}
+
+export function madridDateTimeInputFromISO(iso: string): { date: string; time: string } {
+  const value = new Date(iso)
+
+  if (Number.isNaN(value.getTime())) {
+    return { date: '', time: '09:00' }
+  }
+
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: MADRID_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  })
+
+  const parts = formatter.formatToParts(value)
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? ''
+
+  return {
+    date: `${get('year')}-${get('month')}-${get('day')}`,
+    time: `${get('hour')}:${get('minute')}`,
+  }
 }

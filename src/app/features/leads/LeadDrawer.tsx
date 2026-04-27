@@ -10,11 +10,19 @@ import {
 } from '../../../features/leads/leadsApi'
 import type { Lead, LeadStage, NextAction } from '../../../features/leads/types'
 import { useI18n } from '../../../i18n/i18n'
-import { isoAtMadridNineAMForDateInput, isoAtMadridNineAMInDays } from '../../../lib/dates'
+import { isoAtMadridNineAMInDays, isoAtMadridTimeForDateInput, madridDateTimeInputFromISO } from '../../../lib/dates'
 
 const stageValues: LeadStage[] = ['new', 'contacted', 'replied', 'proposal', 'won', 'lost']
 const nextActionOptions: NextAction[] = ['follow_up', 'send_proposal', 'request_call', 'nurture']
 const resultStageValues: LeadStage[] = ['contacted', 'replied', 'proposal']
+
+function getLeadDateTimeInput(iso: string): { date: string; time: string } {
+  const value = madridDateTimeInputFromISO(iso)
+  return {
+    date: value.date,
+    time: value.time || '09:00',
+  }
+}
 
 function milestoneForStage(stage: LeadStage): 'replied' | 'proposal_sent' | 'won' | 'lost' | null {
   if (stage === 'replied') return 'replied'
@@ -84,28 +92,37 @@ export function LeadDrawer({
 }) {
   const queryClient = useQueryClient()
   const { t } = useI18n()
+  const initialDateTime = getLeadDateTimeInput(lead.next_action_at)
 
   const [stage, setStage] = useState(lead.stage)
   const [nextAction, setNextAction] = useState(lead.next_action)
-  const [nextDate, setNextDate] = useState(lead.next_action_at.slice(0, 10))
+  const [nextDate, setNextDate] = useState(initialDateTime.date)
+  const [nextTime, setNextTime] = useState(initialDateTime.time)
   const [notes, setNotes] = useState(lead.notes ?? '')
   const [drawerError, setDrawerError] = useState<string | null>(null)
+  const [saveSuccess, setSaveSuccess] = useState(false)
 
   const [baselineStage, setBaselineStage] = useState(lead.stage)
   const [baselineNextAction, setBaselineNextAction] = useState(lead.next_action)
-  const [baselineNextDate, setBaselineNextDate] = useState(lead.next_action_at.slice(0, 10))
+  const [baselineNextDate, setBaselineNextDate] = useState(initialDateTime.date)
+  const [baselineNextTime, setBaselineNextTime] = useState(initialDateTime.time)
   const [baselineNotes, setBaselineNotes] = useState(lead.notes ?? '')
 
   useEffect(() => {
+    const nextDateTime = getLeadDateTimeInput(lead.next_action_at)
+
     setStage(lead.stage)
     setNextAction(lead.next_action)
-    setNextDate(lead.next_action_at.slice(0, 10))
+    setNextDate(nextDateTime.date)
+    setNextTime(nextDateTime.time)
     setNotes(lead.notes ?? '')
     setDrawerError(null)
+    setSaveSuccess(false)
 
     setBaselineStage(lead.stage)
     setBaselineNextAction(lead.next_action)
-    setBaselineNextDate(lead.next_action_at.slice(0, 10))
+    setBaselineNextDate(nextDateTime.date)
+    setBaselineNextTime(nextDateTime.time)
     setBaselineNotes(lead.notes ?? '')
   }, [lead])
 
@@ -147,14 +164,15 @@ export function LeadDrawer({
       const stageDirty = stage !== baselineStage
       const nextActionDirty = nextAction !== baselineNextAction
       const nextDateDirty = nextDate !== baselineNextDate
+      const nextTimeDirty = nextTime !== baselineNextTime
       const notesDirty = notes !== baselineNotes
 
-      if (!stageDirty && !nextActionDirty && !nextDateDirty && !notesDirty) return lead
+      if (!stageDirty && !nextActionDirty && !nextDateDirty && !nextTimeDirty && !notesDirty) return lead
 
       const updatedLead = await updateLead(lead.id, {
         stage,
         next_action: nextAction,
-        next_action_at: isoAtMadridNineAMForDateInput(nextDate),
+        next_action_at: isoAtMadridTimeForDateInput(nextDate, nextTime),
         notes,
       })
 
@@ -171,7 +189,7 @@ export function LeadDrawer({
         }
       }
 
-      if (nextActionDirty || nextDateDirty) {
+      if (nextActionDirty || nextDateDirty || nextTimeDirty) {
         await logActivity({
           lead_id: lead.id,
           type: 'next_action_set',
@@ -181,7 +199,11 @@ export function LeadDrawer({
 
       return updatedLead
     },
-    onSuccess: handleChanged,
+    onSuccess: (updatedLead) => {
+      handleChanged(updatedLead)
+      setSaveSuccess(true)
+      window.setTimeout(() => setSaveSuccess(false), 1600)
+    },
     onError: showDrawerError,
   })
 
@@ -329,11 +351,19 @@ export function LeadDrawer({
 
               <button
                 type="button"
-                onClick={() => saveMutation.mutate()}
+                onClick={() => {
+                  setSaveSuccess(false)
+                  setDrawerError(null)
+                  saveMutation.mutate()
+                }}
                 disabled={isBusy}
-                className="rounded-xl border border-white/20 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10 disabled:opacity-50"
+                className={`rounded-xl border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${
+                  saveSuccess
+                    ? 'border-emerald-300 bg-emerald-400/15 text-emerald-100'
+                    : 'border-white/20 text-white hover:bg-white/10'
+                }`}
               >
-                {t('drawer.save')}
+                {saveMutation.isPending ? t('drawer.saving') : saveSuccess ? t('drawer.saved') : t('drawer.save')}
               </button>
             </div>
           </section>
@@ -405,7 +435,7 @@ export function LeadDrawer({
               </div>
             </div>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <label className="min-w-0 space-y-1">
                 <span className="text-xs text-zinc-500">{t('drawer.stage')}</span>
                 <select
@@ -442,6 +472,16 @@ export function LeadDrawer({
                   type="date"
                   value={nextDate}
                   onChange={(e) => setNextDate(e.target.value)}
+                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm"
+                />
+              </label>
+
+              <label className="min-w-0 space-y-1">
+                <span className="text-xs text-zinc-500">{t('drawer.nextTime')}</span>
+                <input
+                  type="time"
+                  value={nextTime}
+                  onChange={(e) => setNextTime(e.target.value)}
                   className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm"
                 />
               </label>
