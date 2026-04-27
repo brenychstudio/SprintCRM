@@ -3,10 +3,12 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { useI18n } from '../../i18n/i18n'
 import type { SupportedLang } from '../../i18n/i18n'
 import { useAuth } from '../auth/AuthProvider'
+import { useThemeMode } from '../theme/useThemeMode'
 
 export function AppShell() {
   const { signOut } = useAuth()
   const { lang, setLang, t } = useI18n()
+  const { theme, setTheme } = useThemeMode()
   const [isSigningOut, setIsSigningOut] = useState(false)
 
   const navItems = useMemo(
@@ -49,6 +51,43 @@ export function AppShell() {
               <option value="ru">{t('lang.ru')}</option>
             </select>
           </label>
+
+          <div className="crm-theme-switch mb-5" role="group" aria-label="Theme">
+
+            <button
+
+              type="button"
+
+              onClick={() => setTheme('light')}
+
+              className={`crm-theme-choice ${theme === 'light' ? 'is-active' : ''}`}
+
+              aria-pressed={theme === 'light'}
+
+            >
+
+              Light
+
+            </button>
+
+            <button
+
+              type="button"
+
+              onClick={() => setTheme('dark')}
+
+              className={`crm-theme-choice ${theme === 'dark' ? 'is-active' : ''}`}
+
+              aria-pressed={theme === 'dark'}
+
+            >
+
+              Dark
+
+            </button>
+
+          </div>
+
 
           <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto">
             {navItems.map((item) => (

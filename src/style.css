@@ -310,3 +310,292 @@ button:active {
 }
 
 /* /CRM Capture Polish v1 */
+
+
+/* CRM Drawer Softening v1 */
+
+.fixed.inset-0.z-50 {
+  background:
+    linear-gradient(90deg, rgba(244, 244, 245, 0.18), rgba(24, 24, 27, 0.20)),
+    rgba(24, 24, 27, 0.18);
+  backdrop-filter: blur(1.5px);
+}
+
+.fixed.inset-0.z-50 aside {
+  border-left-color: rgba(228, 228, 231, 0.92);
+  box-shadow:
+    -22px 0 70px rgba(24, 24, 27, 0.12),
+    -1px 0 0 rgba(255, 255, 255, 0.75);
+}
+
+.fixed.inset-0.z-50 aside > .sticky {
+  box-shadow: 0 1px 0 rgba(228, 228, 231, 0.72);
+}
+
+/* /CRM Drawer Softening v1 */
+
+
+/* CRM Drawer Fixed Position Hotfix v1 */
+
+/*
+  Fixed drawer hotfix:
+  Do not leave transform/filter on parent page wrappers after enter animations.
+  Transformed ancestors can break position: fixed and make the drawer scroll with page content.
+*/
+
+@media (prefers-reduced-motion: no-preference) {
+  .crm-workspace-enter {
+    animation: crm-workspace-enter-safe 380ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  .crm-main > section {
+    animation: crm-page-soft-enter-safe 320ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+}
+
+@keyframes crm-workspace-enter-safe {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.996);
+    filter: blur(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes crm-page-soft-enter-safe {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/*
+  Drawer must always be fixed to viewport, independently from page scroll.
+*/
+.fixed.inset-0.z-50 {
+  position: fixed;
+  inset: 0;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.fixed.inset-0.z-50 aside {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+
+/* /CRM Drawer Fixed Position Hotfix v1 */
+
+
+/* CRM Theme Foundation v1 */
+
+:root,
+:root[data-theme='light'] {
+  --crm-bg: #f7f7f8;
+  --crm-bg-soft: #f5f5f6;
+  --crm-surface: #ffffff;
+  --crm-surface-alpha: rgba(255, 255, 255, 0.92);
+  --crm-surface-elevated: #ffffff;
+  --crm-surface-muted: #f3f3f4;
+  --crm-border: #e4e4e7;
+  --crm-border-soft: rgba(228, 228, 231, 0.78);
+  --crm-text: #111113;
+  --crm-text-secondary: #52525b;
+  --crm-text-muted: #8a8a93;
+  --crm-accent: #09090b;
+  --crm-accent-contrast: #ffffff;
+  --crm-success: #059669;
+  --crm-warning: #d97706;
+  --crm-danger: #dc2626;
+  --crm-info: #2563eb;
+  --crm-shadow-soft: 0 24px 80px rgba(24, 24, 27, 0.08);
+  --crm-shadow-sidebar: 0 18px 60px rgba(24, 24, 27, 0.08);
+  --crm-ring: rgba(24, 24, 27, 0.06);
+}
+
+:root[data-theme='dark'] {
+  --crm-bg: #09090b;
+  --crm-bg-soft: #0d0d10;
+  --crm-surface: #111113;
+  --crm-surface-alpha: rgba(17, 17, 19, 0.92);
+  --crm-surface-elevated: #18181b;
+  --crm-surface-muted: #202024;
+  --crm-border: #2a2a2f;
+  --crm-border-soft: rgba(63, 63, 70, 0.7);
+  --crm-text: #f4f4f5;
+  --crm-text-secondary: #b4b4bc;
+  --crm-text-muted: #71717a;
+  --crm-accent: #f5f5f5;
+  --crm-accent-contrast: #09090b;
+  --crm-success: #34d399;
+  --crm-warning: #fbbf24;
+  --crm-danger: #f87171;
+  --crm-info: #93c5fd;
+  --crm-shadow-soft: 0 24px 90px rgba(0, 0, 0, 0.32);
+  --crm-shadow-sidebar: 0 18px 70px rgba(0, 0, 0, 0.28);
+  --crm-ring: rgba(244, 244, 245, 0.08);
+}
+
+html,
+body {
+  background: var(--crm-bg);
+  color: var(--crm-text);
+}
+
+.crm-shell {
+  color: var(--crm-text);
+  background:
+    radial-gradient(circle at 16% 8%, rgba(255, 255, 255, 0.72), transparent 26%),
+    radial-gradient(circle at 78% 12%, rgba(228, 228, 231, 0.52), transparent 28%),
+    linear-gradient(135deg, var(--crm-bg) 0%, var(--crm-bg-soft) 48%, var(--crm-bg) 100%);
+  transition:
+    background-color 220ms ease,
+    color 220ms ease;
+}
+
+[data-theme='dark'] .crm-shell {
+  background:
+    radial-gradient(circle at 18% 10%, rgba(255, 255, 255, 0.045), transparent 26%),
+    radial-gradient(circle at 78% 8%, rgba(99, 102, 241, 0.075), transparent 30%),
+    linear-gradient(135deg, #09090b 0%, #0d0d10 48%, #09090b 100%);
+}
+
+.crm-sidebar,
+.crm-main {
+  color: var(--crm-text);
+  border-color: var(--crm-border-soft);
+  background: var(--crm-surface-alpha);
+  transition:
+    background-color 220ms ease,
+    border-color 220ms ease,
+    color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.crm-sidebar {
+  box-shadow: var(--crm-shadow-sidebar);
+}
+
+.crm-main {
+  box-shadow: var(--crm-shadow-soft);
+}
+
+[data-theme='dark'] .crm-shell-inner::before {
+  opacity: 0.22;
+  background:
+    linear-gradient(90deg, transparent, rgba(244, 244, 245, 0.08), transparent),
+    radial-gradient(circle at 74% 0%, rgba(147, 197, 253, 0.08), transparent 34%);
+}
+
+.crm-theme-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  border: 1px solid var(--crm-border-soft);
+  border-radius: 14px;
+  background: var(--crm-surface-muted);
+  padding: 4px;
+}
+
+.crm-theme-choice {
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--crm-text-secondary);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 9px 10px;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.crm-theme-choice:hover {
+  color: var(--crm-text);
+}
+
+.crm-theme-choice.is-active {
+  background: var(--crm-accent);
+  color: var(--crm-accent-contrast);
+  box-shadow:
+    0 8px 22px rgba(24, 24, 27, 0.12),
+    0 1px 0 rgba(255, 255, 255, 0.16) inset;
+}
+
+[data-theme='dark'] .crm-theme-choice.is-active {
+  box-shadow:
+    0 10px 26px rgba(0, 0, 0, 0.28),
+    0 1px 0 rgba(255, 255, 255, 0.12) inset;
+}
+
+[data-theme='dark'] .crm-sidebar p,
+[data-theme='dark'] .crm-sidebar span {
+  color: var(--crm-text-secondary);
+}
+
+[data-theme='dark'] .crm-sidebar select {
+  border-color: var(--crm-border);
+  background-color: rgba(24, 24, 27, 0.86);
+  color: var(--crm-text);
+}
+
+[data-theme='dark'] .crm-sidebar a {
+  color: var(--crm-text-secondary);
+}
+
+[data-theme='dark'] .crm-sidebar a:hover {
+  background: rgba(244, 244, 245, 0.06);
+  color: var(--crm-text);
+}
+
+[data-theme='dark'] .crm-sidebar a[class*='bg-zinc-950'] {
+  background: var(--crm-accent);
+  color: var(--crm-accent-contrast);
+}
+
+[data-theme='dark'] .crm-sidebar button:not(.crm-theme-choice) {
+  border-color: var(--crm-border);
+  background-color: rgba(24, 24, 27, 0.72);
+  color: var(--crm-text-secondary);
+}
+
+[data-theme='dark'] .crm-sidebar button:not(.crm-theme-choice):hover {
+  background-color: rgba(32, 32, 36, 0.92);
+  color: var(--crm-text);
+}
+
+[data-theme='dark'] .crm-main::-webkit-scrollbar-thumb,
+[data-theme='dark'] .crm-sidebar nav::-webkit-scrollbar-thumb {
+  background: rgba(113, 113, 122, 0.52);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crm-shell,
+  .crm-sidebar,
+  .crm-main,
+  .crm-theme-choice {
+    transition: none;
+  }
+}
+
+/* /CRM Theme Foundation v1 */
