@@ -915,3 +915,249 @@ body {
 }
 
 /* /CRM Global Surface Tokens v1 */
+
+
+/* CRM Dark Mode Shell Pass v1 */
+
+/*
+  Task 35A:
+  Refine dark-mode shell quality after token foundation.
+  Scope: shell, sidebar, main surface, base contrast, active nav, primary/neutral button balance.
+  No drawer positioning changes. No transform animations on app containers.
+*/
+
+:root[data-theme='dark'] {
+  --crm-bg: #070708;
+  --crm-bg-soft: #0b0b0d;
+  --crm-surface: #101012;
+  --crm-surface-alpha: rgba(16, 16, 18, 0.94);
+  --crm-surface-elevated: #17171a;
+  --crm-surface-muted: #1d1d21;
+  --crm-border: #2d2d33;
+  --crm-border-soft: rgba(82, 82, 91, 0.54);
+  --crm-text: #f5f5f6;
+  --crm-text-secondary: #c2c2ca;
+  --crm-text-muted: #85858f;
+  --crm-accent: #f4f4f5;
+  --crm-accent-contrast: #09090b;
+  --crm-shadow-soft: 0 28px 90px rgba(0, 0, 0, 0.36);
+  --crm-shadow-sidebar: 0 24px 80px rgba(0, 0, 0, 0.32);
+}
+
+[data-theme='dark'] body {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(244, 244, 245, 0.035), transparent 30%),
+    radial-gradient(circle at 92% 8%, rgba(147, 197, 253, 0.055), transparent 32%),
+    #070708;
+}
+
+[data-theme='dark'] .crm-shell {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(244, 244, 245, 0.04), transparent 28%),
+    radial-gradient(circle at 78% 4%, rgba(147, 197, 253, 0.06), transparent 34%),
+    radial-gradient(circle at 50% 100%, rgba(244, 244, 245, 0.025), transparent 34%),
+    linear-gradient(135deg, #070708 0%, #0b0b0d 52%, #060607 100%);
+}
+
+[data-theme='dark'] .crm-shell-inner::before {
+  inset: 16px;
+  opacity: 0.18;
+  background:
+    linear-gradient(90deg, transparent, rgba(244, 244, 245, 0.055), transparent),
+    radial-gradient(circle at 78% 0%, rgba(147, 197, 253, 0.075), transparent 36%);
+}
+
+[data-theme='dark'] .crm-sidebar,
+[data-theme='dark'] .crm-main {
+  background:
+    linear-gradient(180deg, rgba(20, 20, 23, 0.95), rgba(13, 13, 15, 0.94)) !important;
+  border-color: rgba(82, 82, 91, 0.46) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.035) inset,
+    0 30px 90px rgba(0, 0, 0, 0.34) !important;
+}
+
+[data-theme='dark'] .crm-sidebar {
+  background:
+    linear-gradient(180deg, rgba(19, 19, 22, 0.96), rgba(12, 12, 14, 0.96)) !important;
+}
+
+[data-theme='dark'] .crm-main {
+  background:
+    radial-gradient(circle at 80% 0%, rgba(244, 244, 245, 0.022), transparent 36%),
+    linear-gradient(180deg, rgba(18, 18, 21, 0.96), rgba(12, 12, 14, 0.96)) !important;
+}
+
+/* Sidebar hierarchy */
+
+[data-theme='dark'] .crm-sidebar p,
+[data-theme='dark'] .crm-sidebar label,
+[data-theme='dark'] .crm-sidebar span {
+  color: var(--crm-text-muted);
+}
+
+[data-theme='dark'] .crm-sidebar a {
+  color: var(--crm-text-secondary) !important;
+}
+
+[data-theme='dark'] .crm-sidebar a:hover {
+  background: rgba(244, 244, 245, 0.055) !important;
+  color: var(--crm-text) !important;
+}
+
+[data-theme='dark'] .crm-sidebar a[class*='bg-zinc-950'],
+[data-theme='dark'] .crm-sidebar a[class*='bg-zinc-900'] {
+  background:
+    linear-gradient(135deg, rgba(244, 244, 245, 0.14), rgba(244, 244, 245, 0.075)) !important;
+  color: var(--crm-text) !important;
+  box-shadow:
+    0 12px 34px rgba(0, 0, 0, 0.22),
+    0 1px 0 rgba(255, 255, 255, 0.09) inset;
+}
+
+/* Theme switch refinement */
+
+[data-theme='dark'] .crm-theme-switch {
+  background: rgba(244, 244, 245, 0.055);
+  border-color: rgba(244, 244, 245, 0.1);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+[data-theme='dark'] .crm-theme-choice {
+  color: var(--crm-text-muted);
+}
+
+[data-theme='dark'] .crm-theme-choice.is-active {
+  background:
+    linear-gradient(180deg, rgba(244, 244, 245, 0.95), rgba(226, 226, 230, 0.92));
+  color: #09090b;
+}
+
+/* Main content contrast */
+
+[data-theme='dark'] .crm-main :where(h1, h2, h3) {
+  color: var(--crm-text) !important;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.24);
+}
+
+[data-theme='dark'] .crm-main :where(p, label, small) {
+  color: var(--crm-text-secondary);
+}
+
+[data-theme='dark'] .crm-main [class*='text-zinc-500'],
+[data-theme='dark'] .crm-main [class*='text-zinc-400'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='text-zinc-500'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='text-zinc-400'] {
+  color: var(--crm-text-muted) !important;
+}
+
+[data-theme='dark'] .crm-main [class*='text-zinc-700'],
+[data-theme='dark'] .crm-main [class*='text-zinc-600'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='text-zinc-700'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='text-zinc-600'] {
+  color: var(--crm-text-secondary) !important;
+}
+
+/* Surface depth */
+
+[data-theme='dark'] .crm-main [class*='rounded-2xl'][class*='border'],
+[data-theme='dark'] .crm-main [class*='rounded-3xl'][class*='border'] {
+  background:
+    linear-gradient(180deg, rgba(24, 24, 27, 0.86), rgba(16, 16, 18, 0.9)) !important;
+  border-color: rgba(82, 82, 91, 0.5) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.045) inset,
+    0 22px 70px rgba(0, 0, 0, 0.18) !important;
+}
+
+[data-theme='dark'] .crm-main [class*='rounded-xl'][class*='border'] {
+  background-color: rgba(24, 24, 27, 0.58);
+  border-color: rgba(82, 82, 91, 0.48) !important;
+}
+
+/* Tables */
+
+[data-theme='dark'] .crm-main thead {
+  background: rgba(24, 24, 27, 0.72) !important;
+}
+
+[data-theme='dark'] .crm-main th {
+  color: rgba(194, 194, 202, 0.66) !important;
+}
+
+[data-theme='dark'] .crm-main td {
+  color: rgba(194, 194, 202, 0.88);
+}
+
+[data-theme='dark'] .crm-main tbody tr:hover {
+  background: rgba(244, 244, 245, 0.04) !important;
+}
+
+/* Inputs */
+
+[data-theme='dark'] .crm-main input:not([type='checkbox']),
+[data-theme='dark'] .crm-main select,
+[data-theme='dark'] .crm-main textarea,
+[data-theme='dark'] .fixed.inset-0.z-50 aside input:not([type='checkbox']),
+[data-theme='dark'] .fixed.inset-0.z-50 aside select,
+[data-theme='dark'] .fixed.inset-0.z-50 aside textarea {
+  background:
+    linear-gradient(180deg, rgba(24, 24, 27, 0.9), rgba(18, 18, 21, 0.9)) !important;
+  border-color: rgba(82, 82, 91, 0.56) !important;
+  color: var(--crm-text) !important;
+}
+
+[data-theme='dark'] .crm-main input:not([type='checkbox']):hover,
+[data-theme='dark'] .crm-main select:hover,
+[data-theme='dark'] .crm-main textarea:hover,
+[data-theme='dark'] .fixed.inset-0.z-50 aside input:not([type='checkbox']):hover,
+[data-theme='dark'] .fixed.inset-0.z-50 aside select:hover,
+[data-theme='dark'] .fixed.inset-0.z-50 aside textarea:hover {
+  border-color: rgba(161, 161, 170, 0.46) !important;
+}
+
+/* Buttons: less harsh, more operator-console */
+
+[data-theme='dark'] .crm-main button[class*='bg-zinc-900'],
+[data-theme='dark'] .crm-main button[class*='bg-zinc-950'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside button[class*='bg-zinc-900'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside button[class*='bg-zinc-950'] {
+  background:
+    linear-gradient(180deg, rgba(244, 244, 245, 0.96), rgba(226, 226, 230, 0.92)) !important;
+  color: #09090b !important;
+  border-color: rgba(244, 244, 245, 0.26) !important;
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.26),
+    0 1px 0 rgba(255, 255, 255, 0.5) inset !important;
+}
+
+[data-theme='dark'] .crm-main button[class*='bg-zinc-900']:hover,
+[data-theme='dark'] .crm-main button[class*='bg-zinc-950']:hover,
+[data-theme='dark'] .fixed.inset-0.z-50 aside button[class*='bg-zinc-900']:hover,
+[data-theme='dark'] .fixed.inset-0.z-50 aside button[class*='bg-zinc-950']:hover {
+  background:
+    linear-gradient(180deg, #ffffff, rgba(236, 236, 240, 0.96)) !important;
+}
+
+/* Drawer base contrast only. Positioning remains untouched. */
+
+[data-theme='dark'] .fixed.inset-0.z-50 {
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.46), rgba(0, 0, 0, 0.24)),
+    rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside {
+  background:
+    linear-gradient(180deg, rgba(18, 18, 21, 0.98), rgba(12, 12, 14, 0.98)) !important;
+  border-left-color: rgba(82, 82, 91, 0.56) !important;
+}
+
+/* Selection */
+
+[data-theme='dark'] ::selection {
+  background: rgba(244, 244, 245, 0.16);
+  color: var(--crm-text);
+}
+
+/* /CRM Dark Mode Shell Pass v1 */
