@@ -1,22 +1,13 @@
 import { useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { LeadDrawer } from '../../features/leads/LeadDrawer'
-import { defaultNextForStage, leadsQueryKeys, logActivity, updateLead } from '../../../features/leads/leadsApi'
+import { leadsQueryKeys } from '../../../features/leads/leadsApi'
 import type { Lead, LeadStage } from '../../../features/leads/types'
 import { useI18n } from '../../../i18n/i18n'
-import { isoAtMadridNineAMInDays } from '../../../lib/dates'
 import { supabase } from '../../../lib/supabase'
 
 const activeStages: LeadStage[] = ['contacted', 'replied', 'proposal']
 const secondaryStages: LeadStage[] = ['new', 'won', 'lost']
-
-function milestoneForStage(stage: LeadStage): 'replied' | 'proposal_sent' | 'won' | 'lost' | null {
-  if (stage === 'replied') return 'replied'
-  if (stage === 'proposal') return 'proposal_sent'
-  if (stage === 'won') return 'won'
-  if (stage === 'lost') return 'lost'
-  return null
-}
 
 function stageTone(stage: LeadStage) {
   if (stage === 'proposal') return 'bg-amber-50 text-amber-700 border-amber-200'
@@ -38,26 +29,23 @@ function sortLeadsForBoard(leads: Lead[]) {
   })
 }
 
+function formatPipelineDate(iso: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso))
+}
+
 export function PipelinePage() {
   const { t } = useI18n()
-  const queryClient = useQueryClient()
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [search, setSearch] = useState('')
   const [nicheFilter, setNicheFilter] = useState('__all')
 
-  const touchMutation = useMutation({
-    mutationFn: async (lead: Lead) => {
-      const updated = await updateLead(lead.id, { last_touch_at: new Date().toISOString() })
-      await logActivity({ lead_id: lead.id, type: 'contacted', channel: 'email' })
-      return updated
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: leadsQueryKeys.all })
-    },
-  })
-
   const leadsQuery = useQuery({
-    queryKey: leadsQueryKeys.list({}),
+    queryKey: leadsQueryKeys.list({ scope: 'pipeline' }),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('leads')
@@ -67,38 +55,6 @@ export function PipelinePage() {
 
       if (error) throw error
       return (data ?? []) as Lead[]
-    },
-  })
-
-  const moveMutation = useMutation({
-    mutationFn: async ({ lead, to }: { lead: Lead; to: LeadStage }) => {
-      const next = defaultNextForStage(to)
-      const nextActionAt = isoAtMadridNineAMInDays(next.days)
-
-      const updated = await updateLead(lead.id, {
-        stage: to,
-        next_action: next.next_action,
-        next_action_at: nextActionAt,
-        last_touch_at: new Date().toISOString(),
-      })
-
-      if (lead.stage !== to) {
-        await logActivity({
-          lead_id: lead.id,
-          type: 'stage_changed',
-          meta: { from: lead.stage, to, next_action: next.next_action, next_action_at: nextActionAt },
-        })
-
-        const milestone = milestoneForStage(to)
-        if (milestone) {
-          await logActivity({ lead_id: lead.id, type: milestone })
-        }
-      }
-
-      return updated
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: leadsQueryKeys.all })
     },
   })
 
@@ -176,6 +132,7 @@ export function PipelinePage() {
     <section>
       <header className="mb-6">
         <h1 className="text-2xl font-semibold text-zinc-900">{t('pipeline.title')}</h1>
+        <p className="mt-2 text-sm text-zinc-600">{t('pipeline.subtitle')}</p>
       </header>
 
       <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
@@ -183,18 +140,22 @@ export function PipelinePage() {
           <div className="text-xs text-zinc-500">{t('pipeline.kpi.activeWork')}</div>
           <div className="mt-1 text-2xl font-semibold text-zinc-900">{summary.activeWork}</div>
         </div>
+
         <div className="rounded-2xl border border-zinc-200 bg-white p-4">
           <div className="text-xs text-zinc-500">{t('pipeline.kpi.overdue')}</div>
           <div className="mt-1 text-2xl font-semibold text-zinc-900">{summary.overdue}</div>
         </div>
+
         <div className="rounded-2xl border border-zinc-200 bg-white p-4">
           <div className="text-xs text-zinc-500">{t('pipeline.stage.new')}</div>
           <div className="mt-1 text-2xl font-semibold text-zinc-900">{summary.newCount}</div>
         </div>
+
         <div className="rounded-2xl border border-zinc-200 bg-white p-4">
           <div className="text-xs text-zinc-500">{t('pipeline.stage.won')}</div>
           <div className="mt-1 text-2xl font-semibold text-zinc-900">{summary.wonCount}</div>
         </div>
+
         <div className="rounded-2xl border border-zinc-200 bg-white p-4">
           <div className="text-xs text-zinc-500">{t('pipeline.stage.lost')}</div>
           <div className="mt-1 text-2xl font-semibold text-zinc-900">{summary.lostCount}</div>
@@ -208,6 +169,7 @@ export function PipelinePage() {
           placeholder={t('pipeline.filters.searchPlaceholder')}
           className="rounded-xl border border-zinc-200 px-3 py-2 text-sm"
         />
+
         <select
           value={nicheFilter}
           onChange={(event) => setNicheFilter(event.target.value)}
@@ -224,13 +186,20 @@ export function PipelinePage() {
       </div>
 
       {leadsQuery.isLoading ? (
-        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">{t('common.loading')}</div>
-      ) : null}
-      {leadsQuery.isError ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{t('common.error')}</div>
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+          {t('common.loading')}
+        </div>
       ) : null}
 
-      {!leadsQuery.isLoading && !filteredLeads.length ? <p className="text-sm text-zinc-500">{t('pipeline.empty')}</p> : null}
+      {leadsQuery.isError ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {t('common.error')}
+        </div>
+      ) : null}
+
+      {!leadsQuery.isLoading && !filteredLeads.length ? (
+        <p className="text-sm text-zinc-500">{t('pipeline.empty')}</p>
+      ) : null}
 
       <div className="grid gap-5 xl:grid-cols-[1.6fr_1fr]">
         <div className="rounded-2xl border border-zinc-200 bg-white p-4">
@@ -251,27 +220,18 @@ export function PipelinePage() {
                   <div className="space-y-3">
                     {grouped[stage].map((lead) => {
                       const overdue = new Date(lead.next_action_at).getTime() < Date.now()
-                      const isBusy = moveMutation.isPending || touchMutation.isPending
 
                       return (
                         <article
                           key={lead.id}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => setSelectedLead(lead)}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter' || event.key === ' ') {
-                              event.preventDefault()
-                              setSelectedLead(lead)
-                            }
-                          }}
-                          className="cursor-pointer rounded-2xl border border-zinc-200 bg-white p-3 transition hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 focus-visible:ring-offset-2"
+                          className="rounded-2xl border border-zinc-200 bg-white p-3 transition hover:bg-zinc-50"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <p className="text-sm font-semibold text-zinc-900">{lead.company_name}</p>
                               {lead.niche ? <p className="mt-1 truncate text-xs text-zinc-500">{lead.niche}</p> : null}
                             </div>
+
                             <span className={`shrink-0 rounded-full border px-2 py-1 text-[11px] ${stageTone(stage)}`}>
                               {t(`pipeline.stage.${lead.stage}`)}
                             </span>
@@ -282,41 +242,23 @@ export function PipelinePage() {
                               {t('pipeline.card.nextAction')}:{' '}
                               <span className="text-zinc-700">{t(`action.${lead.next_action}`)}</span>
                             </p>
+
                             <p className={overdue ? 'text-red-700' : 'text-zinc-500'}>
                               {t('pipeline.card.nextAt')}:{' '}
                               <span className={overdue ? 'text-red-700' : 'text-zinc-700'}>
-                                {new Date(lead.next_action_at).toLocaleString()}
+                                {formatPipelineDate(lead.next_action_at)}
                               </span>
                             </p>
                           </div>
 
-                          <div className="mt-3 flex flex-wrap gap-2">
+                          <div className="mt-3 flex justify-end">
                             <button
                               type="button"
-                              onClick={(event) => {
-                                event.stopPropagation()
-                                touchMutation.mutate(lead)
-                              }}
-                              disabled={isBusy}
-                              className="rounded-xl border border-zinc-200 bg-white px-2.5 py-1.5 text-[11px] text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50"
+                              onClick={() => setSelectedLead(lead)}
+                              className="rounded-xl bg-zinc-900 px-3 py-2 text-xs font-medium text-white transition hover:bg-zinc-800"
                             >
-                              {t('drawer.logTouch')}
+                              {t('pipeline.card.open')}
                             </button>
-
-                            {(['contacted', 'replied', 'proposal'] as LeadStage[]).map((target) => (
-                              <button
-                                key={target}
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation()
-                                  moveMutation.mutate({ lead, to: target })
-                                }}
-                                disabled={isBusy || lead.stage === target}
-                                className="rounded-xl border border-zinc-200 bg-white px-2.5 py-1.5 text-[11px] text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-40"
-                              >
-                                {t(`pipeline.stage.${target}`)}
-                              </button>
-                            ))}
                           </div>
                         </article>
                       )
@@ -353,18 +295,28 @@ export function PipelinePage() {
                     const overdue = new Date(lead.next_action_at).getTime() < Date.now()
 
                     return (
-                      <button
-                        key={lead.id}
-                        type="button"
-                        onClick={() => setSelectedLead(lead)}
-                        className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-3 text-left transition hover:bg-zinc-50"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-sm font-medium text-zinc-900">{lead.company_name}</span>
-                          {overdue ? <span className="text-[11px] text-red-700">{t('pipeline.card.overdue')}</span> : null}
+                      <article key={lead.id} className="rounded-xl border border-zinc-200 bg-white px-3 py-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-zinc-900">{lead.company_name}</p>
+                            <p className="mt-1 text-xs text-zinc-500">{formatPipelineDate(lead.next_action_at)}</p>
+                          </div>
+
+                          {overdue ? (
+                            <span className="shrink-0 text-[11px] text-red-700">{t('pipeline.card.overdue')}</span>
+                          ) : null}
                         </div>
-                        <div className="mt-1 text-xs text-zinc-500">{new Date(lead.next_action_at).toLocaleString()}</div>
-                      </button>
+
+                        <div className="mt-3 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedLead(lead)}
+                            className="rounded-xl border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
+                          >
+                            {t('pipeline.card.open')}
+                          </button>
+                        </div>
+                      </article>
                     )
                   })}
 
@@ -375,7 +327,9 @@ export function PipelinePage() {
                   ) : null}
 
                   {grouped[stage].length > 5 ? (
-                    <div className="text-xs text-zinc-500">{t('pipeline.secondary.more', { count: grouped[stage].length - 5 })}</div>
+                    <div className="text-xs text-zinc-500">
+                      {t('pipeline.secondary.more', { count: grouped[stage].length - 5 })}
+                    </div>
                   ) : null}
                 </div>
               </section>
@@ -384,7 +338,9 @@ export function PipelinePage() {
         </div>
       </div>
 
-      {selectedLead ? <LeadDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} onLeadChange={setSelectedLead} /> : null}
+      {selectedLead ? (
+        <LeadDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} onLeadChange={setSelectedLead} />
+      ) : null}
     </section>
   )
 }

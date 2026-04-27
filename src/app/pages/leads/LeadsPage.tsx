@@ -417,7 +417,7 @@ export function LeadsPage() {
         <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{t('leads.error')}</div>
       ) : null}
 
-      <div className="mt-5 overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+      <div className="mt-5 overflow-x-auto rounded-2xl border border-zinc-200 bg-white">
         <table className="min-w-full divide-y divide-zinc-200 text-sm">
           <thead className="bg-zinc-50 text-left text-xs uppercase tracking-wide text-zinc-500">
             <tr>
@@ -435,7 +435,7 @@ export function LeadsPage() {
               <th className="px-4 py-3 font-medium">{t('leads.table.stage')}</th>
               <th className="px-4 py-3 font-medium">{t('drawer.nextAction')}</th>
               <th className="px-4 py-3 font-medium">{t('leads.table.nextActionAt')}</th>
-              <th className="px-4 py-3 font-medium">{t('activeContacts.table.lastTouch')}</th>
+              <th className="px-4 py-3 text-right font-medium">{t('leads.table.actions')}</th>
             </tr>
           </thead>
 
@@ -488,13 +488,29 @@ export function LeadsPage() {
                   <td className="px-4 py-3 align-top">
                     {lead.last_touch_at ? new Date(lead.last_touch_at).toLocaleString() : '—'}
                   </td>
+
+                  <td className="px-4 py-3 align-top">
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          setSelectedLead(lead)
+                        }}
+                        aria-label={t('leads.actions.openLead', { company: lead.company_name })}
+                        className="rounded-xl bg-zinc-900 px-3 py-2 text-xs font-medium text-white transition hover:bg-zinc-800"
+                      >
+                        {t('leads.actions.open')}
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               )
             })}
 
             {!filteredLeads.length ? (
               <tr>
-                <td className="px-4 py-8 text-center text-sm text-zinc-500" colSpan={6}>
+                <td className="px-4 py-8 text-center text-sm text-zinc-500" colSpan={7}>
                   {t('leads.empty')}
                 </td>
               </tr>
