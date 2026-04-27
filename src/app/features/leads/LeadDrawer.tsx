@@ -14,6 +14,7 @@ import { isoAtMadridNineAMForDateInput, isoAtMadridNineAMInDays } from '../../..
 
 const stageValues: LeadStage[] = ['new', 'contacted', 'replied', 'proposal', 'won', 'lost']
 const nextActionOptions: NextAction[] = ['follow_up', 'send_proposal', 'request_call', 'nurture']
+const resultStageValues: LeadStage[] = ['contacted', 'replied', 'proposal']
 
 function milestoneForStage(stage: LeadStage): 'replied' | 'proposal_sent' | 'won' | 'lost' | null {
   if (stage === 'replied') return 'replied'
@@ -21,6 +22,23 @@ function milestoneForStage(stage: LeadStage): 'replied' | 'proposal_sent' | 'won
   if (stage === 'won') return 'won'
   if (stage === 'lost') return 'lost'
   return null
+}
+
+function formatDrawerDate(iso: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso))
+}
+
+function isLeadOverdue(iso: string): boolean {
+  return new Date(iso).getTime() < Date.now()
+}
+
+function pickPrimaryContact(lead: Lead): string {
+  return [lead.contact_name, lead.email, lead.phone].filter(Boolean).join(' · ') || lead.website_domain || lead.website || '—'
 }
 
 export function LeadDrawer({
@@ -63,6 +81,14 @@ export function LeadDrawer({
   })
 
   const recentActivities = useMemo(() => (activitiesQuery.data ?? []).slice(0, 5), [activitiesQuery.data])
+  const overdue = isLeadOverdue(lead.next_action_at)
+
+  const contextRows = [
+    { label: t('drawer.context.niche'), value: lead.niche },
+    { label: t('drawer.context.location'), value: lead.country_city },
+    { label: t('drawer.context.website'), value: lead.website_domain || lead.website },
+    { label: t('drawer.context.source'), value: lead.source_file },
+  ].filter((row) => row.value)
 
   const handleChanged = (updatedLead: Lead) => {
     onLeadChange?.(updatedLead)
@@ -187,60 +213,116 @@ export function LeadDrawer({
     deleteMutation.isPending
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-zinc-900/30">
+    <div className="fixed inset-0 z-50 flex justify-end bg-zinc-900/35 backdrop-blur-[1px]">
       <button type="button" aria-label={t('drawer.close')} onClick={onClose} className="h-full flex-1" />
 
-      <aside className="h-full w-full max-w-lg overflow-y-auto border-l border-zinc-200 bg-white shadow-xl">
-        <div className="sticky top-0 z-10 border-b border-zinc-200 bg-white px-6 py-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-semibold text-zinc-900">{lead.company_name}</h2>
-              <p className="mt-1 text-xs text-zinc-500">{t('drawer.leadId', { id: lead.id })}</p>
+      <aside className="h-full w-full max-w-xl overflow-y-auto overflow-x-hidden border-l border-zinc-200 bg-white shadow-xl">
+        <div className="sticky top-0 z-10 border-b border-zinc-200 bg-white/95 px-6 py-5 backdrop-blur">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="truncate text-xl font-semibold text-zinc-900">{lead.company_name}</h2>
+                <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600">
+                  {t(`leads.filter.stage.${lead.stage}`)}
+                </span>
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                    lead.status === 'archived' ? 'bg-zinc-100 text-zinc-500' : 'bg-emerald-50 text-emerald-700'
+                  }`}
+                >
+                  {lead.status === 'archived' ? t('drawer.statusArchived') : t('drawer.statusActive')}
+                </span>
+              </div>
+
+              <p className="mt-1 truncate text-sm text-zinc-500">{pickPrimaryContact(lead)}</p>
             </div>
 
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
+              className="shrink-0 rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
             >
               {t('drawer.close')}
             </button>
           </div>
         </div>
 
-        <div className="px-6 py-5">
-          <div className="grid gap-3 sm:grid-cols-4">
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-              <div className="text-xs text-zinc-500">{t('drawer.stage')}</div>
-              <div className="mt-2 text-sm font-medium text-zinc-900">{t(`leads.filter.stage.${lead.stage}`)}</div>
-            </div>
+        <div className="space-y-5 px-6 py-5">
+          <section className="rounded-3xl border border-zinc-200 bg-zinc-950 p-5 text-white shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="text-xs font-medium uppercase tracking-wide text-zinc-400">{t('drawer.nextStepTitle')}</div>
+                <div className="mt-2 text-2xl font-semibold leading-tight">{t(`action.${lead.next_action}`)}</div>
+                <div className="mt-2 text-sm text-zinc-300">{t('drawer.nextStepSubtitle')}</div>
+              </div>
 
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-              <div className="text-xs text-zinc-500">{t('drawer.nextAction')}</div>
-              <div className="mt-2 text-sm font-medium text-zinc-900">{t(`action.${lead.next_action}`)}</div>
-            </div>
-
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-              <div className="text-xs text-zinc-500">{t('drawer.nextDate')}</div>
-              <div className="mt-2 text-sm font-medium text-zinc-900">{new Date(lead.next_action_at).toLocaleString()}</div>
-            </div>
-
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-              <div className="text-xs text-zinc-500">{t('drawer.status')}</div>
-              <div className="mt-2 text-sm font-medium text-zinc-900">
-                {lead.status === 'archived' ? t('drawer.statusArchived') : t('drawer.statusActive')}
+              <div className="rounded-2xl bg-white/10 px-4 py-3 text-left sm:text-right">
+                <div className="text-xs text-zinc-400">{t('drawer.nextDate')}</div>
+                <div className="mt-1 text-sm font-semibold text-white">{formatDrawerDate(lead.next_action_at)}</div>
+                <div className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs ${overdue ? 'bg-red-400/15 text-red-200' : 'bg-white/10 text-zinc-200'}`}>
+                  {overdue ? t('drawer.dueOverdue') : t('drawer.dueReady')}
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="mt-5 grid gap-4">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <label className="space-y-1">
+            <div className="mt-5 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => touchMutation.mutate()}
+                disabled={isBusy}
+                className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-zinc-950 transition hover:bg-zinc-100 disabled:opacity-50"
+              >
+                {t('drawer.logTouch')}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => saveMutation.mutate()}
+                disabled={isBusy}
+                className="rounded-xl border border-white/20 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10 disabled:opacity-50"
+              >
+                {t('drawer.save')}
+              </button>
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-zinc-200 bg-white p-5">
+            <div>
+              <h3 className="text-sm font-semibold text-zinc-900">{t('drawer.resultTitle')}</h3>
+              <p className="mt-1 text-sm text-zinc-500">{t('drawer.resultSubtitle')}</p>
+            </div>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              {resultStageValues.map((targetStage) => (
+                <button
+                  key={targetStage}
+                  type="button"
+                  onClick={() => moveMutation.mutate(targetStage)}
+                  disabled={isBusy || lead.stage === targetStage}
+                  className="rounded-2xl border border-zinc-200 px-3 py-3 text-left text-sm transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  <span className="block font-medium text-zinc-900">{t(`drawer.result.${targetStage}`)}</span>
+                  <span className="mt-1 block text-xs text-zinc-500">{t(`drawer.resultHint.${targetStage}`)}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-zinc-200 bg-zinc-50 p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-semibold text-zinc-900">{t('drawer.editTitle')}</h3>
+                <p className="mt-1 text-sm text-zinc-500">{t('drawer.editSubtitle')}</p>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <label className="min-w-0 space-y-1">
                 <span className="text-xs text-zinc-500">{t('drawer.stage')}</span>
                 <select
                   value={stage}
                   onChange={(e) => setStage(e.target.value as LeadStage)}
-                  className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm"
+                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm"
                 >
                   {stageValues.map((s) => (
                     <option key={s} value={s}>
@@ -250,12 +332,12 @@ export function LeadDrawer({
                 </select>
               </label>
 
-              <label className="space-y-1">
+              <label className="min-w-0 space-y-1">
                 <span className="text-xs text-zinc-500">{t('drawer.nextAction')}</span>
                 <select
                   value={nextAction}
                   onChange={(e) => setNextAction(e.target.value as NextAction)}
-                  className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm"
+                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm"
                 >
                   {nextActionOptions.map((a) => (
                     <option key={a} value={a}>
@@ -265,29 +347,46 @@ export function LeadDrawer({
                 </select>
               </label>
 
-              <label className="space-y-1">
+              <label className="min-w-0 space-y-1">
                 <span className="text-xs text-zinc-500">{t('drawer.nextDate')}</span>
                 <input
                   type="date"
                   value={nextDate}
                   onChange={(e) => setNextDate(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm"
+                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm"
                 />
               </label>
             </div>
 
-            <label className="space-y-1">
+            <label className="mt-4 block space-y-1">
               <span className="text-xs text-zinc-500">{t('drawer.notes')}</span>
               <textarea
-                rows={3}
+                rows={5}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full rounded-2xl border border-zinc-200 px-3 py-3 text-sm"
+                className="w-full rounded-2xl border border-zinc-200 bg-white px-3 py-3 text-sm leading-relaxed"
               />
             </label>
-          </div>
+          </section>
 
-          <div className="mt-6 rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+          <section className="rounded-3xl border border-zinc-200 bg-white p-5">
+            <h3 className="text-sm font-semibold text-zinc-900">{t('drawer.contextTitle')}</h3>
+
+            {contextRows.length ? (
+              <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+                {contextRows.map((row) => (
+                  <div key={row.label} className="rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-3">
+                    <dt className="text-xs text-zinc-500">{row.label}</dt>
+                    <dd className="mt-1 break-words text-sm font-medium text-zinc-800">{row.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className="mt-3 text-sm text-zinc-500">{t('drawer.noContext')}</p>
+            )}
+          </section>
+
+          <section className="rounded-3xl border border-zinc-200 bg-white p-5">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-zinc-900">{t('drawer.activityTitle')}</h3>
               {!!activitiesQuery.data?.length ? (
@@ -297,9 +396,7 @@ export function LeadDrawer({
               ) : null}
             </div>
 
-            {activitiesQuery.isLoading ? (
-              <p className="mt-3 text-sm text-zinc-500">{t('drawer.loadingActivities')}</p>
-            ) : null}
+            {activitiesQuery.isLoading ? <p className="mt-3 text-sm text-zinc-500">{t('drawer.loadingActivities')}</p> : null}
 
             {!activitiesQuery.isLoading && !recentActivities.length ? (
               <p className="mt-3 text-sm text-zinc-500">{t('drawer.noActivities')}</p>
@@ -309,19 +406,19 @@ export function LeadDrawer({
               <div className="mt-3 max-h-64 overflow-y-auto pr-1">
                 <ul className="space-y-2">
                   {recentActivities.map((activity) => (
-                    <li key={activity.id} className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+                    <li key={activity.id} className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2">
                       <p className="text-sm font-medium leading-tight text-zinc-800">{t(`activity.${activity.type}`)}</p>
-                      <p className="mt-1 text-xs text-zinc-500">{new Date(activity.at).toLocaleString()}</p>
+                      <p className="mt-1 text-xs text-zinc-500">{formatDrawerDate(activity.at)}</p>
                     </li>
                   ))}
                 </ul>
               </div>
             ) : null}
-          </div>
+          </section>
 
-          <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4">
-            <div className="text-sm font-semibold text-red-800">{t('drawer.dangerTitle')}</div>
-            <p className="mt-2 text-sm text-red-700">
+          <details className="rounded-3xl border border-zinc-200 bg-white p-5">
+            <summary className="cursor-pointer text-sm font-semibold text-zinc-900">{t('drawer.dangerTitle')}</summary>
+            <p className="mt-3 text-sm text-zinc-500">
               {lead.status === 'archived' ? t('drawer.deleteHintArchived') : t('drawer.deleteHintArchiveFirst')}
             </p>
 
@@ -344,47 +441,13 @@ export function LeadDrawer({
                   type="button"
                   onClick={handlePermanentDelete}
                   disabled={isBusy}
-                  className="rounded-xl border border-red-300 px-3 py-2 text-sm text-red-700 hover:bg-red-100 disabled:opacity-50"
+                  className="rounded-xl border border-red-300 px-3 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50"
                 >
                   {t('drawer.deletePermanent')}
                 </button>
               ) : null}
             </div>
-          </div>
-        </div>
-
-        <div className="sticky bottom-0 border-t border-zinc-200 bg-white px-6 py-4">
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => touchMutation.mutate()}
-              disabled={isBusy}
-              className="rounded-xl border border-zinc-200 px-3 py-2 text-sm"
-            >
-              {t('drawer.logTouch')}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => saveMutation.mutate()}
-              disabled={isBusy}
-              className="rounded-xl bg-zinc-900 px-4 py-2 text-sm text-white"
-            >
-              {t('drawer.save')}
-            </button>
-
-            {(['contacted', 'replied', 'proposal'] as LeadStage[]).map((targetStage) => (
-              <button
-                key={targetStage}
-                type="button"
-                onClick={() => moveMutation.mutate(targetStage)}
-                disabled={isBusy}
-                className="rounded-xl border border-zinc-200 px-3 py-2 text-sm"
-              >
-                {t(`leads.filter.stage.${targetStage}`)}
-              </button>
-            ))}
-          </div>
+          </details>
         </div>
       </aside>
     </div>
