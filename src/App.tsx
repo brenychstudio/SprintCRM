@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+﻿import { Navigate, Route, Routes } from 'react-router-dom'
 import { LoginPage } from './app/auth/LoginPage'
 import { RequireAuth } from './app/auth/RequireAuth'
 import { AppShell } from './app/layout/AppShell'
@@ -7,7 +7,7 @@ import { TodayPage } from './app/pages/today/TodayPage'
 import { ActiveContactsPage } from './app/pages/active-contacts/ActiveContactsPage'
 import { ImportsPage } from './app/pages/imports/ImportsPage'
 import { PipelinePage } from './app/pages/pipeline/PipelinePage'
-import { ReportsPage } from "./app/pages/reports/ReportsPage";
+import { ReportsPage } from './app/pages/reports/ReportsPage'
 
 export default function App() {
   return (
@@ -30,3 +30,4 @@ export default function App() {
     </Routes>
   )
 }
+

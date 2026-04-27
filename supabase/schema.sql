@@ -1,4 +1,4 @@
--- OUTREACH CRM schema v2 (Org-ready) for Supabase (public)
+﻿-- SprintCRM schema v2 (Org-ready) for Supabase (public)
 -- Includes: organizations + memberships + org-scoped RLS, plus leads/activities/imports.
 
 create extension if not exists pgcrypto;
@@ -76,7 +76,7 @@ as $$
   limit 1;
 $$;
 
--- 4) Create “personal org” automatically for new auth users
+-- 4) Create вЂњpersonal orgвЂќ automatically for new auth users
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -288,3 +288,4 @@ drop policy if exists imports_insert_org on public.imports;
 create policy imports_insert_org on public.imports
 for insert to authenticated
 with check (public.is_org_member(org_id));
+

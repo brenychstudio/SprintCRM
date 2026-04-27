@@ -101,6 +101,10 @@ Build:
 
     npm run build
 
+## Architecture
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for a concise overview of the application structure, workflow model, data model, and safety rules.
+
 ## Supabase
 
 Database migrations are stored in:
