@@ -1,4 +1,4 @@
--- Outreach CRM v2 hardening patch (idempotent)
+﻿-- SprintCRM hardening patch (idempotent)
 -- Applies safety fixes on top of base org-ready schema.
 -- 1) org-scoped dedup uniqueness
 -- 2) FK integrity for owner/created_by columns
@@ -142,3 +142,4 @@ BEGIN
   SELECT v_action, (v_local_target AT TIME ZONE p_tz);
 END;
 $$;
+
