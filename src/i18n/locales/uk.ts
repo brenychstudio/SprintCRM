@@ -219,6 +219,8 @@ const uk: Record<string, string> = {
   'drawer.loadingActivities': 'Завантаження…',
   'drawer.noActivities': 'Поки немає подій.',
   'drawer.status': "Статус",
+  'drawer.statusActive': 'Активний',
+  'drawer.statusArchived': 'В архіві',
   'drawer.archive': "Архівувати",
   'drawer.restore': "Відновити",
   'drawer.dangerTitle': "Архів і видалення",

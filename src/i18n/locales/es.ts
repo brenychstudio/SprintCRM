@@ -206,6 +206,8 @@ const es: Record<string, string> = {
   'drawer.loadingActivities': 'Cargando…',
   'drawer.noActivities': 'Sin actividad.',
   'drawer.status': 'Estado',
+  'drawer.statusActive': 'Activo',
+  'drawer.statusArchived': 'Archivado',
   'drawer.archive': 'Archivar',
   'drawer.restore': 'Restaurar',
   'drawer.dangerTitle': 'Zona peligrosa',

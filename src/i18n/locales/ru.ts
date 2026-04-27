@@ -206,6 +206,8 @@ const ru: Record<string, string> = {
   'drawer.loadingActivities': 'Загрузка…',
   'drawer.noActivities': 'Пока нет событий.',
   'drawer.status': 'Статус',
+  'drawer.statusActive': 'Активный',
+  'drawer.statusArchived': 'В архиве',
   'drawer.archive': 'Архивировать',
   'drawer.restore': 'Восстановить',
   'drawer.dangerTitle': 'Опасная зона',
