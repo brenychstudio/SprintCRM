@@ -1,73 +1,130 @@
-# React + TypeScript + Vite
+﻿# SprintCRM
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+SprintCRM is an internal outbound CRM for managing imported lead databases, daily work queues, warm contacts, pipeline stages, reports, and safe data cleanup.
 
-Currently, two official plugins are available:
+It was built as a personal-use operational CRM, not as a public SaaS or email automation tool.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Project Type
 
-## React Compiler
+- Internal tool
+- Product prototype
+- Operational CRM system
+- Personal outbound workflow system
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Core Workflow
 
-## Expanding the ESLint configuration
+Import CSV/XLSX → map columns → preview and deduplicate → create leads → work through Today queue → manage each lead in the Work Panel → monitor warm contacts and pipeline → review reports → export or clean data safely.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Main Features
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Supabase authentication
+- Protected CRM routes
+- Multi-language UI: English, Ukrainian, Spanish, Russian
+- CSV / XLSX import flow
+- Column mapping
+- Import preview
+- Deduplication checks
+- Import history
+- Undo import
+- Import history cleanup
+- Lead database with filters and smart views
+- Saved views
+- Bulk actions
+- Daily work queue
+- Lead Work Panel
+- Active Contacts view
+- Pipeline / funnel overview
+- Reports and CSV export
+- Archive / restore workflow
+- Permanent delete only for archived leads
+- RLS-backed data safety policies
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## UX Direction
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+SprintCRM is designed as a focused business tool, not a generic admin dashboard.
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The latest UX pass simplified the main workflow around four surfaces:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- Today — daily work queue
+- Lead Work Panel — single place to manage a lead
+- Active Contacts — warm leads already in progress
+- Pipeline — overview of current funnel state
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+The goal is that a non-technical user can understand the next action without needing to understand CRM internals.
+
+## Tech Stack
+
+- Vite
+- React
+- TypeScript
+- Tailwind CSS
+- React Router
+- TanStack Query
+- Supabase
+- Postgres
+- Supabase Auth
+- Row Level Security
+- XLSX import support
+
+## Repository Status
+
+This repository is shared as a portfolio and code review reference.
+
+The live production CRM is not public because it is connected to private lead data and Supabase access.
+
+The project should be reviewed through anonymized screenshots, workflow video, code structure, architecture notes, and implementation details.
+
+No public live demo is provided for security and privacy reasons.
+
+## Environment Variables
+
+Create a local .env file based on .env.example.
+
+Required variables:
+
+- VITE_SUPABASE_URL
+- VITE_SUPABASE_ANON_KEY
+
+Do not commit .env files.
+
+## Local Development
+
+Install dependencies:
+
+    npm install
+
+Run locally:
+
+    npm run dev
+
+Build:
+
+    npm run build
+
+## Supabase
+
+Database migrations are stored in:
+
+    supabase/migrations
+
+A working Supabase project with the required schema, auth, RLS policies, and environment variables is required to run the CRM locally.
+
+## Security Notes
+
+- No Supabase service role key should be used in the frontend.
+- .env and .env.* are ignored.
+- Only .env.example is committed.
+- The app uses Supabase Row Level Security policies for org-scoped access.
+- This repository should not contain real lead databases, CSV/XLSX files, private emails, phone numbers, or production secrets.
+
+## Portfolio Note
+
+SprintCRM is best understood as an internal product system case study.
+
+It demonstrates product UX thinking, operational workflow design, React / TypeScript implementation, Supabase integration, data safety logic, import / dedup / rollback flow, CRM lifecycle modeling, multilingual interface work, and practical business-tool design.
+
+## License
+
+All rights reserved.
+
+This repository is provided for portfolio review only. No permission is granted to reuse, redistribute, resell, repackage, or commercialize this code without explicit written permission.

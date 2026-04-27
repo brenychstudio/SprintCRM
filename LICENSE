@@ -1,30 +1,4 @@
-﻿# SprintCRM
-
-SprintCRM is an internal outbound CRM for managing imported lead databases, daily work queues, warm contacts, pipeline stages, reports, and safe data cleanup.
-
-It was built as a personal-use operational CRM, not as a public SaaS or email automation tool. The main goal is to support a disciplined manual outbound workflow: import leads, clean and deduplicate data, work through the daily queue, manage active contacts, monitor the pipeline, and export reports.
-
-## Project Type
-
-- Internal tool
-- Product prototype
-- Operational CRM system
-- Personal outbound workflow system
-
-## Core Workflow
-
-```text
-Import CSV/XLSX
-→ map columns
-→ preview and deduplicate
-→ create leads
-→ work through Today queue
-→ manage each lead in the Work Panel
-→ monitor warm contacts and pipeline
-→ review reports
-→ export or clean data safely
-@'
-All Rights Reserved
+﻿All Rights Reserved
 
 Copyright (c) 2026 Rostyslav Brenych / Concept2048
 
