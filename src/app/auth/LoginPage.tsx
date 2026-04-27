@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useI18n } from '../../i18n/i18n'
 import { supabase } from '../../lib/supabase'
 import { SignalGateBackdrop } from './SignalGateBackdrop'
@@ -10,10 +10,12 @@ export function LoginPage() {
   const { isLoading, session } = useAuth()
   const { t } = useI18n()
   const location = useLocation()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [authPhase, setAuthPhase] = useState<'idle' | 'submitting' | 'success'>('idle')
 
   const redirectTo =
     typeof location.state === 'object' &&
@@ -34,13 +36,17 @@ export function LoginPage() {
     )
   }
 
-  if (session) {
+  if (session && authPhase !== 'success') {
     return <Navigate to={redirectTo} replace />
   }
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+
+    if (isSubmitting || authPhase === 'success') return
+
     setIsSubmitting(true)
+    setAuthPhase('submitting')
     setErrorMessage(null)
 
     const { error } = await supabase.auth.signInWithPassword({
@@ -48,15 +54,39 @@ export function LoginPage() {
       password,
     })
 
-    if (error) setErrorMessage(error.message)
+    if (error) {
+      setErrorMessage(error.message)
+      setAuthPhase('idle')
+      setIsSubmitting(false)
+      return
+    }
+
+    setAuthPhase('success')
     setIsSubmitting(false)
+
+    window.setTimeout(() => {
+      navigate(redirectTo, { replace: true })
+    }, 680)
   }
 
   return (
-    <div className="sg-stage">
+    <div className={'sg-stage' + (authPhase === 'success' ? ' is-handoff' : '')}>
       <style>{signalGateStyles}</style>
 
       <SignalGateBackdrop />
+
+      {authPhase === 'success' ? (
+        <div className="sg-handoff-layer" aria-live="polite">
+          <div className="sg-handoff-pulse" />
+          <div className="sg-handoff-card">
+            <span className="sg-handoff-dot" />
+            <div>
+              <div className="sg-handoff-title">Access granted</div>
+              <div className="sg-handoff-copy">Opening workspace</div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <main className="sg-shell">
         <section className="sg-copy" aria-label="SprintCRM product introduction">
@@ -102,7 +132,7 @@ export function LoginPage() {
             <div className="sg-login-shell">
               <div className="sg-card-top-line" />
 
-              <form onSubmit={onSubmit} className="sg-login-inner">
+              <form onSubmit={onSubmit} className={'sg-login-inner' + (authPhase === 'success' ? ' is-success' : '')}>
                 <div className="sg-login-head">
                   <div>
                     <div className="sg-micro">Private access</div>
@@ -140,8 +170,8 @@ export function LoginPage() {
 
                 {errorMessage ? <p className="sg-error">{errorMessage}</p> : null}
 
-                <button type="submit" disabled={isSubmitting} className="sg-submit">
-                  <span>{isSubmitting ? t('auth.signingIn') : t('auth.signIn')}</span>
+                <button type="submit" disabled={isSubmitting || authPhase === 'success'} className="sg-submit">
+                  <span>{authPhase === 'success' ? 'Opening workspace' : isSubmitting ? t('auth.signingIn') : t('auth.signIn')}</span>
                 </button>
 
                 <div className="sg-login-footer">
@@ -614,6 +644,90 @@ const signalGateStyles = `
   font-size: 12px;
 }
 
+
+.sg-stage.is-handoff .sg-copy {
+  animation: sg-copy-exit 620ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.sg-stage.is-handoff .sg-login-wrap {
+  animation: sg-login-handoff 680ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.sg-stage.is-handoff .sg-card-aura {
+  animation: sg-handoff-aura 680ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.sg-login-inner.is-success {
+  border-color: rgba(52, 211, 153, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.sg-login-inner.is-success .sg-submit {
+  background: #ffffff;
+  box-shadow:
+    0 24px 64px rgba(244, 244, 245, 0.22),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.sg-handoff-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: 0;
+  animation: sg-handoff-layer 680ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.sg-handoff-pulse {
+  position: absolute;
+  width: min(720px, 80vw);
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle, rgba(244, 244, 245, 0.12), transparent 28%),
+    radial-gradient(circle, rgba(52, 211, 153, 0.06), transparent 46%);
+  filter: blur(22px);
+  transform: scale(0.82);
+  animation: sg-handoff-pulse 680ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.sg-handoff-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 999px;
+  background: rgba(17, 17, 19, 0.72);
+  padding: 12px 16px;
+  color: #f4f4f5;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(24px);
+}
+
+.sg-handoff-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #34d399;
+  box-shadow: 0 0 24px rgba(52, 211, 153, 0.9);
+}
+
+.sg-handoff-title {
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.sg-handoff-copy {
+  margin-top: 2px;
+  color: rgba(212, 212, 216, 0.7);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
 .sg-loading {
   min-height: 100svh;
   display: grid;
@@ -630,6 +744,87 @@ const signalGateStyles = `
   color: rgba(244, 244, 245, 0.75);
   font-size: 14px;
   backdrop-filter: blur(16px);
+}
+
+
+@keyframes sg-copy-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.992);
+    filter: blur(8px);
+  }
+}
+
+@keyframes sg-login-handoff {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+
+  46% {
+    opacity: 1;
+    transform: translateY(-5px) scale(1.01);
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-18px) scale(0.985);
+    filter: blur(10px);
+  }
+}
+
+@keyframes sg-handoff-aura {
+  from {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1.22);
+  }
+}
+
+@keyframes sg-handoff-layer {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+
+  42% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-8px) scale(1.015);
+  }
+}
+
+@keyframes sg-handoff-pulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+
+  48% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.36);
+  }
 }
 
 @keyframes sg-fade-rise {
