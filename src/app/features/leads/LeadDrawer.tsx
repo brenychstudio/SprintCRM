@@ -228,7 +228,7 @@ export function LeadDrawer({
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
               <div className="text-xs text-zinc-500">{t('drawer.status')}</div>
               <div className="mt-2 text-sm font-medium text-zinc-900">
-                {lead.status === 'archived' ? t('leads.smartViews.archived') : t('reports.kpi.active')}
+                {lead.status === 'archived' ? t('drawer.statusArchived') : t('drawer.statusActive')}
               </div>
             </div>
           </div>
