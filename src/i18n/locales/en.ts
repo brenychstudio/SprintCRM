@@ -1,5 +1,5 @@
 const en: Record<string, string> = {
-  'app.name': 'Outreach CRM',
+  'app.name': 'SprintCRM',
   'lang.label': 'Language',
   'lang.en': 'English',
   'lang.uk': 'Українська',

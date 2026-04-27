@@ -89,6 +89,7 @@ export function LeadDrawer({
   const [nextAction, setNextAction] = useState(lead.next_action)
   const [nextDate, setNextDate] = useState(lead.next_action_at.slice(0, 10))
   const [notes, setNotes] = useState(lead.notes ?? '')
+  const [drawerError, setDrawerError] = useState<string | null>(null)
 
   const [baselineStage, setBaselineStage] = useState(lead.stage)
   const [baselineNextAction, setBaselineNextAction] = useState(lead.next_action)
@@ -100,6 +101,7 @@ export function LeadDrawer({
     setNextAction(lead.next_action)
     setNextDate(lead.next_action_at.slice(0, 10))
     setNotes(lead.notes ?? '')
+    setDrawerError(null)
 
     setBaselineStage(lead.stage)
     setBaselineNextAction(lead.next_action)
@@ -134,6 +136,10 @@ export function LeadDrawer({
     queryClient.invalidateQueries({ queryKey: leadsQueryKeys.all })
     queryClient.invalidateQueries({ queryKey: leadsQueryKeys.activities(lead.id) })
     onClose()
+  }
+
+  function showDrawerError(error: unknown) {
+    setDrawerError(error instanceof Error ? error.message : t('common.error'))
   }
 
   const saveMutation = useMutation({
@@ -176,6 +182,7 @@ export function LeadDrawer({
       return updatedLead
     },
     onSuccess: handleChanged,
+    onError: showDrawerError,
   })
 
   const touchMutation = useMutation({
@@ -185,6 +192,7 @@ export function LeadDrawer({
       return updatedLead
     },
     onSuccess: handleChanged,
+    onError: showDrawerError,
   })
 
   const moveMutation = useMutation({
@@ -215,6 +223,7 @@ export function LeadDrawer({
       return updatedLead
     },
     onSuccess: handleChanged,
+    onError: showDrawerError,
   })
 
   const archiveMutation = useMutation({
@@ -223,6 +232,7 @@ export function LeadDrawer({
       return updateLead(lead.id, { status: nextStatus })
     },
     onSuccess: handleChanged,
+    onError: showDrawerError,
   })
 
   const deleteMutation = useMutation({
@@ -230,9 +240,11 @@ export function LeadDrawer({
       await deleteLeadPermanently(lead.id)
     },
     onSuccess: handleDeleted,
+    onError: showDrawerError,
   })
 
   function handlePermanentDelete() {
+    setDrawerError(null)
     if (lead.status !== 'archived') return
     const ok = window.confirm(t('drawer.deleteConfirm'))
     if (!ok) return
@@ -282,6 +294,12 @@ export function LeadDrawer({
         </div>
 
         <div className="space-y-5 px-6 py-5">
+          {drawerError ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {drawerError}
+            </div>
+          ) : null}
+
           <section className="rounded-3xl border border-zinc-200 bg-zinc-950 p-5 text-white shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>

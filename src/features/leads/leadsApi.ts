@@ -101,11 +101,18 @@ export async function updateLead(id: string, patch: UpdateLeadInput): Promise<Le
 }
 
 export async function deleteLeadPermanently(id: string): Promise<void> {
-  const { error: activitiesError } = await supabase.from('activities').delete().eq('lead_id', id)
-  if (activitiesError) throw activitiesError
+  const { data, error } = await supabase
+    .from('leads')
+    .delete()
+    .eq('id', id)
+    .eq('status', 'archived')
+    .select('id')
 
-  const { error: leadError } = await supabase.from('leads').delete().eq('id', id)
-  if (leadError) throw leadError
+  if (error) throw error
+
+  if (!data?.length) {
+    throw new Error('Lead was not deleted. It may still be active, already deleted, or blocked by permissions.')
+  }
 }
 
 export async function listActivities(leadId: string): Promise<Activity[]> {
