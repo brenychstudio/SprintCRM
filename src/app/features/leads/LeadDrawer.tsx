@@ -41,6 +41,38 @@ function pickPrimaryContact(lead: Lead): string {
   return [lead.contact_name, lead.email, lead.phone].filter(Boolean).join(' · ') || lead.website_domain || lead.website || '—'
 }
 
+function getNoteLine(notes: string, labels: string[]): string {
+  const lines = notes
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  for (const label of labels) {
+    const found = lines.find((line) => line.toLowerCase().startsWith(`${label.toLowerCase()}:`))
+    if (found) return found.slice(found.indexOf(':') + 1).trim()
+  }
+
+  return ''
+}
+
+function buildLeadInsights(notes: string) {
+  return {
+    shortContext: getNoteLine(notes, ['Segment', 'Source group', 'Market']),
+    whyRelevant: getNoteLine(notes, ['Why', 'Hook', 'Angle']),
+    weakSpot: getNoteLine(notes, ['Weaknesses', 'Weakness']),
+    suggestedOffer: getNoteLine(notes, ['Case fit', 'Offer', 'Practicality']),
+  }
+}
+
+function hasLeadInsights(insights: ReturnType<typeof buildLeadInsights>): boolean {
+  return Boolean(
+    insights.shortContext ||
+      insights.whyRelevant ||
+      insights.weakSpot ||
+      insights.suggestedOffer,
+  )
+}
+
 export function LeadDrawer({
   lead,
   onClose,
@@ -82,6 +114,8 @@ export function LeadDrawer({
 
   const recentActivities = useMemo(() => (activitiesQuery.data ?? []).slice(0, 5), [activitiesQuery.data])
   const overdue = isLeadOverdue(lead.next_action_at)
+  const leadInsights = useMemo(() => buildLeadInsights(notes), [notes])
+  const hasInsights = hasLeadInsights(leadInsights)
 
   const contextRows = [
     { label: t('drawer.context.niche'), value: lead.niche },
@@ -213,7 +247,7 @@ export function LeadDrawer({
     deleteMutation.isPending
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-zinc-900/35 backdrop-blur-[1px]">
+    <div className="fixed inset-0 z-50 flex justify-end overflow-hidden bg-zinc-900/35 backdrop-blur-[1px]">
       <button type="button" aria-label={t('drawer.close')} onClick={onClose} className="h-full flex-1" />
 
       <aside className="h-full w-full max-w-xl overflow-y-auto overflow-x-hidden border-l border-zinc-200 bg-white shadow-xl">
@@ -308,6 +342,43 @@ export function LeadDrawer({
             </div>
           </section>
 
+          {hasInsights ? (
+            <section className="rounded-3xl border border-zinc-200 bg-white p-5">
+              <h3 className="text-sm font-semibold text-zinc-900">{t('drawer.insightTitle')}</h3>
+              <p className="mt-1 text-sm text-zinc-500">{t('drawer.insightSubtitle')}</p>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {leadInsights.shortContext ? (
+                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-3">
+                    <div className="text-xs text-zinc-500">{t('drawer.insight.shortContext')}</div>
+                    <div className="mt-1 break-words text-sm font-medium text-zinc-900">{leadInsights.shortContext}</div>
+                  </div>
+                ) : null}
+
+                {leadInsights.whyRelevant ? (
+                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-3">
+                    <div className="text-xs text-zinc-500">{t('drawer.insight.whyRelevant')}</div>
+                    <div className="mt-1 break-words text-sm font-medium text-zinc-900">{leadInsights.whyRelevant}</div>
+                  </div>
+                ) : null}
+
+                {leadInsights.weakSpot ? (
+                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-3">
+                    <div className="text-xs text-zinc-500">{t('drawer.insight.weakSpot')}</div>
+                    <div className="mt-1 break-words text-sm font-medium text-zinc-900">{leadInsights.weakSpot}</div>
+                  </div>
+                ) : null}
+
+                {leadInsights.suggestedOffer ? (
+                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-3">
+                    <div className="text-xs text-zinc-500">{t('drawer.insight.suggestedOffer')}</div>
+                    <div className="mt-1 break-words text-sm font-medium text-zinc-900">{leadInsights.suggestedOffer}</div>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+
           <section className="rounded-3xl border border-zinc-200 bg-zinc-50 p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -358,15 +429,16 @@ export function LeadDrawer({
               </label>
             </div>
 
-            <label className="mt-4 block space-y-1">
-              <span className="text-xs text-zinc-500">{t('drawer.notes')}</span>
+            <details className="mt-4 rounded-2xl border border-zinc-200 bg-white px-3 py-3" open={!hasInsights}>
+              <summary className="cursor-pointer text-xs font-medium text-zinc-500">{t('drawer.notes')}</summary>
+
               <textarea
                 rows={5}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full rounded-2xl border border-zinc-200 bg-white px-3 py-3 text-sm leading-relaxed"
+                className="mt-3 w-full resize-y rounded-xl border border-zinc-200 bg-white px-3 py-3 text-sm leading-relaxed"
               />
-            </label>
+            </details>
           </section>
 
           <section className="rounded-3xl border border-zinc-200 bg-white p-5">
