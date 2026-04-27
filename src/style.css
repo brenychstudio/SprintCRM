@@ -599,3 +599,319 @@ body {
 }
 
 /* /CRM Theme Foundation v1 */
+
+
+/* CRM Global Surface Tokens v1 */
+
+/*
+  Task 34B:
+  Tokenize global CRM surfaces after Theme Foundation.
+  This is intentionally CSS-first and avoids component logic changes.
+  Do not add transform animations here: LeadDrawer uses a portal and must stay viewport-stable.
+*/
+
+:root,
+:root[data-theme='light'] {
+  --crm-input-bg: rgba(255, 255, 255, 0.9);
+  --crm-input-border: rgba(212, 212, 216, 0.92);
+  --crm-input-placeholder: #a1a1aa;
+  --crm-neutral-card: rgba(255, 255, 255, 0.94);
+  --crm-neutral-card-hover: rgba(250, 250, 250, 0.9);
+  --crm-table-head: rgba(250, 250, 250, 0.88);
+  --crm-table-row-hover: rgba(250, 250, 250, 0.84);
+  --crm-button-neutral: rgba(255, 255, 255, 0.84);
+  --crm-button-neutral-hover: rgba(250, 250, 250, 0.94);
+  --crm-disabled-bg: rgba(244, 244, 245, 0.82);
+  --crm-disabled-text: rgba(113, 113, 122, 0.58);
+  --crm-overlay-bg: rgba(24, 24, 27, 0.2);
+}
+
+:root[data-theme='dark'] {
+  --crm-input-bg: rgba(24, 24, 27, 0.82);
+  --crm-input-border: rgba(63, 63, 70, 0.86);
+  --crm-input-placeholder: rgba(161, 161, 170, 0.68);
+  --crm-neutral-card: rgba(24, 24, 27, 0.88);
+  --crm-neutral-card-hover: rgba(32, 32, 36, 0.92);
+  --crm-table-head: rgba(32, 32, 36, 0.72);
+  --crm-table-row-hover: rgba(244, 244, 245, 0.035);
+  --crm-button-neutral: rgba(24, 24, 27, 0.82);
+  --crm-button-neutral-hover: rgba(32, 32, 36, 0.96);
+  --crm-disabled-bg: rgba(39, 39, 42, 0.74);
+  --crm-disabled-text: rgba(161, 161, 170, 0.46);
+  --crm-overlay-bg: rgba(0, 0, 0, 0.34);
+}
+
+/* Main text hierarchy */
+
+[data-theme='dark'] .crm-main {
+  background: var(--crm-surface-alpha) !important;
+  color: var(--crm-text);
+}
+
+[data-theme='dark'] .crm-main :where(h1, h2, h3, h4, strong) {
+  color: var(--crm-text);
+}
+
+[data-theme='dark'] .crm-main :where(p, label, small) {
+  color: var(--crm-text-secondary);
+}
+
+[data-theme='dark'] .crm-main [class*='text-zinc-900'],
+[data-theme='dark'] .crm-main [class*='text-zinc-950'] {
+  color: var(--crm-text) !important;
+}
+
+[data-theme='dark'] .crm-main [class*='text-zinc-700'],
+[data-theme='dark'] .crm-main [class*='text-zinc-600'] {
+  color: var(--crm-text-secondary) !important;
+}
+
+[data-theme='dark'] .crm-main [class*='text-zinc-500'],
+[data-theme='dark'] .crm-main [class*='text-zinc-400'] {
+  color: var(--crm-text-muted) !important;
+}
+
+/* Neutral surfaces */
+
+[data-theme='dark'] .crm-main [class*='bg-white'],
+[data-theme='dark'] .crm-main [class*='bg-zinc-50'],
+[data-theme='dark'] .crm-main [class*='bg-zinc-100'] {
+  background-color: var(--crm-neutral-card) !important;
+}
+
+[data-theme='dark'] .crm-main [class*='border-zinc-100'],
+[data-theme='dark'] .crm-main [class*='border-zinc-200'],
+[data-theme='dark'] .crm-main [class*='border-zinc-300'] {
+  border-color: var(--crm-border-soft) !important;
+}
+
+[data-theme='dark'] .crm-main [class*='shadow-sm'],
+[data-theme='dark'] .crm-main [class*='shadow-'] {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.045) inset,
+    0 18px 54px rgba(0, 0, 0, 0.22) !important;
+}
+
+/* Cards and panels */
+
+[data-theme='dark'] .crm-main [class*='rounded-2xl'][class*='border'],
+[data-theme='dark'] .crm-main [class*='rounded-3xl'][class*='border'] {
+  background:
+    linear-gradient(180deg, rgba(24, 24, 27, 0.92), rgba(17, 17, 19, 0.9)) !important;
+  border-color: var(--crm-border-soft) !important;
+}
+
+[data-theme='dark'] .crm-main [class*='rounded-xl'][class*='border'] {
+  border-color: var(--crm-border-soft) !important;
+}
+
+/* Inputs, selects, textareas */
+
+.crm-main input:not([type='checkbox']),
+.crm-main select,
+.crm-main textarea,
+.fixed.inset-0.z-50 aside input:not([type='checkbox']),
+.fixed.inset-0.z-50 aside select,
+.fixed.inset-0.z-50 aside textarea {
+  background-color: var(--crm-input-bg);
+  border-color: var(--crm-input-border);
+  color: var(--crm-text);
+}
+
+.crm-main input::placeholder,
+.crm-main textarea::placeholder,
+.fixed.inset-0.z-50 aside input::placeholder,
+.fixed.inset-0.z-50 aside textarea::placeholder {
+  color: var(--crm-input-placeholder);
+}
+
+[data-theme='dark'] .crm-main input:not([type='checkbox']),
+[data-theme='dark'] .crm-main select,
+[data-theme='dark'] .crm-main textarea,
+[data-theme='dark'] .fixed.inset-0.z-50 aside input:not([type='checkbox']),
+[data-theme='dark'] .fixed.inset-0.z-50 aside select,
+[data-theme='dark'] .fixed.inset-0.z-50 aside textarea {
+  background-color: var(--crm-input-bg) !important;
+  border-color: var(--crm-input-border) !important;
+  color: var(--crm-text) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.035) inset,
+    0 0 0 0 rgba(255, 255, 255, 0);
+}
+
+[data-theme='dark'] .crm-main input:not([type='checkbox']):focus,
+[data-theme='dark'] .crm-main select:focus,
+[data-theme='dark'] .crm-main textarea:focus,
+[data-theme='dark'] .fixed.inset-0.z-50 aside input:not([type='checkbox']):focus,
+[data-theme='dark'] .fixed.inset-0.z-50 aside select:focus,
+[data-theme='dark'] .fixed.inset-0.z-50 aside textarea:focus {
+  border-color: rgba(244, 244, 245, 0.32) !important;
+  box-shadow:
+    0 0 0 4px rgba(244, 244, 245, 0.065),
+    0 1px 0 rgba(255, 255, 255, 0.055) inset !important;
+  outline: none;
+}
+
+[data-theme='dark'] option {
+  background: #18181b;
+  color: #f4f4f5;
+}
+
+/* Tables */
+
+[data-theme='dark'] .crm-main table {
+  color: var(--crm-text-secondary);
+}
+
+[data-theme='dark'] .crm-main thead {
+  background: var(--crm-table-head) !important;
+}
+
+[data-theme='dark'] .crm-main th {
+  color: var(--crm-text-muted) !important;
+  border-color: var(--crm-border-soft) !important;
+}
+
+[data-theme='dark'] .crm-main td {
+  color: var(--crm-text-secondary);
+  border-color: var(--crm-border-soft) !important;
+}
+
+[data-theme='dark'] .crm-main tbody tr:hover {
+  background-color: var(--crm-table-row-hover) !important;
+}
+
+/* Neutral buttons */
+
+[data-theme='dark'] .crm-main button:not([class*='bg-zinc-900']):not([class*='bg-zinc-950']):not(.crm-theme-choice),
+[data-theme='dark'] .fixed.inset-0.z-50 aside button:not([class*='bg-zinc-900']):not([class*='bg-zinc-950']):not(.crm-theme-choice) {
+  border-color: var(--crm-border-soft);
+  background-color: var(--crm-button-neutral);
+  color: var(--crm-text-secondary);
+}
+
+[data-theme='dark'] .crm-main button:not([class*='bg-zinc-900']):not([class*='bg-zinc-950']):not(.crm-theme-choice):hover,
+[data-theme='dark'] .fixed.inset-0.z-50 aside button:not([class*='bg-zinc-900']):not([class*='bg-zinc-950']):not(.crm-theme-choice):hover {
+  background-color: var(--crm-button-neutral-hover);
+  color: var(--crm-text);
+}
+
+[data-theme='dark'] .crm-main button:disabled,
+[data-theme='dark'] .fixed.inset-0.z-50 aside button:disabled {
+  background-color: var(--crm-disabled-bg) !important;
+  color: var(--crm-disabled-text) !important;
+  border-color: var(--crm-border-soft) !important;
+  box-shadow: none !important;
+}
+
+/* Primary buttons */
+
+[data-theme='dark'] .crm-main button[class*='bg-zinc-900'],
+[data-theme='dark'] .crm-main button[class*='bg-zinc-950'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside button[class*='bg-zinc-900'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside button[class*='bg-zinc-950'] {
+  background: var(--crm-accent) !important;
+  color: var(--crm-accent-contrast) !important;
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.26),
+    0 1px 0 rgba(255, 255, 255, 0.12) inset !important;
+}
+
+/* Checkboxes */
+
+[data-theme='dark'] .crm-main input[type='checkbox'] {
+  accent-color: var(--crm-accent);
+}
+
+/* Pills / neutral badges only */
+
+[data-theme='dark'] .crm-main [class*='bg-zinc-100'][class*='rounded-full'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-zinc-100'][class*='rounded-full'] {
+  background-color: rgba(244, 244, 245, 0.08) !important;
+  color: var(--crm-text-secondary) !important;
+}
+
+/* Drawer base tokenization. Full drawer polish comes later in Task 35C. */
+
+[data-theme='dark'] .fixed.inset-0.z-50 {
+  background:
+    linear-gradient(90deg, rgba(9, 9, 11, 0.5), rgba(9, 9, 11, 0.24)),
+    var(--crm-overlay-bg) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside {
+  background: var(--crm-surface) !important;
+  border-color: var(--crm-border-soft) !important;
+  color: var(--crm-text);
+  box-shadow:
+    -28px 0 90px rgba(0, 0, 0, 0.34),
+    -1px 0 0 rgba(255, 255, 255, 0.045) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside :where(h1, h2, h3, h4, strong) {
+  color: var(--crm-text);
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside :where(p, label, small) {
+  color: var(--crm-text-secondary);
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-white'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-zinc-50'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-zinc-100'] {
+  background-color: var(--crm-neutral-card) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='border-zinc-100'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='border-zinc-200'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='border-zinc-300'] {
+  border-color: var(--crm-border-soft) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='text-zinc-900'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='text-zinc-950'] {
+  color: var(--crm-text) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='text-zinc-700'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='text-zinc-600'] {
+  color: var(--crm-text-secondary) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='text-zinc-500'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='text-zinc-400'] {
+  color: var(--crm-text-muted) !important;
+}
+
+/* Scrollbars */
+
+[data-theme='dark'] .crm-main::-webkit-scrollbar-thumb,
+[data-theme='dark'] .fixed.inset-0.z-50 aside::-webkit-scrollbar-thumb {
+  background: rgba(113, 113, 122, 0.58);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+[data-theme='dark'] .crm-main::-webkit-scrollbar-thumb:hover,
+[data-theme='dark'] .fixed.inset-0.z-50 aside::-webkit-scrollbar-thumb:hover {
+  background: rgba(161, 161, 170, 0.68);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+/* Light mode keeps the existing premium polish but receives token consistency */
+
+:root[data-theme='light'] .crm-main,
+:root[data-theme='light'] .crm-sidebar {
+  background: var(--crm-surface-alpha);
+  border-color: var(--crm-border-soft);
+}
+
+:root[data-theme='light'] .crm-main input:not([type='checkbox']),
+:root[data-theme='light'] .crm-main select,
+:root[data-theme='light'] .crm-main textarea {
+  background-color: var(--crm-input-bg);
+  border-color: var(--crm-input-border);
+}
+
+/* /CRM Global Surface Tokens v1 */
