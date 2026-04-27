@@ -43,6 +43,7 @@ export function PipelinePage() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [search, setSearch] = useState('')
   const [nicheFilter, setNicheFilter] = useState('__all')
+  const [expandedSecondaryStages, setExpandedSecondaryStages] = useState<Partial<Record<LeadStage, boolean>>>({})
 
   const leadsQuery = useQuery({
     queryKey: leadsQueryKeys.list({ scope: 'pipeline' }),
@@ -127,6 +128,13 @@ export function PipelinePage() {
       lostCount: grouped.lost.length,
     }
   }, [filteredLeads, grouped])
+
+  function toggleSecondaryStage(stage: LeadStage) {
+    setExpandedSecondaryStages((prev) => ({
+      ...prev,
+      [stage]: !prev[stage],
+    }))
+  }
 
   return (
     <section>
@@ -283,57 +291,70 @@ export function PipelinePage() {
           </div>
 
           <div className="space-y-4">
-            {secondaryStages.map((stage) => (
-              <section key={stage} className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-zinc-900">{t(`pipeline.stage.${stage}`)}</h3>
-                  <span className={`rounded-full border px-2 py-1 text-[11px] ${stageTone(stage)}`}>{grouped[stage].length}</span>
-                </div>
+            {secondaryStages.map((stage) => {
+              const expanded = Boolean(expandedSecondaryStages[stage])
+              const stageLeads = grouped[stage]
+              const visibleStageLeads = expanded ? stageLeads : stageLeads.slice(0, 5)
+              const hiddenCount = Math.max(stageLeads.length - 5, 0)
 
-                <div className="space-y-2">
-                  {grouped[stage].slice(0, 5).map((lead) => {
-                    const overdue = new Date(lead.next_action_at).getTime() < Date.now()
+              return (
+                <section key={stage} className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-zinc-900">{t(`pipeline.stage.${stage}`)}</h3>
+                    <span className={`rounded-full border px-2 py-1 text-[11px] ${stageTone(stage)}`}>
+                      {stageLeads.length}
+                    </span>
+                  </div>
 
-                    return (
-                      <article key={lead.id} className="rounded-xl border border-zinc-200 bg-white px-3 py-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-zinc-900">{lead.company_name}</p>
-                            <p className="mt-1 text-xs text-zinc-500">{formatPipelineDate(lead.next_action_at)}</p>
+                  <div className="space-y-2">
+                    {visibleStageLeads.map((lead) => {
+                      const overdue = new Date(lead.next_action_at).getTime() < Date.now()
+
+                      return (
+                        <article key={lead.id} className="rounded-xl border border-zinc-200 bg-white px-3 py-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium text-zinc-900">{lead.company_name}</p>
+                              <p className="mt-1 text-xs text-zinc-500">{formatPipelineDate(lead.next_action_at)}</p>
+                            </div>
+
+                            {overdue ? (
+                              <span className="shrink-0 text-[11px] text-red-700">{t('pipeline.card.overdue')}</span>
+                            ) : null}
                           </div>
 
-                          {overdue ? (
-                            <span className="shrink-0 text-[11px] text-red-700">{t('pipeline.card.overdue')}</span>
-                          ) : null}
-                        </div>
+                          <div className="mt-3 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedLead(lead)}
+                              className="rounded-xl border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
+                            >
+                              {t('pipeline.card.open')}
+                            </button>
+                          </div>
+                        </article>
+                      )
+                    })}
 
-                        <div className="mt-3 flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedLead(lead)}
-                            className="rounded-xl border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
-                          >
-                            {t('pipeline.card.open')}
-                          </button>
-                        </div>
-                      </article>
-                    )
-                  })}
+                    {!stageLeads.length ? (
+                      <div className="rounded-xl border border-dashed border-zinc-200 px-3 py-4 text-center text-sm text-zinc-400">
+                        {t('pipeline.secondary.empty')}
+                      </div>
+                    ) : null}
 
-                  {!grouped[stage].length ? (
-                    <div className="rounded-xl border border-dashed border-zinc-200 px-3 py-4 text-center text-sm text-zinc-400">
-                      {t('pipeline.secondary.empty')}
-                    </div>
-                  ) : null}
-
-                  {grouped[stage].length > 5 ? (
-                    <div className="text-xs text-zinc-500">
-                      {t('pipeline.secondary.more', { count: grouped[stage].length - 5 })}
-                    </div>
-                  ) : null}
-                </div>
-              </section>
-            ))}
+                    {hiddenCount > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => toggleSecondaryStage(stage)}
+                        className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-600 transition hover:bg-zinc-50"
+                      >
+                        {expanded ? t('pipeline.secondary.collapse') : t('pipeline.secondary.showAll', { count: hiddenCount })}
+                      </button>
+                    ) : null}
+                  </div>
+                </section>
+              )
+            })}
           </div>
         </div>
       </div>

@@ -293,6 +293,7 @@ export function ImportsPage() {
   const [mapping, setMapping] = useState<Mapping | null>(null)
 
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const [running, setRunning] = useState(false)
   const [report, setReport] = useState<Report | null>(null)
 
@@ -306,6 +307,7 @@ export function ImportsPage() {
   const [history, setHistory] = useState<ImportRow[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
   const [undoingId, setUndoingId] = useState<string | null>(null)
+  const [cleaningId, setCleaningId] = useState<string | null>(null)
 
   // Presets (localStorage)
   const [presets, setPresets] = useState<Preset[]>(() => loadPresets())
@@ -325,6 +327,7 @@ export function ImportsPage() {
   async function loadHistory() {
     setHistoryLoading(true)
     setError(null)
+    setNotice(null)
     try {
       const { data, error: e } = await supabase.from('imports').select('*').limit(50)
       if (e) throw e
@@ -346,6 +349,7 @@ export function ImportsPage() {
 
   async function handleFile(f: File) {
     setError(null)
+    setNotice(null)
     setReport(null)
     setFile(f)
     setParsed(null)
@@ -427,45 +431,146 @@ export function ImportsPage() {
 
   async function undoImport(importId: string) {
     if (!importId) return
-    const ok = window.confirm(t('imports.history.undoConfirm'))
-    if (!ok) return
+
+    const importRow = history.find((row) => row.id === importId)
 
     setUndoingId(importId)
     setError(null)
+    setNotice(null)
+
     try {
-      // 1) Find leads created by this import
-      const { data: leadRows, error: e1 } = await supabase
+      let ids: string[] = []
+
+      const { data: byImportId, error: sourceImportError } = await supabase
         .from('leads')
         .select('id')
         .eq('source_import_id', importId)
 
-      if (e1) throw e1
+      if (sourceImportError) throw sourceImportError
 
-      const ids = ((leadRows ?? []) as any[]).map((x) => x.id).filter(Boolean) as string[]
+      ids = ((byImportId ?? []) as any[]).map((row) => row.id).filter(Boolean)
 
-      // 2) Delete activities for those leads (batch)
-      const BATCH = 500
-      for (let i = 0; i < ids.length; i += BATCH) {
-        const chunk = ids.slice(i, i + BATCH)
-        const { error: e2 } = await supabase.from('activities').delete().in('lead_id', chunk)
-        if (e2) throw e2
+      if (!ids.length && importRow?.file_name) {
+        const { data: bySourceFile, error: sourceFileError } = await supabase
+          .from('leads')
+          .select('id')
+          .eq('source_file', importRow.file_name)
+
+        if (sourceFileError) throw sourceFileError
+
+        ids = ((bySourceFile ?? []) as any[]).map((row) => row.id).filter(Boolean)
       }
 
-      // 3) Delete leads
-      const { error: e3 } = await supabase.from('leads').delete().eq('source_import_id', importId)
-      if (e3) throw e3
+      if (!ids.length) {
+        setError(t('imports.history.undoNoLeads'))
+        return
+      }
 
-      // 4) Mark import as reverted (best-effort)
-      await supabase.from('imports').update({ reverted_at: new Date().toISOString() }).eq('id', importId)
+      const ok = window.confirm(t('imports.history.undoConfirmWithCount', { count: ids.length }))
+      if (!ok) return
+
+      let deletedCount = 0
+      const BATCH = 500
+
+      for (let i = 0; i < ids.length; i += BATCH) {
+        const chunk = ids.slice(i, i + BATCH)
+
+        const { data: deletedRows, error: deleteError } = await supabase
+          .from('leads')
+          .delete()
+          .in('id', chunk)
+          .select('id')
+
+        if (deleteError) throw deleteError
+
+        deletedCount += deletedRows?.length ?? 0
+      }
+
+      if (!deletedCount) {
+        throw new Error(t('imports.history.undoDeletedZero'))
+      }
+
+      const { error: updateImportError } = await supabase
+        .from('imports')
+        .update({ reverted_at: new Date().toISOString() })
+        .eq('id', importId)
+
+      if (updateImportError) throw updateImportError
 
       await loadHistory()
+
       setReport(null)
       setStep('upload')
       setView('history')
-    } catch {
-      setError(t('imports.history.undoError'))
+      setNotice(t('imports.history.undoSuccess', { count: deletedCount }))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('imports.history.undoError'))
     } finally {
       setUndoingId(null)
+    }
+  }
+
+  async function cleanImportRecord(row: ImportRow) {
+    if (!row.id) return
+
+    setCleaningId(row.id)
+    setError(null)
+    setNotice(null)
+
+    try {
+      const { data: linkedByImportId, error: linkedError } = await supabase
+        .from('leads')
+        .select('id')
+        .eq('source_import_id', row.id)
+        .limit(1)
+
+      if (linkedError) throw linkedError
+
+      if (linkedByImportId?.length) {
+        setError(t('imports.history.clearBlocked'))
+        return
+      }
+
+      let legacyCount = 0
+
+      if (row.file_name) {
+        const { data: legacyRows, error: legacyError } = await supabase
+          .from('leads')
+          .select('id')
+          .eq('source_file', row.file_name)
+          .limit(20)
+
+        if (legacyError) throw legacyError
+
+        legacyCount = legacyRows?.length ?? 0
+      }
+
+      const ok = window.confirm(
+        legacyCount > 0
+          ? t('imports.history.clearConfirmWithLegacy', { count: legacyCount })
+          : t('imports.history.clearConfirm'),
+      )
+
+      if (!ok) return
+
+      const { data: deletedRows, error: deleteError } = await supabase
+        .from('imports')
+        .delete()
+        .eq('id', row.id)
+        .select('id')
+
+      if (deleteError) throw deleteError
+
+      if (!deletedRows?.length) {
+        throw new Error(t('imports.history.clearDeletedZero'))
+      }
+
+      await loadHistory()
+      setNotice(t('imports.history.clearSuccess'))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('imports.history.clearError'))
+    } finally {
+      setCleaningId(null)
     }
   }
 
@@ -475,6 +580,7 @@ export function ImportsPage() {
 
     setRunning(true)
     setError(null)
+    setNotice(null)
 
     const skippedReasons: Report['skippedReasons'] = {
       missing_company_name: 0,
@@ -679,6 +785,7 @@ export function ImportsPage() {
     setParsed(null)
     setMapping(null)
     setError(null)
+    setNotice(null)
     setDedupInfo({ total: 0, dupInFile: 0, ready: false })
     setRunning(false)
     setReport(null)
@@ -778,6 +885,12 @@ export function ImportsPage() {
         <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       ) : null}
 
+      {notice ? (
+        <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {notice}
+        </div>
+      ) : null}
+
       {view === 'history' ? (
         <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-5">
           <div className="flex items-center justify-between">
@@ -836,6 +949,14 @@ export function ImportsPage() {
                               disabled={reverted || undoingId === id}
                             >
                               {undoingId === id ? t('imports.history.undoing') : t('imports.history.undo')}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => cleanImportRecord(row)}
+                              disabled={cleaningId === id || undoingId === id}
+                              className="rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+                            >
+                              {cleaningId === id ? t('imports.history.clearing') : t('imports.history.clearRecord')}
                             </button>
                           </div>
                         </td>
