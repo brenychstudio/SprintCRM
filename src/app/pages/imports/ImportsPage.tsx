@@ -66,6 +66,8 @@ type Preset = {
 }
 
 const PRESETS_KEY = 'imports.mappingPresets.v1'
+const PREVIEW_PAGE_SIZE = 3
+const PREVIEW_HEADERS_LIMIT = 8
 
 const FIELDS: Array<{ key: keyof Mapping; labelKey: string; required?: boolean }> = [
   { key: 'company_name', labelKey: 'imports.field.company', required: true },
@@ -282,10 +284,16 @@ function formatDateTime(value?: string | null) {
   return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString()
 }
 
+function isNotesPreviewColumn(header: string) {
+  const key = header.toLowerCase()
+  return key.includes('note') || key.includes('comment') || key.includes('notes')
+}
+
 export function ImportsPage() {
   const { t } = useI18n()
 
   const [view, setView] = useState<'wizard' | 'history'>('wizard')
+  const [previewPage, setPreviewPage] = useState(0)
 
   const [step, setStep] = useState<'upload' | 'preview' | 'mapping' | 'dedup' | 'report'>('upload')
   const [file, setFile] = useState<File | null>(null)
@@ -321,7 +329,14 @@ export function ImportsPage() {
   }, [presets])
 
   const headers = parsed?.headers ?? []
-  const previewRows = useMemo(() => parsed?.rows.slice(0, 10) ?? [], [parsed])
+  const previewTotal = parsed?.rows.length ?? 0
+  const previewPageCount = Math.max(1, Math.ceil(previewTotal / PREVIEW_PAGE_SIZE))
+  const safePreviewPage = Math.min(previewPage, previewPageCount - 1)
+  const previewStart = safePreviewPage * PREVIEW_PAGE_SIZE
+  const previewEnd = Math.min(previewStart + PREVIEW_PAGE_SIZE, previewTotal)
+  const previewNotesHeader = headers.find((header) => isNotesPreviewColumn(header)) ?? ''
+  const previewCardHeaders = headers.filter((header) => header !== previewNotesHeader).slice(0, PREVIEW_HEADERS_LIMIT - 1)
+  const previewRows = useMemo(() => parsed?.rows.slice(previewStart, previewEnd) ?? [], [parsed, previewStart, previewEnd])
   const sanitySummary = useMemo(() => analyzeSanity(parsed, mapping), [parsed, mapping])
 
   async function loadHistory() {
@@ -811,29 +826,29 @@ export function ImportsPage() {
           ) : null}
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <div className="rounded-xl border border-zinc-200 bg-white p-3">
-            <div className="text-xs text-zinc-500">{t('imports.sanity.rowsWithContact')}</div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
+          <div className="min-w-0 rounded-xl border border-zinc-200 bg-white p-3.5">
+            <div className="text-xs leading-5 text-zinc-500">{t('imports.sanity.rowsWithContact')}</div>
             <div className="mt-1 text-lg font-semibold text-zinc-900">{sanitySummary.rowsWithContact}</div>
           </div>
 
-          <div className="rounded-xl border border-zinc-200 bg-white p-3">
-            <div className="text-xs text-zinc-500">{t('imports.sanity.rowsWithoutContact')}</div>
+          <div className="min-w-0 rounded-xl border border-zinc-200 bg-white p-3.5">
+            <div className="text-xs leading-5 text-zinc-500">{t('imports.sanity.rowsWithoutContact')}</div>
             <div className="mt-1 text-lg font-semibold text-zinc-900">{sanitySummary.rowsWithoutContact}</div>
           </div>
 
-          <div className="rounded-xl border border-zinc-200 bg-white p-3">
-            <div className="text-xs text-zinc-500">{t('imports.sanity.rowsWithoutNiche')}</div>
+          <div className="min-w-0 rounded-xl border border-zinc-200 bg-white p-3.5">
+            <div className="text-xs leading-5 text-zinc-500">{t('imports.sanity.rowsWithoutNiche')}</div>
             <div className="mt-1 text-lg font-semibold text-zinc-900">{sanitySummary.rowsWithoutNiche}</div>
           </div>
 
-          <div className="rounded-xl border border-zinc-200 bg-white p-3">
-            <div className="text-xs text-zinc-500">{t('imports.sanity.rowsWithoutLocation')}</div>
+          <div className="min-w-0 rounded-xl border border-zinc-200 bg-white p-3.5">
+            <div className="text-xs leading-5 text-zinc-500">{t('imports.sanity.rowsWithoutLocation')}</div>
             <div className="mt-1 text-lg font-semibold text-zinc-900">{sanitySummary.rowsWithoutLocation}</div>
           </div>
 
-          <div className="rounded-xl border border-zinc-200 bg-white p-3">
-            <div className="text-xs text-zinc-500">{t('imports.sanity.rowsWithInvalidWebsite')}</div>
+          <div className="min-w-0 rounded-xl border border-zinc-200 bg-white p-3.5">
+            <div className="text-xs leading-5 text-zinc-500">{t('imports.sanity.rowsWithInvalidWebsite')}</div>
             <div className="mt-1 text-lg font-semibold text-zinc-900">{sanitySummary.rowsWithInvalidWebsite}</div>
           </div>
         </div>
@@ -842,7 +857,7 @@ export function ImportsPage() {
   }
 
   return (
-    <section>
+    <section className="pb-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-zinc-900">{t('imports.title')}</h1>
@@ -1072,47 +1087,103 @@ export function ImportsPage() {
           ) : null}
 
           {step === 'preview' && parsed ? (
-            <div className="mt-4">
-              <div className="text-sm text-zinc-700">
-                {t('imports.previewRows')}: <span className="font-medium">{Math.min(10, parsed.rows.length)}</span> / {parsed.rows.length}
+            <div className="mt-4 flex h-[calc(100vh-250px)] min-h-0 flex-col overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-medium text-zinc-900">{t('imports.previewRows')}</div>
+                  <div className="mt-1 text-xs text-zinc-500">
+                    {previewTotal > 0 ? previewStart + 1 : 0}-{previewEnd} / {previewTotal}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={safePreviewPage <= 0}
+                    onClick={() => setPreviewPage((page) => Math.max(0, page - 1))}
+                    className="rounded-xl border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Previous
+                  </button>
+
+                  <span className="min-w-16 text-center text-xs text-zinc-500">
+                    {safePreviewPage + 1} / {previewPageCount}
+                  </span>
+
+                  <button
+                    type="button"
+                    disabled={safePreviewPage >= previewPageCount - 1}
+                    onClick={() => setPreviewPage((page) => Math.min(previewPageCount - 1, page + 1))}
+                    className="rounded-xl border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
 
-              <div className="mt-3 overflow-hidden rounded-xl border border-zinc-200">
-                <table className="min-w-full divide-y divide-zinc-200 text-sm">
-                  <thead className="bg-zinc-50 text-left text-xs uppercase tracking-wide text-zinc-500">
-                    <tr>
-                      {headers.slice(0, 8).map((h) => (
-                        <th key={h} className="px-3 py-2 font-medium">
-                          {h}
-                        </th>
+              <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+                {previewRows.map((row, rowIndex) => (
+                  <article
+                    key={previewStart + rowIndex}
+                    className="rounded-xl border border-zinc-200 bg-white p-2.5 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="text-xs uppercase tracking-wide text-zinc-400">
+                          Row {previewStart + rowIndex + 1}
+                        </div>
+                        <div className="mt-0.5 text-sm font-semibold leading-5 text-zinc-900">
+                          {row[previewCardHeaders[0]] || 'Untitled lead'}
+                        </div>
+                      </div>
+
+                      <div className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs text-zinc-500">
+                        {previewStart + rowIndex + 1} / {previewTotal}
+                      </div>
+                    </div>
+
+                    <div className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                      {previewCardHeaders.map((header) => (
+                        <div key={header} className="min-w-0 rounded-lg border border-zinc-100 bg-zinc-50 px-2.5 py-1.5">
+                          <div className="text-[11px] uppercase tracking-wide text-zinc-400">{header}</div>
+                          <div className="mt-0.5 max-h-16 overflow-y-auto break-words text-sm leading-5 text-zinc-700">
+                            {row[header] || '-'}
+                          </div>
+                        </div>
                       ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-200 bg-white text-zinc-700">
-                    {previewRows.map((r, idx) => (
-                      <tr key={idx}>
-                        {headers.slice(0, 8).map((h) => (
-                          <td key={h} className="px-3 py-2">
-                            {r[h] || '—'}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </div>
+
+                    {previewNotesHeader ? (
+                      <details className="mt-2 rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2">
+                        <summary className="cursor-pointer text-xs font-medium uppercase tracking-wide text-zinc-500">
+                          {previewNotesHeader}
+                        </summary>
+                        <div className="mt-2 max-h-32 overflow-y-auto whitespace-pre-wrap break-words text-xs leading-5 text-zinc-600">
+                          {row[previewNotesHeader] || '-'}
+                        </div>
+                      </details>
+                    ) : null}
+                  </article>
+                ))}
               </div>
 
-              <div className="mt-4 flex gap-2">
+              {headers.length > PREVIEW_HEADERS_LIMIT ? (
+                <p className="mt-2 text-xs leading-5 text-zinc-500">
+                  Showing a compact preview of the main columns. Continue to mapping to review every column.
+                </p>
+              ) : null}
+
+              <div className="mt-auto flex shrink-0 gap-2 pt-3">
                 <button
                   type="button"
-                  className="rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
+                  className="rounded-xl border border-zinc-900 bg-zinc-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800"
                   onClick={() => setStep('mapping')}
                 >
                   {t('imports.continue')}
                 </button>
                 <button
                   type="button"
-                  className="rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
+                  className="rounded-xl border border-zinc-200 px-4 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
                   onClick={reset}
                 >
                   {t('imports.back')}
@@ -1125,63 +1196,69 @@ export function ImportsPage() {
             <div className="mt-4">
               {renderSanitySummary()}
 
-              <div className="mb-4 grid gap-3 md:grid-cols-3">
-                <div className="md:col-span-2">
-                  <div className="text-xs text-zinc-500">{t('imports.presets.mappingTitle')}</div>
-                  <div className="mt-1 flex gap-2">
-                    <select
-                      value={selectedPresetId}
-                      onChange={(e) => setSelectedPresetId(e.target.value)}
-                      className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-200"
-                    >
-                      <option value="">{t('imports.presets.selectPlaceholder')}</option>
-                      {presets.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={applySelectedPreset}
-                      disabled={!selectedPresetId}
-                      className="rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
-                    >
-                      {t('imports.preset.apply')}
-                    </button>
-                  </div>
-                </div>
+              <div className="mt-4 rounded-2xl border border-zinc-200 bg-white p-4">
+                <div className="grid gap-4 xl:grid-cols-[1fr_420px]">
+                  <div className="min-w-0">
+                    <div className="text-xs font-medium text-zinc-500">{t('imports.preset.apply')}</div>
 
-                <div>
-                  <div className="text-xs text-zinc-500">{t('imports.preset.saveLabel')}</div>
-                  <div className="mt-1 flex gap-2">
-                    <input
-                      value={presetName}
-                      onChange={(e) => setPresetName(e.target.value)}
-                      placeholder={t('imports.preset.namePlaceholder')}
-                      className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-200"
-                    />
-                    <button
-                      type="button"
-                      onClick={saveCurrentMappingAsPreset}
-                      className="rounded-xl bg-zinc-900 px-3 py-2 text-sm text-white transition hover:bg-zinc-800"
-                    >
-                      {t('imports.preset.saveButton')}
-                    </button>
+                    <div className="mt-2 flex min-w-0 gap-2">
+                      <select
+                        value={selectedPresetId}
+                        onChange={(e) => setSelectedPresetId(e.target.value)}
+                        className="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm"
+                      >
+                        <option value="">{t('imports.preset.apply')}</option>
+                        {presets.map((preset) => (
+                          <option key={preset.id} value={preset.id}>
+                            {preset.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      <button
+                        type="button"
+                        disabled={!selectedPresetId}
+                        onClick={applySelectedPreset}
+                        className="shrink-0 rounded-xl border border-zinc-200 px-4 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {t('imports.preset.apply')}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="text-xs font-medium text-zinc-500">{t('imports.preset.saveLabel')}</div>
+
+                    <div className="mt-2 flex min-w-0 gap-2">
+                      <input
+                        value={presetName}
+                        onChange={(e) => setPresetName(e.target.value)}
+                        placeholder={t('imports.preset.namePlaceholder')}
+                        className="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={saveCurrentMappingAsPreset}
+                        disabled={!mapping}
+                        className="shrink-0 rounded-xl border border-zinc-900 bg-zinc-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {t('imports.preset.saveButton')}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="mt-5 grid gap-x-4 gap-y-4 xl:grid-cols-2">
                 {FIELDS.map((f) => (
-                  <label key={f.key} className="space-y-1">
+                  <label key={f.key} className="min-w-0 space-y-1.5">
                     <span className="text-xs text-zinc-500">
-                      {t(f.labelKey)} {f.required ? `· ${t('imports.required')}` : ''}
+                      {t(f.labelKey)} {f.required ? `? ${t('imports.required')}` : ''}
                     </span>
                     <select
                       value={mapping[f.key]}
                       onChange={(e) => setMapping((m) => ({ ...(m as Mapping), [f.key]: e.target.value }))}
-                      className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-200"
+                      className="w-full min-w-0 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm"
                     >
                       <option value="">{t('imports.ignore')}</option>
                       {headers.map((h) => (
@@ -1218,16 +1295,16 @@ export function ImportsPage() {
             <div className="mt-4">
               {renderSanitySummary()}
 
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+              <div className="mt-5 grid gap-3 md:grid-cols-3">
+                <div className="rounded-2xl border border-zinc-200 bg-white p-4">
                   <div className="text-xs text-zinc-500">{t('imports.summary.total')}</div>
                   <div className="text-lg font-semibold text-zinc-900">{dedupInfo.total}</div>
                 </div>
-                <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                <div className="rounded-2xl border border-zinc-200 bg-white p-4">
                   <div className="text-xs text-zinc-500">{t('imports.summary.duplicates')}</div>
                   <div className="text-lg font-semibold text-zinc-900">{dedupInfo.dupInFile}</div>
                 </div>
-                <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                <div className="rounded-2xl border border-zinc-200 bg-white p-4">
                   <div className="text-xs text-zinc-500">{t('imports.summary.ready')}</div>
                   <div className="text-lg font-semibold text-zinc-900">{t('imports.readyYes')}</div>
                 </div>
@@ -1258,9 +1335,14 @@ export function ImportsPage() {
             <div className="mt-4">
               {renderSanitySummary()}
 
-              <div className="text-sm text-zinc-700">
-                <span className="font-medium">{report.fileName}</span>
-                {report.importId ? <span className="ml-2 text-xs text-zinc-500">({report.importId})</span> : null}
+              <div className="mt-4 rounded-2xl border border-zinc-200 bg-white p-4">
+                <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">Import batch</div>
+
+                <div className="mt-1 break-words text-sm font-medium text-zinc-900">{report.fileName}</div>
+
+                {report.importId ? (
+                  <div className="mt-1 max-w-full truncate font-mono text-xs text-zinc-400">{report.importId}</div>
+                ) : null}
               </div>
 
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
@@ -1278,19 +1360,20 @@ export function ImportsPage() {
                 </div>
               </div>
 
-              <div className="mt-4 rounded-xl border border-zinc-200 bg-white p-3 text-sm text-zinc-700">
-                <div className="text-xs text-zinc-500">{t('imports.skippedReasons')}</div>
-                <ul className="mt-2 space-y-1">
-                  {Object.entries(report.skippedReasons).map(([k, v]) => (
-                    <li key={k} className="flex justify-between">
-                      <span>{t(`imports.reason.${k}`)}</span>
-                      <span className="font-medium">{v}</span>
-                    </li>
+              <div className="mt-4 rounded-2xl border border-zinc-200 bg-white p-4">
+                <div className="text-sm font-medium text-zinc-900">{t('imports.report.skippedReasons')}</div>
+
+                <div className="mt-3 divide-y divide-zinc-100">
+                  {Object.entries(report.skippedReasons).map(([reason, count]) => (
+                    <div key={reason} className="flex items-center justify-between gap-4 py-2 text-sm">
+                      <span className="min-w-0 break-words text-zinc-600">{t(`imports.reason.${reason}`)}</span>
+                      <span className="shrink-0 font-medium text-zinc-900">{count}</span>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-5 flex flex-wrap gap-2">
                 <button
                   type="button"
                   className="rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
