@@ -1,6 +1,10 @@
 export type LeadStage = 'new' | 'contacted' | 'replied' | 'proposal' | 'won' | 'lost'
 export type LeadStatus = 'active' | 'archived'
 export type NextAction = 'follow_up' | 'send_proposal' | 'request_call' | 'nurture'
+export type OutreachChannel = 'email' | 'linkedin' | 'ig' | 'other'
+export type OutreachLanguage = 'en' | 'uk' | 'es' | 'ru'
+export type OutreachVariant = 'short' | 'standard' | 'premium'
+export type ReplyStatus = 'not_sent' | 'sent' | 'no_reply' | 'replied' | 'positive' | 'negative'
 
 export type ActivityType =
   | 'imported'
@@ -12,6 +16,13 @@ export type ActivityType =
   | 'note'
   | 'stage_changed'
   | 'next_action_set'
+  | 'ai_draft_generated'
+  | 'ai_draft_applied'
+  | 'ai_draft_copied'
+  | 'outreach_sent'
+  | 'followup_scheduled'
+  | 'reply_marked'
+  | 'manual_edit'
 
 export type ActivityChannel = 'email' | 'ig' | 'linkedin' | 'other'
 
@@ -36,6 +47,21 @@ export type Lead = {
   next_action_at: string
   notes: string | null
   revenue: number | null
+  preferred_channel: OutreachChannel | null
+  language: OutreachLanguage | null
+  service_interest: string | null
+  offer_type: string | null
+  observed_issue: string | null
+  reply_status: ReplyStatus | null
+  current_outreach_generation_id: string | null
+  current_outreach_subject: string | null
+  current_outreach_body: string | null
+  current_outreach_variant: OutreachVariant | null
+  current_outreach_channel: OutreachChannel | null
+  current_outreach_personalization_notes: string | null
+  outreach_generated_at: string | null
+  outreach_edited_manually: boolean
+  sent_at: string | null
   email_norm: string | null
   website_domain_norm: string | null
   phone_norm: string | null
@@ -73,6 +99,21 @@ export type CreateLeadInput = Pick<Lead, 'company_name'> &
       | 'next_action_at'
       | 'notes'
       | 'revenue'
+      | 'preferred_channel'
+      | 'language'
+      | 'service_interest'
+      | 'offer_type'
+      | 'observed_issue'
+      | 'reply_status'
+      | 'current_outreach_generation_id'
+      | 'current_outreach_subject'
+      | 'current_outreach_body'
+      | 'current_outreach_variant'
+      | 'current_outreach_channel'
+      | 'current_outreach_personalization_notes'
+      | 'outreach_generated_at'
+      | 'outreach_edited_manually'
+      | 'sent_at'
     >
   >
 
@@ -95,6 +136,21 @@ export type UpdateLeadInput = Partial<
     | 'next_action_at'
     | 'notes'
     | 'revenue'
+    | 'preferred_channel'
+    | 'language'
+    | 'service_interest'
+    | 'offer_type'
+    | 'observed_issue'
+    | 'reply_status'
+    | 'current_outreach_generation_id'
+    | 'current_outreach_subject'
+    | 'current_outreach_body'
+    | 'current_outreach_variant'
+    | 'current_outreach_channel'
+    | 'current_outreach_personalization_notes'
+    | 'outreach_generated_at'
+    | 'outreach_edited_manually'
+    | 'sent_at'
   >
 >
 
