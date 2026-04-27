@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   defaultNextForStage,
@@ -107,6 +108,15 @@ export function LeadDrawer({
   const [baselineNextDate, setBaselineNextDate] = useState(initialDateTime.date)
   const [baselineNextTime, setBaselineNextTime] = useState(initialDateTime.time)
   const [baselineNotes, setBaselineNotes] = useState(lead.notes ?? '')
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [])
 
   useEffect(() => {
     const nextDateTime = getLeadDateTimeInput(lead.next_action_at)
@@ -280,7 +290,7 @@ export function LeadDrawer({
     archiveMutation.isPending ||
     deleteMutation.isPending
 
-  return (
+  const drawer = (
     <div className="fixed inset-0 z-50 flex justify-end overflow-hidden bg-zinc-900/35 backdrop-blur-[1px]">
       <button type="button" aria-label={t('drawer.close')} onClick={onClose} className="h-full flex-1" />
 
@@ -582,4 +592,6 @@ export function LeadDrawer({
       </aside>
     </div>
   )
+
+  return createPortal(drawer, document.body)
 }
