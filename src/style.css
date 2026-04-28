@@ -1439,4 +1439,104 @@ body {
     0 1px 0 rgba(255, 255, 255, 0.16) inset;
 }
 
+/* CRM Dark Mode Action Contrast + Overlay Cleanup v1 */
+
+/*
+  Task 35B.1:
+  Refine dark-mode action contrast after core page pass.
+  Scope: action buttons + drawer overlay only.
+  Do not change drawer portal/fixed positioning.
+  Do not add transform animations to app containers.
+*/
+
+/* Dark mode action buttons should feel like graphite controls, not white pills */
+
+[data-theme='dark'] .crm-main button[class*='bg-zinc-900']:not(.crm-theme-choice),
+[data-theme='dark'] .crm-main button[class*='bg-zinc-950']:not(.crm-theme-choice),
+[data-theme='dark'] .fixed.inset-0.z-50 aside button[class*='bg-zinc-900']:not(.crm-theme-choice),
+[data-theme='dark'] .fixed.inset-0.z-50 aside button[class*='bg-zinc-950']:not(.crm-theme-choice) {
+  background:
+    linear-gradient(180deg, rgba(38, 38, 42, 0.96), rgba(18, 18, 21, 0.98)) !important;
+  color: rgba(245, 245, 246, 0.96) !important;
+  border: 1px solid rgba(244, 244, 245, 0.12) !important;
+  box-shadow:
+    0 16px 34px rgba(0, 0, 0, 0.34),
+    0 1px 0 rgba(255, 255, 255, 0.08) inset !important;
+}
+
+[data-theme='dark'] .crm-main button[class*='bg-zinc-900']:not(.crm-theme-choice):hover,
+[data-theme='dark'] .crm-main button[class*='bg-zinc-950']:not(.crm-theme-choice):hover,
+[data-theme='dark'] .fixed.inset-0.z-50 aside button[class*='bg-zinc-900']:not(.crm-theme-choice):hover,
+[data-theme='dark'] .fixed.inset-0.z-50 aside button[class*='bg-zinc-950']:not(.crm-theme-choice):hover {
+  background:
+    linear-gradient(180deg, rgba(50, 50, 56, 0.98), rgba(24, 24, 27, 0.98)) !important;
+  color: #ffffff !important;
+  border-color: rgba(244, 244, 245, 0.2) !important;
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.42),
+    0 1px 0 rgba(255, 255, 255, 0.1) inset !important;
+}
+
+/* Keep disabled actions visibly disabled, not bright */
+
+[data-theme='dark'] .crm-main button:disabled,
+[data-theme='dark'] .fixed.inset-0.z-50 aside button:disabled {
+  background:
+    linear-gradient(180deg, rgba(35, 35, 39, 0.62), rgba(22, 22, 25, 0.62)) !important;
+  color: rgba(161, 161, 170, 0.42) !important;
+  border-color: rgba(82, 82, 91, 0.34) !important;
+  box-shadow: none !important;
+  cursor: not-allowed;
+}
+
+/* Neutral buttons in dark mode should stay quiet and readable */
+
+[data-theme='dark'] .crm-main button:not([class*='bg-zinc-900']):not([class*='bg-zinc-950']):not(.crm-theme-choice):not(:disabled),
+[data-theme='dark'] .fixed.inset-0.z-50 aside button:not([class*='bg-zinc-900']):not([class*='bg-zinc-950']):not(.crm-theme-choice):not(:disabled) {
+  background:
+    linear-gradient(180deg, rgba(28, 28, 32, 0.82), rgba(18, 18, 21, 0.86)) !important;
+  color: rgba(218, 218, 224, 0.9) !important;
+  border-color: rgba(82, 82, 91, 0.48) !important;
+}
+
+[data-theme='dark'] .crm-main button:not([class*='bg-zinc-900']):not([class*='bg-zinc-950']):not(.crm-theme-choice):not(:disabled):hover,
+[data-theme='dark'] .fixed.inset-0.z-50 aside button:not([class*='bg-zinc-900']):not([class*='bg-zinc-950']):not(.crm-theme-choice):not(:disabled):hover {
+  background:
+    linear-gradient(180deg, rgba(38, 38, 42, 0.94), rgba(24, 24, 27, 0.94)) !important;
+  color: rgba(245, 245, 246, 0.96) !important;
+  border-color: rgba(161, 161, 170, 0.42) !important;
+}
+
+/* Keep theme switch active state bright enough as a control, not affected by app buttons */
+
+[data-theme='dark'] .crm-theme-choice.is-active {
+  background:
+    linear-gradient(180deg, rgba(244, 244, 245, 0.94), rgba(226, 226, 230, 0.9)) !important;
+  color: #09090b !important;
+}
+
+/* Drawer overlay should focus the drawer without crushing the workspace */
+
+[data-theme='dark'] .fixed.inset-0.z-50 {
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0.18)),
+    rgba(0, 0, 0, 0.2) !important;
+  backdrop-filter: blur(2px) saturate(0.9) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside {
+  box-shadow:
+    -28px 0 88px rgba(0, 0, 0, 0.36),
+    -1px 0 0 rgba(244, 244, 245, 0.08) !important;
+}
+
+/* Light mode safety: preserve the existing clean light UI */
+
+:root[data-theme='light'] .fixed.inset-0.z-50 {
+  background:
+    linear-gradient(90deg, rgba(244, 244, 245, 0.18), rgba(24, 24, 27, 0.2)),
+    rgba(24, 24, 27, 0.18);
+  backdrop-filter: blur(1.5px);
+}
+
 /* /CRM Dark Mode Core Pages Pass v1 */
