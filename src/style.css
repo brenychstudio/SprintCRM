@@ -2120,3 +2120,244 @@ body {
 }
 
 /* /CRM LeadDrawer Next Date Summary Contrast Fix v1 */
+
+/* CRM Dark Mode Empty States + Capture Polish v1 */
+
+/*
+  Task 35E:
+  Dark-mode empty states and capture polish.
+  Scope: empty tables, empty cards, low-data pages, disabled states, screenshot/video polish.
+  CSS-only.
+  No drawer portal/fixed positioning changes.
+  No global WebGL/background animation inside app.
+*/
+
+/* Capture-friendly app frame */
+
+[data-theme='dark'] .crm-shell {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(244, 244, 245, 0.035), transparent 28%),
+    radial-gradient(circle at 86% 0%, rgba(147, 197, 253, 0.04), transparent 34%),
+    radial-gradient(circle at 50% 105%, rgba(244, 244, 245, 0.025), transparent 36%),
+    linear-gradient(135deg, #070708 0%, #0b0b0d 48%, #060607 100%) !important;
+}
+
+[data-theme='dark'] .crm-main {
+  min-height: calc(100vh - 48px);
+  background:
+    radial-gradient(circle at 76% 0%, rgba(244, 244, 245, 0.03), transparent 34%),
+    radial-gradient(circle at 42% 100%, rgba(147, 197, 253, 0.022), transparent 40%),
+    linear-gradient(180deg, rgba(18, 18, 21, 0.97), rgba(10, 10, 12, 0.98)) !important;
+}
+
+/* Better low-data page balance */
+
+[data-theme='dark'] .crm-main > section {
+  min-height: calc(100vh - 96px);
+}
+
+[data-theme='dark'] .crm-main > section > div:last-child {
+  margin-bottom: 24px;
+}
+
+/* Empty table rows */
+
+[data-theme='dark'] .crm-main td[colspan],
+[data-theme='dark'] .crm-main tr:only-child td[colspan] {
+  color: rgba(161, 161, 170, 0.78) !important;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(244, 244, 245, 0.035), transparent 40%),
+    linear-gradient(180deg, rgba(24, 24, 27, 0.36), rgba(18, 18, 21, 0.42)) !important;
+  text-align: center;
+}
+
+/* Tables with little or no data should still feel intentional */
+
+[data-theme='dark'] .crm-main table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+[data-theme='dark'] .crm-main tbody:empty::after {
+  content: 'No records yet';
+  display: block;
+  padding: 32px 16px;
+  color: rgba(161, 161, 170, 0.72);
+  text-align: center;
+}
+
+/* Empty / dashed panels */
+
+[data-theme='dark'] .crm-main [class*='border-dashed'] {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(244, 244, 245, 0.04), transparent 42%),
+    linear-gradient(180deg, rgba(22, 22, 25, 0.74), rgba(14, 14, 16, 0.84)) !important;
+  border-color: rgba(113, 113, 122, 0.38) !important;
+  color: rgba(194, 194, 202, 0.84) !important;
+}
+
+[data-theme='dark'] .crm-main [class*='border-dashed'] p,
+[data-theme='dark'] .crm-main [class*='border-dashed'] span,
+[data-theme='dark'] .crm-main [class*='border-dashed'] div {
+  color: rgba(161, 161, 170, 0.78);
+}
+
+[data-theme='dark'] .crm-main [class*='border-dashed'] strong,
+[data-theme='dark'] .crm-main [class*='border-dashed'] h2,
+[data-theme='dark'] .crm-main [class*='border-dashed'] h3 {
+  color: rgba(245, 245, 246, 0.94) !important;
+}
+
+/* Empty cards inside Pipeline / Reports / Imports */
+
+[data-theme='dark'] .crm-main [class*='rounded-xl'][class*='border']:empty,
+[data-theme='dark'] .crm-main [class*='rounded-2xl'][class*='border']:empty {
+  background:
+    linear-gradient(180deg, rgba(24, 24, 27, 0.44), rgba(18, 18, 21, 0.5)) !important;
+  border-color: rgba(82, 82, 91, 0.32) !important;
+}
+
+/* Muted empty-state text should remain visible */
+
+[data-theme='dark'] .crm-main [class*='text-zinc-400'],
+[data-theme='dark'] .crm-main [class*='text-zinc-500'],
+[data-theme='dark'] .crm-main [class*='text-zinc-600'] {
+  color: rgba(161, 161, 170, 0.78) !important;
+}
+
+/* But important table/list names must stay crisp */
+
+[data-theme='dark'] .crm-main td [class*='font-medium'],
+[data-theme='dark'] .crm-main td [class*='font-semibold'],
+[data-theme='dark'] .crm-main td strong,
+[data-theme='dark'] .crm-main [class*='rounded-xl'] [class*='font-medium'],
+[data-theme='dark'] .crm-main [class*='rounded-xl'] [class*='font-semibold'],
+[data-theme='dark'] .crm-main [class*='rounded-2xl'] [class*='font-medium'],
+[data-theme='dark'] .crm-main [class*='rounded-2xl'] [class*='font-semibold'] {
+  color: rgba(245, 245, 246, 0.94) !important;
+}
+
+/* Disabled buttons: clear, premium, non-clickable */
+
+[data-theme='dark'] .crm-main button:disabled,
+[data-theme='dark'] .crm-main button[disabled] {
+  background:
+    linear-gradient(180deg, rgba(35, 35, 39, 0.48), rgba(22, 22, 25, 0.52)) !important;
+  color: rgba(161, 161, 170, 0.42) !important;
+  border-color: rgba(82, 82, 91, 0.28) !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  cursor: not-allowed;
+}
+
+/* Disabled top CTA should not look broken */
+
+[data-theme='dark'] .crm-main > section > div:first-child button:disabled,
+[data-theme='dark'] .crm-main > section > div:first-child button[disabled] {
+  background:
+    linear-gradient(180deg, rgba(38, 38, 42, 0.58), rgba(24, 24, 27, 0.62)) !important;
+  color: rgba(194, 194, 202, 0.46) !important;
+  border-color: rgba(82, 82, 91, 0.34) !important;
+}
+
+/* Import upload state: better product screenshot composition */
+
+[data-theme='dark'] .crm-main [class*='border-dashed'] button:not(:disabled) {
+  background:
+    linear-gradient(180deg, rgba(244, 244, 245, 0.96), rgba(226, 226, 230, 0.92)) !important;
+  color: #09090b !important;
+  border-color: rgba(244, 244, 245, 0.22) !important;
+  box-shadow:
+    0 16px 42px rgba(0, 0, 0, 0.32),
+    0 1px 0 rgba(255, 255, 255, 0.42) inset !important;
+}
+
+[data-theme='dark'] .crm-main [class*='border-dashed'] button:not(:disabled):hover {
+  background:
+    linear-gradient(180deg, #ffffff, rgba(236, 236, 240, 0.96)) !important;
+}
+
+/* Reports and low-data analytic panels */
+
+[data-theme='dark'] .crm-main [class*='rounded-2xl'][class*='border'] table tr:last-child td,
+[data-theme='dark'] .crm-main [class*='rounded-3xl'][class*='border'] table tr:last-child td {
+  border-bottom-color: transparent !important;
+}
+
+[data-theme='dark'] .crm-main [class*='rounded-2xl'][class*='border'] table td,
+[data-theme='dark'] .crm-main [class*='rounded-3xl'][class*='border'] table td {
+  vertical-align: middle;
+}
+
+/* Pipeline empty columns */
+
+[data-theme='dark'] .crm-main [class*='min-h'] [class*='border-dashed'] {
+  display: grid;
+  place-items: center;
+  min-height: 72px;
+  color: rgba(161, 161, 170, 0.72) !important;
+}
+
+/* Pipeline secondary lists: smoother screenshot rhythm */
+
+[data-theme='dark'] .crm-main [class*='space-y'] > [class*='rounded-xl'][class*='border'] + [class*='rounded-xl'][class*='border'],
+[data-theme='dark'] .crm-main [class*='space-y'] > [class*='rounded-2xl'][class*='border'] + [class*='rounded-2xl'][class*='border'] {
+  margin-top: 10px;
+}
+
+/* Focus states for recording: visible but quiet */
+
+[data-theme='dark'] .crm-main button:focus-visible,
+[data-theme='dark'] .crm-main a:focus-visible,
+[data-theme='dark'] .crm-main input:focus-visible,
+[data-theme='dark'] .crm-main select:focus-visible,
+[data-theme='dark'] .crm-main textarea:focus-visible {
+  outline: none !important;
+  box-shadow:
+    0 0 0 4px rgba(244, 244, 245, 0.07),
+    0 1px 0 rgba(255, 255, 255, 0.055) inset !important;
+}
+
+/* Smooth hover for video capture */
+
+[data-theme='dark'] .crm-main button,
+[data-theme='dark'] .crm-main input,
+[data-theme='dark'] .crm-main select,
+[data-theme='dark'] .crm-main textarea,
+[data-theme='dark'] .crm-main [class*='rounded-xl'][class*='border'],
+[data-theme='dark'] .crm-main [class*='rounded-2xl'][class*='border'],
+[data-theme='dark'] .crm-main [class*='rounded-3xl'][class*='border'] {
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    opacity 160ms ease;
+}
+
+/* Avoid motion for reduced-motion users */
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme='dark'] .crm-main button,
+  [data-theme='dark'] .crm-main input,
+  [data-theme='dark'] .crm-main select,
+  [data-theme='dark'] .crm-main textarea,
+  [data-theme='dark'] .crm-main [class*='rounded-xl'][class*='border'],
+  [data-theme='dark'] .crm-main [class*='rounded-2xl'][class*='border'],
+  [data-theme='dark'] .crm-main [class*='rounded-3xl'][class*='border'] {
+    transition: none !important;
+  }
+}
+
+/* Light-mode safety */
+
+:root[data-theme='light'] .crm-main {
+  min-height: calc(100vh - 48px);
+}
+
+:root[data-theme='light'] .crm-main button:disabled,
+:root[data-theme='light'] .crm-main button[disabled] {
+  opacity: 0.55;
+}
+
+/* /CRM Dark Mode Empty States + Capture Polish v1 */
