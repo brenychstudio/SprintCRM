@@ -1891,3 +1891,232 @@ body {
 }
 
 /* /CRM LeadDrawer Date Time + Save Success Fix v1 */
+
+/* CRM Badge Status System v1 */
+
+/*
+  Task 35D:
+  Dark-mode badge / status pill system.
+  Scope: stage pills, status pills, due pills, count pills, small inline badges.
+  CSS-only. No component logic changes.
+*/
+
+/* Base badge shape inside CRM surfaces */
+
+[data-theme='dark'] .crm-main span[class*='rounded-full'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='rounded-full'] {
+  border: 1px solid rgba(82, 82, 91, 0.42);
+  background:
+    linear-gradient(180deg, rgba(38, 38, 42, 0.76), rgba(24, 24, 27, 0.82)) !important;
+  color: rgba(218, 218, 224, 0.9) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.045) inset,
+    0 8px 22px rgba(0, 0, 0, 0.12);
+}
+
+/* Neutral / new / archived */
+
+[data-theme='dark'] .crm-main span[class*='bg-zinc'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='bg-zinc'] {
+  background:
+    linear-gradient(180deg, rgba(45, 45, 50, 0.78), rgba(28, 28, 32, 0.84)) !important;
+  color: rgba(218, 218, 224, 0.86) !important;
+  border-color: rgba(113, 113, 122, 0.34) !important;
+}
+
+/* Active / success */
+
+[data-theme='dark'] .crm-main span[class*='bg-emerald'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='bg-emerald'],
+[data-theme='dark'] .crm-main span[class*='text-emerald'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='text-emerald'] {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(52, 211, 153, 0.2), transparent 42%),
+    linear-gradient(180deg, rgba(6, 95, 70, 0.28), rgba(6, 78, 59, 0.18)) !important;
+  color: rgba(167, 243, 208, 0.98) !important;
+  border-color: rgba(52, 211, 153, 0.34) !important;
+}
+
+/* Replied / info */
+
+[data-theme='dark'] .crm-main span[class*='bg-blue'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='bg-blue'],
+[data-theme='dark'] .crm-main span[class*='text-blue'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='text-blue'] {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(147, 197, 253, 0.2), transparent 42%),
+    linear-gradient(180deg, rgba(30, 64, 175, 0.24), rgba(30, 41, 59, 0.18)) !important;
+  color: rgba(191, 219, 254, 0.98) !important;
+  border-color: rgba(147, 197, 253, 0.34) !important;
+}
+
+/* Proposal / warning / scheduled */
+
+[data-theme='dark'] .crm-main span[class*='bg-amber'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='bg-amber'],
+[data-theme='dark'] .crm-main span[class*='bg-yellow'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='bg-yellow'],
+[data-theme='dark'] .crm-main span[class*='text-amber'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='text-amber'],
+[data-theme='dark'] .crm-main span[class*='text-yellow'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='text-yellow'] {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(251, 191, 36, 0.22), transparent 42%),
+    linear-gradient(180deg, rgba(146, 64, 14, 0.26), rgba(69, 26, 3, 0.18)) !important;
+  color: rgba(254, 240, 138, 0.98) !important;
+  border-color: rgba(251, 191, 36, 0.38) !important;
+}
+
+/* Overdue / danger */
+
+[data-theme='dark'] .crm-main span[class*='bg-red'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='bg-red'],
+[data-theme='dark'] .crm-main span[class*='text-red'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='text-red'] {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(248, 113, 113, 0.22), transparent 42%),
+    linear-gradient(180deg, rgba(127, 29, 29, 0.28), rgba(69, 10, 10, 0.2)) !important;
+  color: rgba(254, 202, 202, 0.98) !important;
+  border-color: rgba(248, 113, 113, 0.38) !important;
+}
+
+/* Count pills in pipeline columns and compact counters */
+
+[data-theme='dark'] .crm-main span[class*='rounded-full'][class*='min-w'],
+[data-theme='dark'] .crm-main span[class*='rounded-full'][class*='h-'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='rounded-full'][class*='min-w'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='rounded-full'][class*='h-'] {
+  background:
+    linear-gradient(180deg, rgba(50, 50, 56, 0.82), rgba(30, 30, 34, 0.88)) !important;
+  color: rgba(245, 245, 246, 0.94) !important;
+  border-color: rgba(113, 113, 122, 0.42) !important;
+}
+
+/* Small badge text should stay crisp */
+
+[data-theme='dark'] .crm-main span[class*='rounded-full'][class*='text-xs'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='rounded-full'][class*='text-xs'] {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Do not let table row muted text make badges unreadable */
+
+[data-theme='dark'] .crm-main td span[class*='rounded-full'],
+[data-theme='dark'] .crm-main td span[class*='rounded-md'],
+[data-theme='dark'] .crm-main td span[class*='rounded-lg'] {
+  color: rgba(218, 218, 224, 0.92) !important;
+}
+
+/* Badge-like rounded md/lg pills used in tables */
+
+[data-theme='dark'] .crm-main span[class*='rounded-md'],
+[data-theme='dark'] .crm-main span[class*='rounded-lg'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='rounded-md'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='rounded-lg'] {
+  border: 1px solid rgba(82, 82, 91, 0.34);
+  background:
+    linear-gradient(180deg, rgba(38, 38, 42, 0.72), rgba(24, 24, 27, 0.8)) !important;
+  color: rgba(218, 218, 224, 0.9) !important;
+}
+
+/* Color variants for rounded md/lg pills */
+
+[data-theme='dark'] .crm-main span[class*='rounded-md'][class*='emerald'],
+[data-theme='dark'] .crm-main span[class*='rounded-lg'][class*='emerald'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='rounded-md'][class*='emerald'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='rounded-lg'][class*='emerald'] {
+  background:
+    linear-gradient(180deg, rgba(6, 95, 70, 0.28), rgba(6, 78, 59, 0.18)) !important;
+  color: rgba(167, 243, 208, 0.98) !important;
+  border-color: rgba(52, 211, 153, 0.34) !important;
+}
+
+[data-theme='dark'] .crm-main span[class*='rounded-md'][class*='blue'],
+[data-theme='dark'] .crm-main span[class*='rounded-lg'][class*='blue'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='rounded-md'][class*='blue'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='rounded-lg'][class*='blue'] {
+  background:
+    linear-gradient(180deg, rgba(30, 64, 175, 0.24), rgba(30, 41, 59, 0.18)) !important;
+  color: rgba(191, 219, 254, 0.98) !important;
+  border-color: rgba(147, 197, 253, 0.34) !important;
+}
+
+[data-theme='dark'] .crm-main span[class*='rounded-md'][class*='amber'],
+[data-theme='dark'] .crm-main span[class*='rounded-lg'][class*='amber'],
+[data-theme='dark'] .crm-main span[class*='rounded-md'][class*='yellow'],
+[data-theme='dark'] .crm-main span[class*='rounded-lg'][class*='yellow'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='rounded-md'][class*='amber'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='rounded-lg'][class*='amber'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='rounded-md'][class*='yellow'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='rounded-lg'][class*='yellow'] {
+  background:
+    linear-gradient(180deg, rgba(146, 64, 14, 0.26), rgba(69, 26, 3, 0.18)) !important;
+  color: rgba(254, 240, 138, 0.98) !important;
+  border-color: rgba(251, 191, 36, 0.38) !important;
+}
+
+[data-theme='dark'] .crm-main span[class*='rounded-md'][class*='red'],
+[data-theme='dark'] .crm-main span[class*='rounded-lg'][class*='red'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='rounded-md'][class*='red'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='rounded-lg'][class*='red'] {
+  background:
+    linear-gradient(180deg, rgba(127, 29, 29, 0.28), rgba(69, 10, 10, 0.2)) !important;
+  color: rgba(254, 202, 202, 0.98) !important;
+  border-color: rgba(248, 113, 113, 0.38) !important;
+}
+
+/* Light mode safety: keep badges close to current clean product UI */
+
+:root[data-theme='light'] .crm-main span[class*='rounded-full'],
+:root[data-theme='light'] .fixed.inset-0.z-50 aside span[class*='rounded-full'] {
+  box-shadow: none;
+}
+
+/* /CRM Badge Status System v1 */
+
+/* CRM LeadDrawer Next Date Summary Contrast Fix v1 */
+
+/*
+  Task 35D.1:
+  Make the top Next date summary inside LeadDrawer readable in dark mode.
+  CSS-only. No drawer positioning / portal changes.
+*/
+
+/* Right-side next-date capsule inside the dark next-step hero card */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-zinc-950'] [class*='rounded-2xl'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-zinc-900'] [class*='rounded-2xl'] {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244, 244, 245, 0.1), transparent 42%),
+    linear-gradient(180deg, rgba(34, 34, 39, 0.94), rgba(22, 22, 25, 0.98)) !important;
+  border: 1px solid rgba(244, 244, 245, 0.08) !important;
+}
+
+/* Label: Next date */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-zinc-950'] [class*='rounded-2xl'] [class*='text-zinc-400'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-zinc-900'] [class*='rounded-2xl'] [class*='text-zinc-400'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-zinc-950'] [class*='rounded-2xl'] [class*='text-zinc-500'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-zinc-900'] [class*='rounded-2xl'] [class*='text-zinc-500'] {
+  color: rgba(194, 194, 202, 0.78) !important;
+}
+
+/* Date/time value */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-zinc-950'] [class*='rounded-2xl'] [class*='font-semibold'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-zinc-900'] [class*='rounded-2xl'] [class*='font-semibold'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-zinc-950'] [class*='rounded-2xl'] strong,
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-zinc-900'] [class*='rounded-2xl'] strong {
+  color: rgba(255, 255, 255, 0.98) !important;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.32);
+}
+
+/* Scheduled / overdue micro-status under the date */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-zinc-950'] [class*='rounded-2xl'] span,
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-zinc-900'] [class*='rounded-2xl'] span {
+  color: rgba(218, 218, 224, 0.92) !important;
+}
+
+/* /CRM LeadDrawer Next Date Summary Contrast Fix v1 */
