@@ -1161,3 +1161,282 @@ body {
 }
 
 /* /CRM Dark Mode Shell Pass v1 */
+
+
+/* CRM Dark Mode Core Pages Pass v1 */
+
+/*
+  Task 35B:
+  Dark Mode Core Pages Pass.
+  Scope: Today, Leads, Active Contacts, Imports, Pipeline, Reports.
+  CSS-only. No drawer positioning changes. No portal changes. No transform animations.
+*/
+
+/* Page-level spacing and typography */
+
+[data-theme='dark'] .crm-main > section {
+  color: var(--crm-text);
+}
+
+[data-theme='dark'] .crm-main > section > div:first-child h1,
+[data-theme='dark'] .crm-main h1 {
+  color: rgba(245, 245, 246, 0.96) !important;
+}
+
+[data-theme='dark'] .crm-main > section > div:first-child p,
+[data-theme='dark'] .crm-main h1 + p {
+  color: rgba(194, 194, 202, 0.78) !important;
+}
+
+/* KPI cards: calmer graphite surfaces */
+
+[data-theme='dark'] .crm-main > section [class*='grid'] > [class*='rounded-2xl'][class*='border'] {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244, 244, 245, 0.04), transparent 34%),
+    linear-gradient(180deg, rgba(25, 25, 29, 0.88), rgba(15, 15, 17, 0.92)) !important;
+  border-color: rgba(82, 82, 91, 0.46) !important;
+}
+
+[data-theme='dark'] .crm-main > section [class*='grid'] > [class*='rounded-2xl'][class*='border'] div:first-child,
+[data-theme='dark'] .crm-main > section [class*='grid'] > [class*='rounded-2xl'][class*='border'] p:first-child {
+  color: rgba(161, 161, 170, 0.78) !important;
+}
+
+[data-theme='dark'] .crm-main > section [class*='grid'] > [class*='rounded-2xl'][class*='border'] [class*='text-2xl'],
+[data-theme='dark'] .crm-main > section [class*='grid'] > [class*='rounded-2xl'][class*='border'] [class*='text-3xl'] {
+  color: rgba(245, 245, 246, 0.96) !important;
+}
+
+/* Overdue / danger cards: visible but restrained */
+
+[data-theme='dark'] .crm-main [class*='border-red'],
+[data-theme='dark'] .crm-main [class*='bg-red'] {
+  background:
+    linear-gradient(180deg, rgba(127, 29, 29, 0.18), rgba(24, 24, 27, 0.9)) !important;
+  border-color: rgba(248, 113, 113, 0.26) !important;
+}
+
+[data-theme='dark'] .crm-main [class*='text-red'] {
+  color: rgba(248, 113, 113, 0.92) !important;
+}
+
+/* Smart views / quick filters */
+
+[data-theme='dark'] .crm-main [class*='space-y'] button:not([class*='bg-zinc-900']):not([class*='bg-zinc-950']),
+[data-theme='dark'] .crm-main [class*='flex'] button:not([class*='bg-zinc-900']):not([class*='bg-zinc-950']) {
+  border-color: rgba(82, 82, 91, 0.42);
+}
+
+[data-theme='dark'] .crm-main button[class*='border'][class*='rounded-xl'],
+[data-theme='dark'] .crm-main button[class*='border'][class*='rounded-2xl'] {
+  background:
+    linear-gradient(180deg, rgba(26, 26, 30, 0.88), rgba(18, 18, 21, 0.88)) !important;
+  color: rgba(194, 194, 202, 0.9) !important;
+  border-color: rgba(82, 82, 91, 0.46) !important;
+}
+
+[data-theme='dark'] .crm-main button[class*='border'][class*='rounded-xl']:hover,
+[data-theme='dark'] .crm-main button[class*='border'][class*='rounded-2xl']:hover {
+  background:
+    linear-gradient(180deg, rgba(34, 34, 39, 0.96), rgba(24, 24, 27, 0.94)) !important;
+  color: rgba(245, 245, 246, 0.96) !important;
+  border-color: rgba(161, 161, 170, 0.46) !important;
+}
+
+/* Primary page actions: white but less flat */
+
+[data-theme='dark'] .crm-main button[class*='bg-zinc-900'],
+[data-theme='dark'] .crm-main button[class*='bg-zinc-950'] {
+  background:
+    linear-gradient(180deg, rgba(250, 250, 250, 0.98), rgba(228, 228, 231, 0.94)) !important;
+  color: #09090b !important;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Tables: better separation, less muddy */
+
+[data-theme='dark'] .crm-main table {
+  background: transparent !important;
+}
+
+[data-theme='dark'] .crm-main thead {
+  background:
+    linear-gradient(180deg, rgba(28, 28, 32, 0.82), rgba(21, 21, 24, 0.82)) !important;
+}
+
+[data-theme='dark'] .crm-main th {
+  color: rgba(161, 161, 170, 0.82) !important;
+  border-bottom-color: rgba(82, 82, 91, 0.48) !important;
+}
+
+[data-theme='dark'] .crm-main tbody tr {
+  background: transparent;
+}
+
+[data-theme='dark'] .crm-main tbody tr + tr td {
+  border-top-color: rgba(82, 82, 91, 0.28) !important;
+}
+
+[data-theme='dark'] .crm-main td {
+  color: rgba(194, 194, 202, 0.84) !important;
+}
+
+[data-theme='dark'] .crm-main td strong,
+[data-theme='dark'] .crm-main td [class*='font-medium'],
+[data-theme='dark'] .crm-main td [class*='font-semibold'] {
+  color: rgba(245, 245, 246, 0.95) !important;
+}
+
+/* Table action buttons should stay visible but not shout */
+
+[data-theme='dark'] .crm-main table button {
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.22),
+    0 1px 0 rgba(255, 255, 255, 0.12) inset;
+}
+
+/* Inputs and filters */
+
+[data-theme='dark'] .crm-main input:not([type='checkbox']),
+[data-theme='dark'] .crm-main select,
+[data-theme='dark'] .crm-main textarea {
+  background:
+    linear-gradient(180deg, rgba(22, 22, 25, 0.96), rgba(16, 16, 18, 0.96)) !important;
+  border-color: rgba(82, 82, 91, 0.5) !important;
+  color: rgba(245, 245, 246, 0.94) !important;
+}
+
+[data-theme='dark'] .crm-main input:not([type='checkbox'])::placeholder,
+[data-theme='dark'] .crm-main textarea::placeholder {
+  color: rgba(133, 133, 143, 0.72) !important;
+}
+
+/* Leads / Active Contacts list density */
+
+[data-theme='dark'] .crm-main td [class*='text-xs'],
+[data-theme='dark'] .crm-main td [class*='text-sm'] {
+  color: rgba(161, 161, 170, 0.76);
+}
+
+[data-theme='dark'] .crm-main td a {
+  color: rgba(194, 194, 202, 0.92);
+}
+
+[data-theme='dark'] .crm-main td a:hover {
+  color: rgba(245, 245, 246, 0.98);
+}
+
+/* Import wizard: upload area, preview cards, report panels */
+
+[data-theme='dark'] .crm-main [class*='border-dashed'] {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(244, 244, 245, 0.035), transparent 42%),
+    linear-gradient(180deg, rgba(20, 20, 23, 0.86), rgba(14, 14, 16, 0.9)) !important;
+  border-color: rgba(113, 113, 122, 0.42) !important;
+}
+
+[data-theme='dark'] .crm-main [class*='border-dashed']:hover {
+  border-color: rgba(194, 194, 202, 0.44) !important;
+}
+
+[data-theme='dark'] .crm-main details,
+[data-theme='dark'] .crm-main summary {
+  color: rgba(194, 194, 202, 0.9);
+}
+
+[data-theme='dark'] .crm-main summary:hover {
+  color: rgba(245, 245, 246, 0.96);
+}
+
+/* Import report / sanity cards */
+
+[data-theme='dark'] .crm-main [class*='rounded-xl'][class*='bg-zinc-50'],
+[data-theme='dark'] .crm-main [class*='rounded-2xl'][class*='bg-zinc-50'] {
+  background:
+    linear-gradient(180deg, rgba(24, 24, 27, 0.82), rgba(17, 17, 19, 0.9)) !important;
+}
+
+/* Pipeline boards */
+
+[data-theme='dark'] .crm-main [class*='grid'] [class*='min-h'] {
+  border-color: rgba(82, 82, 91, 0.42) !important;
+}
+
+[data-theme='dark'] .crm-main [class*='border-dashed'][class*='rounded-xl'] {
+  color: rgba(133, 133, 143, 0.82) !important;
+}
+
+/* Pipeline / secondary cards */
+
+[data-theme='dark'] .crm-main [class*='rounded-xl'][class*='border'][class*='p-4'],
+[data-theme='dark'] .crm-main [class*='rounded-2xl'][class*='border'][class*='p-4'] {
+  background:
+    linear-gradient(180deg, rgba(24, 24, 27, 0.84), rgba(15, 15, 17, 0.92)) !important;
+}
+
+/* Reports */
+
+[data-theme='dark'] .crm-main [class*='overflow-hidden'][class*='rounded-2xl'],
+[data-theme='dark'] .crm-main [class*='overflow-hidden'][class*='rounded-3xl'] {
+  background:
+    linear-gradient(180deg, rgba(22, 22, 25, 0.88), rgba(14, 14, 16, 0.94)) !important;
+  border-color: rgba(82, 82, 91, 0.46) !important;
+}
+
+/* Muted empty states */
+
+[data-theme='dark'] .crm-main [class*='border-dashed'] [class*='text-zinc-400'],
+[data-theme='dark'] .crm-main [class*='border-dashed'] [class*='text-zinc-500'] {
+  color: rgba(133, 133, 143, 0.82) !important;
+}
+
+/* Status text safety before dedicated badge pass */
+
+[data-theme='dark'] .crm-main [class*='text-emerald'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='text-emerald'] {
+  color: rgba(52, 211, 153, 0.95) !important;
+}
+
+[data-theme='dark'] .crm-main [class*='text-blue'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='text-blue'] {
+  color: rgba(147, 197, 253, 0.95) !important;
+}
+
+[data-theme='dark'] .crm-main [class*='text-amber'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='text-amber'] {
+  color: rgba(251, 191, 36, 0.95) !important;
+}
+
+/* Base scrollbar consistency inside page content */
+
+[data-theme='dark'] .crm-main *::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+[data-theme='dark'] .crm-main *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-theme='dark'] .crm-main *::-webkit-scrollbar-thumb {
+  background: rgba(113, 113, 122, 0.48);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+
+[data-theme='dark'] .crm-main *::-webkit-scrollbar-thumb:hover {
+  background: rgba(161, 161, 170, 0.58);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+/* Light-mode safety: keep existing current look */
+
+:root[data-theme='light'] .crm-main table button {
+  box-shadow:
+    0 10px 24px rgba(24, 24, 27, 0.12),
+    0 1px 0 rgba(255, 255, 255, 0.16) inset;
+}
+
+/* /CRM Dark Mode Core Pages Pass v1 */
