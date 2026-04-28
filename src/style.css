@@ -2712,3 +2712,23 @@ body {
 }
 
 /* /CRM Light Mode Recovery + Safe Capture Polish v1 */
+
+/* CRM Light Mode Drawer Header Badge Fix v2 */
+
+[data-theme='light'] .fixed.inset-0.z-50 aside :is(h1, h2, h3, h4) + .rounded-full {
+  background: rgba(245, 158, 11, 0.14) !important;
+  color: #b45309 !important;
+  border: 1px solid rgba(245, 158, 11, 0.28) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72) !important;
+  font-weight: 600 !important;
+}
+
+[data-theme='light'] .fixed.inset-0.z-50 aside :is(h1, h2, h3, h4) + .rounded-full + .rounded-full {
+  background: rgba(16, 185, 129, 0.14) !important;
+  color: #047857 !important;
+  border: 1px solid rgba(16, 185, 129, 0.28) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72) !important;
+  font-weight: 600 !important;
+}
+
+/* /CRM Light Mode Drawer Header Badge Fix v2 */
