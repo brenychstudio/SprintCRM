@@ -2516,116 +2516,50 @@ body {
 
 /* /CRM Final Dark Light QA Polish Pass v1 */
 
-/* CRM Light Mode Capture Polish + Final Surface Balance v1 */
+/* CRM Light Mode Recovery + Safe Capture Polish v1 */
 
 /*
-  Task 35G:
-  Final light-mode visual polish for portfolio capture.
+  Task 35G.1:
+  Recovery after overbroad light-mode polish.
   Scope:
-  - softer premium light shell
-  - clearer light surfaces
-  - table/card rhythm
-  - pipeline cards
-  - drawer light readability
-  - disabled/hover states
+  - restore black CTA readability
+  - restore light drawer next-step hero contrast
+  - keep subtle light capture polish
+  - avoid broad overrides that affect every rounded card/button
 
   CSS-only.
-  No dark-mode changes.
   No component logic changes.
+  No dark-mode changes.
 */
 
-/* Premium light shell balance */
+/* Keep light shell premium, but restrained */
 
 [data-theme='light'] .crm-shell {
   background:
-    radial-gradient(circle at 12% 0%, rgba(255, 255, 255, 0.92), transparent 30%),
-    radial-gradient(circle at 86% 0%, rgba(228, 228, 231, 0.52), transparent 36%),
-    linear-gradient(135deg, #f4f4f5 0%, #f8f8f9 46%, #eeeeef 100%) !important;
+    radial-gradient(circle at 12% 0%, rgba(255, 255, 255, 0.88), transparent 30%),
+    radial-gradient(circle at 88% 0%, rgba(228, 228, 231, 0.42), transparent 36%),
+    linear-gradient(135deg, #f4f4f5 0%, #f8f8f9 48%, #eeeeef 100%) !important;
 }
 
 [data-theme='light'] .crm-main {
   background:
-    radial-gradient(circle at 74% 0%, rgba(255, 255, 255, 0.92), transparent 38%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(250, 250, 251, 0.98)) !important;
-  border-color: rgba(212, 212, 216, 0.82) !important;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(250, 250, 251, 0.98)) !important;
+  border-color: rgba(212, 212, 216, 0.78) !important;
   box-shadow:
-    0 34px 90px rgba(24, 24, 27, 0.08),
+    0 30px 84px rgba(24, 24, 27, 0.07),
     0 1px 0 rgba(255, 255, 255, 0.9) inset !important;
 }
 
-/* Sidebar light polish */
-
 [data-theme='light'] .crm-sidebar {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(250, 250, 251, 0.98)) !important;
-  border-color: rgba(212, 212, 216, 0.78) !important;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(250, 250, 251, 0.98)) !important;
+  border-color: rgba(212, 212, 216, 0.76) !important;
   box-shadow:
-    0 28px 70px rgba(24, 24, 27, 0.08),
-    0 1px 0 rgba(255, 255, 255, 0.86) inset !important;
+    0 26px 70px rgba(24, 24, 27, 0.075),
+    0 1px 0 rgba(255, 255, 255, 0.88) inset !important;
 }
 
-/* Light cards: less flat, still restrained */
-
-[data-theme='light'] .crm-main [class*='rounded-xl'][class*='border'],
-[data-theme='light'] .crm-main [class*='rounded-2xl'][class*='border'],
-[data-theme='light'] .crm-main [class*='rounded-3xl'][class*='border'] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(253, 253, 254, 0.96)) !important;
-  border-color: rgba(212, 212, 216, 0.82) !important;
-  box-shadow:
-    0 18px 48px rgba(24, 24, 27, 0.035),
-    0 1px 0 rgba(255, 255, 255, 0.9) inset;
-}
-
-/* KPI cards need subtle depth for screenshots */
-
-[data-theme='light'] .crm-main > section > div [class*='rounded-2xl'][class*='border'] {
-  box-shadow:
-    0 16px 42px rgba(24, 24, 27, 0.045),
-    0 1px 0 rgba(255, 255, 255, 0.9) inset;
-}
-
-/* Tables: cleaner header and softer row rhythm */
-
-[data-theme='light'] .crm-main table thead,
-[data-theme='light'] .crm-main table tr:first-child {
-  background:
-    linear-gradient(180deg, rgba(250, 250, 251, 0.92), rgba(246, 246, 247, 0.92)) !important;
-}
-
-[data-theme='light'] .crm-main table th {
-  color: rgba(82, 82, 91, 0.84) !important;
-  font-weight: 700;
-  letter-spacing: 0.018em;
-}
-
-[data-theme='light'] .crm-main table td {
-  color: rgba(39, 39, 42, 0.9);
-}
-
-[data-theme='light'] .crm-main table tbody tr:hover {
-  background:
-    linear-gradient(90deg, rgba(244, 244, 245, 0.82), rgba(250, 250, 251, 0.64)) !important;
-}
-
-/* Muted text: readable but calm */
-
-[data-theme='light'] .crm-main [class*='text-zinc-500'],
-[data-theme='light'] .crm-main [class*='text-zinc-600'],
-[data-theme='light'] .crm-sidebar [class*='text-zinc-500'],
-[data-theme='light'] .crm-sidebar [class*='text-zinc-600'] {
-  color: rgba(82, 82, 91, 0.78) !important;
-}
-
-/* Important names/titles stay crisp */
-
-[data-theme='light'] .crm-main [class*='font-semibold'],
-[data-theme='light'] .crm-main [class*='font-medium'],
-[data-theme='light'] .crm-main strong {
-  color: rgba(17, 17, 19, 0.94) !important;
-}
-
-/* Inputs/selects: Apple-like light surface */
+/* Inputs/selects: safe light polish only */
 
 [data-theme='light'] .crm-main input,
 [data-theme='light'] .crm-main select,
@@ -2634,125 +2568,130 @@ body {
 [data-theme='light'] .fixed.inset-0.z-50 aside input,
 [data-theme='light'] .fixed.inset-0.z-50 aside select,
 [data-theme='light'] .fixed.inset-0.z-50 aside textarea {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 250, 251, 0.96)) !important;
+  background: rgba(255, 255, 255, 0.96) !important;
   border-color: rgba(212, 212, 216, 0.92) !important;
-  color: rgba(17, 17, 19, 0.92) !important;
+  color: rgba(17, 17, 19, 0.94) !important;
+  -webkit-text-fill-color: rgba(17, 17, 19, 0.94) !important;
+}
+
+/* Tables: subtle, not over-styled */
+
+[data-theme='light'] .crm-main table th {
+  color: rgba(82, 82, 91, 0.82) !important;
+  font-weight: 700;
+  letter-spacing: 0.015em;
+}
+
+[data-theme='light'] .crm-main table td {
+  color: rgba(39, 39, 42, 0.9);
+}
+
+[data-theme='light'] .crm-main table tbody tr:hover {
+  background: rgba(244, 244, 245, 0.72) !important;
+}
+
+/* Import upload zone: safe polish */
+
+[data-theme='light'] .crm-main [class*='border-dashed'] {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.84), transparent 46%),
+    linear-gradient(180deg, rgba(253, 253, 254, 0.96), rgba(250, 250, 251, 0.96)) !important;
+  border-color: rgba(161, 161, 170, 0.52) !important;
+}
+
+/* Critical recovery: all dark CTAs in light mode must keep white text */
+
+[data-theme='light'] .crm-main button[class*='bg-black'],
+[data-theme='light'] .crm-main button[class*='bg-zinc-950'],
+[data-theme='light'] .crm-main button[class*='bg-zinc-900'],
+[data-theme='light'] .crm-main button[class*='bg-neutral-950'],
+[data-theme='light'] .crm-main button[class*='bg-neutral-900'],
+[data-theme='light'] .fixed.inset-0.z-50 aside button[class*='bg-black'],
+[data-theme='light'] .fixed.inset-0.z-50 aside button[class*='bg-zinc-950'],
+[data-theme='light'] .fixed.inset-0.z-50 aside button[class*='bg-zinc-900'],
+[data-theme='light'] .fixed.inset-0.z-50 aside button[class*='bg-neutral-950'],
+[data-theme='light'] .fixed.inset-0.z-50 aside button[class*='bg-neutral-900'] {
+  background:
+    linear-gradient(180deg, #18181b, #050506) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border-color: rgba(24, 24, 27, 0.92) !important;
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.92) inset,
-    0 8px 20px rgba(24, 24, 27, 0.025);
+    0 18px 44px rgba(24, 24, 27, 0.18),
+    0 1px 0 rgba(255, 255, 255, 0.14) inset !important;
 }
 
-[data-theme='light'] .crm-main input:focus,
-[data-theme='light'] .crm-main select:focus,
-[data-theme='light'] .crm-main textarea:focus,
-[data-theme='light'] .fixed.inset-0.z-50 aside input:focus,
-[data-theme='light'] .fixed.inset-0.z-50 aside select:focus,
-[data-theme='light'] .fixed.inset-0.z-50 aside textarea:focus {
-  border-color: rgba(24, 24, 27, 0.34) !important;
-  box-shadow:
-    0 0 0 4px rgba(24, 24, 27, 0.06),
-    0 1px 0 rgba(255, 255, 255, 0.92) inset !important;
+[data-theme='light'] .crm-main button[class*='bg-black'] *,
+[data-theme='light'] .crm-main button[class*='bg-zinc-950'] *,
+[data-theme='light'] .crm-main button[class*='bg-zinc-900'] *,
+[data-theme='light'] .crm-main button[class*='bg-neutral-950'] *,
+[data-theme='light'] .crm-main button[class*='bg-neutral-900'] *,
+[data-theme='light'] .fixed.inset-0.z-50 aside button[class*='bg-black'] *,
+[data-theme='light'] .fixed.inset-0.z-50 aside button[class*='bg-zinc-950'] *,
+[data-theme='light'] .fixed.inset-0.z-50 aside button[class*='bg-zinc-900'] *,
+[data-theme='light'] .fixed.inset-0.z-50 aside button[class*='bg-neutral-950'] *,
+[data-theme='light'] .fixed.inset-0.z-50 aside button[class*='bg-neutral-900'] * {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
-/* Buttons: keep black CTAs premium, soften secondary actions */
+/* Critical recovery: drawer next-step hero must stay dark in light mode */
 
-[data-theme='light'] .crm-main button,
-[data-theme='light'] .fixed.inset-0.z-50 aside button {
-  transition:
-    background-color 160ms ease,
-    border-color 160ms ease,
-    color 160ms ease,
-    box-shadow 160ms ease,
-    opacity 160ms ease;
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-black'],
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-zinc-950'],
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-zinc-900'],
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-neutral-950'],
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-neutral-900'] {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.12), transparent 42%),
+    linear-gradient(180deg, #09090b, #050506) !important;
+  color: #ffffff !important;
+  border-color: rgba(24, 24, 27, 0.92) !important;
 }
 
-[data-theme='light'] .crm-main button:not(:disabled):hover,
-[data-theme='light'] .fixed.inset-0.z-50 aside button:not(:disabled):hover {
-  box-shadow:
-    0 14px 34px rgba(24, 24, 27, 0.08),
-    0 1px 0 rgba(255, 255, 255, 0.72) inset;
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-black'] *,
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-zinc-950'] *,
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-zinc-900'] *,
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-neutral-950'] *,
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-neutral-900'] * {
+  color: inherit;
 }
 
-/* Disabled should look intentionally unavailable, not broken */
+/* Re-allow specific muted text inside dark next-step card */
+
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-black'] [class*='text-zinc-400'],
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-black'] [class*='text-zinc-500'],
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-zinc-950'] [class*='text-zinc-400'],
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-zinc-950'] [class*='text-zinc-500'],
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-zinc-900'] [class*='text-zinc-400'],
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-zinc-900'] [class*='text-zinc-500'] {
+  color: rgba(212, 212, 216, 0.78) !important;
+}
+
+/* Disabled buttons should not look like broken black buttons */
 
 [data-theme='light'] .crm-main button:disabled,
 [data-theme='light'] .crm-main button[disabled],
 [data-theme='light'] .fixed.inset-0.z-50 aside button:disabled,
 [data-theme='light'] .fixed.inset-0.z-50 aside button[disabled] {
-  background:
-    linear-gradient(180deg, rgba(245, 245, 246, 0.82), rgba(238, 238, 240, 0.86)) !important;
+  background: rgba(244, 244, 245, 0.88) !important;
   color: rgba(113, 113, 122, 0.46) !important;
+  -webkit-text-fill-color: rgba(113, 113, 122, 0.46) !important;
   border-color: rgba(212, 212, 216, 0.72) !important;
   box-shadow: none !important;
   opacity: 1 !important;
 }
 
-/* Badge/pill light safety */
-
-[data-theme='light'] .crm-main span[class*='rounded-full'],
-[data-theme='light'] .fixed.inset-0.z-50 aside span[class*='rounded-full'] {
-  border-color: rgba(212, 212, 216, 0.78);
-  box-shadow: none;
-}
-
-/* Pipeline cards: clearer hierarchy in light theme */
-
-[data-theme='light'] .crm-main [class*='rounded-xl'][class*='border'] [class*='text-zinc-400'],
-[data-theme='light'] .crm-main [class*='rounded-xl'][class*='border'] [class*='text-zinc-500'],
-[data-theme='light'] .crm-main [class*='rounded-2xl'][class*='border'] [class*='text-zinc-400'],
-[data-theme='light'] .crm-main [class*='rounded-2xl'][class*='border'] [class*='text-zinc-500'] {
-  color: rgba(82, 82, 91, 0.72) !important;
-}
-
-[data-theme='light'] .crm-main [class*='rounded-xl'][class*='border'] button:not(:disabled),
-[data-theme='light'] .crm-main [class*='rounded-2xl'][class*='border'] button:not(:disabled) {
-  border-color: rgba(24, 24, 27, 0.1);
-}
-
-/* Import upload capture polish */
-
-[data-theme='light'] .crm-main [class*='border-dashed'] {
-  background:
-    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.9), transparent 46%),
-    linear-gradient(180deg, rgba(253, 253, 254, 0.96), rgba(250, 250, 251, 0.96)) !important;
-  border-color: rgba(161, 161, 170, 0.55) !important;
-}
-
-/* Drawer light surface polish */
+/* Light drawer base surface */
 
 [data-theme='light'] .fixed.inset-0.z-50 aside {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 250, 251, 0.98)) !important;
+  background: rgba(255, 255, 255, 0.98) !important;
   box-shadow:
     -34px 0 90px rgba(24, 24, 27, 0.12),
     -1px 0 0 rgba(212, 212, 216, 0.9) !important;
 }
 
-[data-theme='light'] .fixed.inset-0.z-50 aside [class*='rounded-2xl'][class*='border'],
-[data-theme='light'] .fixed.inset-0.z-50 aside [class*='rounded-3xl'][class*='border'] {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 250, 251, 0.96)) !important;
-  border-color: rgba(212, 212, 216, 0.86) !important;
-  box-shadow:
-    0 18px 46px rgba(24, 24, 27, 0.04),
-    0 1px 0 rgba(255, 255, 255, 0.92) inset;
-}
-
-/* Keep the black next-step hero card strong in light drawer */
-
-[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-zinc-950'],
-[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-zinc-900'] {
-  background:
-    radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.12), transparent 42%),
-    linear-gradient(180deg, #09090b, #050506) !important;
-  color: #ffffff !important;
-  box-shadow:
-    0 24px 60px rgba(24, 24, 27, 0.18),
-    0 1px 0 rgba(255, 255, 255, 0.12) inset !important;
-}
-
-/* Native date/time controls stay visible in light drawer */
+/* Native controls */
 
 [data-theme='light'] .fixed.inset-0.z-50 aside input[type='date'],
 [data-theme='light'] .fixed.inset-0.z-50 aside input[type='time'] {
@@ -2761,7 +2700,7 @@ body {
 
 [data-theme='light'] .fixed.inset-0.z-50 aside input[type='date']::-webkit-calendar-picker-indicator,
 [data-theme='light'] .fixed.inset-0.z-50 aside input[type='time']::-webkit-calendar-picker-indicator {
-  opacity: 0.88;
+  opacity: 0.9;
   cursor: pointer;
 }
 
@@ -2772,4 +2711,4 @@ body {
   overflow-x: clip;
 }
 
-/* /CRM Light Mode Capture Polish + Final Surface Balance v1 */
+/* /CRM Light Mode Recovery + Safe Capture Polish v1 */
