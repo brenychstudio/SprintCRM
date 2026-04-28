@@ -2758,3 +2758,91 @@ body {
 }
 
 /* /CRM Light Mode Drawer Primary CTA Text Fix v1 */
+
+/* CRM Light Mode Drawer Dark Card Secondary Button Fix v1 */
+
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-black'] button:not([class*='bg-white']),
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-zinc-950'] button:not([class*='bg-white']),
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='from-black'] button:not([class*='bg-white']),
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='to-black'] button:not([class*='bg-white']),
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='to-zinc-950'] button:not([class*='bg-white']) {
+  color: rgba(255, 255, 255, 0.92) !important;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.92) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+}
+
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-black'] button:not([class*='bg-white']):hover,
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-zinc-950'] button:not([class*='bg-white']):hover,
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='from-black'] button:not([class*='bg-white']):hover,
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='to-black'] button:not([class*='bg-white']):hover,
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='to-zinc-950'] button:not([class*='bg-white']):hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.42) !important;
+}
+
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-black'] button:not([class*='bg-white']):disabled,
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='bg-zinc-950'] button:not([class*='bg-white']):disabled,
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='from-black'] button:not([class*='bg-white']):disabled,
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='to-black'] button:not([class*='bg-white']):disabled,
+[data-theme='light'] .fixed.inset-0.z-50 aside [class*='to-zinc-950'] button:not([class*='bg-white']):disabled {
+  color: rgba(255, 255, 255, 0.42) !important;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.42) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+/* /CRM Light Mode Drawer Dark Card Secondary Button Fix v1 */
+
+/* CRM Light Drawer Next-Step Save Button Final Contrast Fix v2 */
+
+/*
+  Fix:
+  The previous broad light-mode selector matched hover:bg-white/10
+  and treated the secondary Save button as a white CTA.
+  This block targets only the secondary Save-style button inside
+  the dark next-step hero card.
+*/
+
+[data-theme='light'] .fixed.inset-0.z-50 aside section[class*='bg-zinc-950'] button[class*='border-white'],
+[data-theme='light'] .fixed.inset-0.z-50 aside section[class*='bg-black'] button[class*='border-white'],
+[data-theme='light'] .fixed.inset-0.z-50 aside section[class*='bg-neutral-950'] button[class*='border-white'] {
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.92) !important;
+  border-color: rgba(255, 255, 255, 0.32) !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
+[data-theme='light'] .fixed.inset-0.z-50 aside section[class*='bg-zinc-950'] button[class*='border-white']:hover,
+[data-theme='light'] .fixed.inset-0.z-50 aside section[class*='bg-black'] button[class*='border-white']:hover,
+[data-theme='light'] .fixed.inset-0.z-50 aside section[class*='bg-neutral-950'] button[class*='border-white']:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.48) !important;
+}
+
+[data-theme='light'] .fixed.inset-0.z-50 aside section[class*='bg-zinc-950'] button[class*='border-emerald'],
+[data-theme='light'] .fixed.inset-0.z-50 aside section[class*='bg-black'] button[class*='border-emerald'],
+[data-theme='light'] .fixed.inset-0.z-50 aside section[class*='bg-neutral-950'] button[class*='border-emerald'] {
+  background: rgba(16, 185, 129, 0.16) !important;
+  color: rgba(209, 250, 229, 0.98) !important;
+  -webkit-text-fill-color: rgba(209, 250, 229, 0.98) !important;
+  border-color: rgba(52, 211, 153, 0.52) !important;
+  box-shadow:
+    0 0 0 1px rgba(52, 211, 153, 0.12),
+    0 12px 28px rgba(0, 0, 0, 0.22) !important;
+}
+
+[data-theme='light'] .fixed.inset-0.z-50 aside section[class*='bg-zinc-950'] button[class*='border-white']:disabled,
+[data-theme='light'] .fixed.inset-0.z-50 aside section[class*='bg-black'] button[class*='border-white']:disabled,
+[data-theme='light'] .fixed.inset-0.z-50 aside section[class*='bg-neutral-950'] button[class*='border-white']:disabled {
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: rgba(255, 255, 255, 0.48) !important;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.48) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  opacity: 1 !important;
+}
+
+/* /CRM Light Drawer Next-Step Save Button Final Contrast Fix v2 */
