@@ -1540,3 +1540,354 @@ body {
 }
 
 /* /CRM Dark Mode Core Pages Pass v1 */
+
+/* CRM LeadDrawer Dark Work Panel Polish v1 */
+
+/*
+  Task 35C:
+  LeadDrawer dark-mode work panel polish.
+  Scope: visual polish only.
+  Do not change drawer portal/fixed positioning.
+  Do not add transform animations to drawer or app containers.
+*/
+
+/* Drawer base: premium graphite work panel */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside {
+  background:
+    radial-gradient(circle at 78% 0%, rgba(244, 244, 245, 0.035), transparent 34%),
+    linear-gradient(180deg, rgba(20, 20, 23, 0.985), rgba(12, 12, 14, 0.99)) !important;
+  border-left-color: rgba(113, 113, 122, 0.38) !important;
+  color: rgba(245, 245, 246, 0.96);
+}
+
+/* Drawer top identity header */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside > div:first-child {
+  background:
+    linear-gradient(180deg, rgba(24, 24, 27, 0.96), rgba(16, 16, 18, 0.94)) !important;
+  border-bottom-color: rgba(82, 82, 91, 0.48) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside > div:first-child h2,
+[data-theme='dark'] .fixed.inset-0.z-50 aside > div:first-child h3,
+[data-theme='dark'] .fixed.inset-0.z-50 aside > div:first-child strong {
+  color: rgba(250, 250, 250, 0.98) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside > div:first-child p,
+[data-theme='dark'] .fixed.inset-0.z-50 aside > div:first-child span {
+  color: rgba(194, 194, 202, 0.78) !important;
+}
+
+/* Header close button */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside > div:first-child button {
+  background:
+    linear-gradient(180deg, rgba(28, 28, 32, 0.86), rgba(18, 18, 21, 0.9)) !important;
+  color: rgba(218, 218, 224, 0.9) !important;
+  border-color: rgba(82, 82, 91, 0.5) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside > div:first-child button:hover {
+  background:
+    linear-gradient(180deg, rgba(38, 38, 42, 0.94), rgba(24, 24, 27, 0.94)) !important;
+  color: rgba(245, 245, 246, 0.98) !important;
+  border-color: rgba(161, 161, 170, 0.42) !important;
+}
+
+/* Drawer internal cards: consistent graphite surfaces */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='rounded-2xl'][class*='border'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='rounded-3xl'][class*='border'] {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244, 244, 245, 0.035), transparent 32%),
+    linear-gradient(180deg, rgba(25, 25, 29, 0.88), rgba(16, 16, 18, 0.94)) !important;
+  border-color: rgba(82, 82, 91, 0.48) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.045) inset,
+    0 18px 54px rgba(0, 0, 0, 0.22) !important;
+}
+
+/* Next-step hero card: keep high-emphasis, but more premium */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-zinc-950'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-zinc-900'] {
+  background:
+    radial-gradient(circle at 86% 0%, rgba(255, 255, 255, 0.085), transparent 32%),
+    linear-gradient(145deg, rgba(9, 9, 11, 0.98), rgba(18, 18, 21, 0.96) 58%, rgba(9, 9, 11, 0.98)) !important;
+  border-color: rgba(244, 244, 245, 0.1) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.08) inset,
+    0 24px 70px rgba(0, 0, 0, 0.36) !important;
+}
+
+/* Prevent primary buttons inside next-step card from becoming too flat */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-zinc-950'] button,
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-zinc-900'] button {
+  border-color: rgba(244, 244, 245, 0.14) !important;
+}
+
+/* Drawer section titles and descriptions */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside h3,
+[data-theme='dark'] .fixed.inset-0.z-50 aside h4 {
+  color: rgba(245, 245, 246, 0.96) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside h3 + p,
+[data-theme='dark'] .fixed.inset-0.z-50 aside h4 + p {
+  color: rgba(194, 194, 202, 0.72) !important;
+}
+
+/* Work result cards */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside button[class*='rounded-2xl'][class*='border'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside button[class*='rounded-xl'][class*='border'] {
+  background:
+    linear-gradient(180deg, rgba(26, 26, 30, 0.78), rgba(18, 18, 21, 0.84)) !important;
+  border-color: rgba(82, 82, 91, 0.48) !important;
+  color: rgba(218, 218, 224, 0.92) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.035) inset,
+    0 12px 28px rgba(0, 0, 0, 0.14) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside button[class*='rounded-2xl'][class*='border']:hover,
+[data-theme='dark'] .fixed.inset-0.z-50 aside button[class*='rounded-xl'][class*='border']:hover {
+  background:
+    linear-gradient(180deg, rgba(38, 38, 42, 0.92), rgba(24, 24, 27, 0.92)) !important;
+  border-color: rgba(161, 161, 170, 0.42) !important;
+  color: rgba(245, 245, 246, 0.98) !important;
+}
+
+/* Disabled result actions stay clearly unavailable */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside button:disabled,
+[data-theme='dark'] .fixed.inset-0.z-50 aside button[disabled] {
+  background:
+    linear-gradient(180deg, rgba(35, 35, 39, 0.5), rgba(22, 22, 25, 0.5)) !important;
+  color: rgba(161, 161, 170, 0.38) !important;
+  border-color: rgba(82, 82, 91, 0.3) !important;
+  box-shadow: none !important;
+}
+
+/* Quick context / lead context values should be readable */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='rounded-xl'] [class*='text-xs'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='rounded-2xl'] [class*='text-xs'] {
+  color: rgba(161, 161, 170, 0.74) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='rounded-xl'] [class*='text-sm'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='rounded-2xl'] [class*='text-sm'] {
+  color: rgba(218, 218, 224, 0.9) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='rounded-xl'] strong,
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='rounded-2xl'] strong,
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='font-medium'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='font-semibold'] {
+  color: rgba(245, 245, 246, 0.96) !important;
+}
+
+/* Next action form */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside input:not([type='checkbox']),
+[data-theme='dark'] .fixed.inset-0.z-50 aside select,
+[data-theme='dark'] .fixed.inset-0.z-50 aside textarea {
+  background:
+    linear-gradient(180deg, rgba(18, 18, 21, 0.98), rgba(12, 12, 14, 0.98)) !important;
+  border-color: rgba(82, 82, 91, 0.58) !important;
+  color: rgba(245, 245, 246, 0.96) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.035) inset !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside input:not([type='checkbox']):focus,
+[data-theme='dark'] .fixed.inset-0.z-50 aside select:focus,
+[data-theme='dark'] .fixed.inset-0.z-50 aside textarea:focus {
+  border-color: rgba(244, 244, 245, 0.34) !important;
+  box-shadow:
+    0 0 0 4px rgba(244, 244, 245, 0.07),
+    0 1px 0 rgba(255, 255, 255, 0.055) inset !important;
+  outline: none;
+}
+
+/* Details/notes accordion */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside details,
+[data-theme='dark'] .fixed.inset-0.z-50 aside summary {
+  color: rgba(194, 194, 202, 0.86) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside summary:hover {
+  color: rgba(245, 245, 246, 0.96) !important;
+}
+
+/* Activity timeline */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='overflow-y-auto'] {
+  scrollbar-color: rgba(113, 113, 122, 0.58) transparent;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='overflow-y-auto']::-webkit-scrollbar {
+  width: 10px;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='overflow-y-auto']::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='overflow-y-auto']::-webkit-scrollbar-thumb {
+  background: rgba(113, 113, 122, 0.56);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='overflow-y-auto']::-webkit-scrollbar-thumb:hover {
+  background: rgba(161, 161, 170, 0.64);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+/* Timeline event cards */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='overflow-y-auto'] > div {
+  border-color: rgba(82, 82, 91, 0.42) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='overflow-y-auto'] > div:hover {
+  border-color: rgba(161, 161, 170, 0.34) !important;
+}
+
+/* Archive / danger zone: restrained, not alarming unless opened */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='border-red'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-red'] {
+  background:
+    linear-gradient(180deg, rgba(127, 29, 29, 0.12), rgba(18, 18, 21, 0.92)) !important;
+  border-color: rgba(248, 113, 113, 0.24) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='text-red'] {
+  color: rgba(248, 113, 113, 0.9) !important;
+}
+
+/* Badges inside drawer: temporary safety until Task 35D */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='rounded-full'] {
+  border-color: rgba(82, 82, 91, 0.42);
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-emerald'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='text-emerald'] {
+  color: rgba(52, 211, 153, 0.96) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-amber'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='text-amber'] {
+  color: rgba(251, 191, 36, 0.96) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='bg-blue'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='text-blue'] {
+  color: rgba(147, 197, 253, 0.96) !important;
+}
+
+/* Drawer horizontal divider lines */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside hr,
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='divide-y'] > * + * {
+  border-color: rgba(82, 82, 91, 0.38) !important;
+}
+
+/* Light mode safety: keep current drawer feeling clean */
+
+:root[data-theme='light'] .fixed.inset-0.z-50 aside {
+  background: #ffffff;
+}
+
+/* /CRM LeadDrawer Dark Work Panel Polish v1 */
+
+/* CRM LeadDrawer Date Time + Save Success Fix v1 */
+
+/*
+  Task 35C.1:
+  Restore dark-mode readability for native date/time inputs
+  and preserve the green success state for the drawer Save button.
+  CSS-only. No drawer portal/fixed positioning changes.
+*/
+
+/* Date/time inputs need explicit browser-level dark rendering */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside input[type='date'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside input[type='time'] {
+  color: rgba(245, 245, 246, 0.98) !important;
+  -webkit-text-fill-color: rgba(245, 245, 246, 0.98) !important;
+  color-scheme: dark;
+  background:
+    linear-gradient(180deg, rgba(18, 18, 21, 0.98), rgba(10, 10, 12, 0.98)) !important;
+  border-color: rgba(113, 113, 122, 0.62) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside input[type='date']::-webkit-datetime-edit,
+[data-theme='dark'] .fixed.inset-0.z-50 aside input[type='time']::-webkit-datetime-edit,
+[data-theme='dark'] .fixed.inset-0.z-50 aside input[type='date']::-webkit-datetime-edit-fields-wrapper,
+[data-theme='dark'] .fixed.inset-0.z-50 aside input[type='time']::-webkit-datetime-edit-fields-wrapper,
+[data-theme='dark'] .fixed.inset-0.z-50 aside input[type='date']::-webkit-datetime-edit-text,
+[data-theme='dark'] .fixed.inset-0.z-50 aside input[type='time']::-webkit-datetime-edit-text,
+[data-theme='dark'] .fixed.inset-0.z-50 aside input[type='date']::-webkit-datetime-edit-month-field,
+[data-theme='dark'] .fixed.inset-0.z-50 aside input[type='date']::-webkit-datetime-edit-day-field,
+[data-theme='dark'] .fixed.inset-0.z-50 aside input[type='date']::-webkit-datetime-edit-year-field,
+[data-theme='dark'] .fixed.inset-0.z-50 aside input[type='time']::-webkit-datetime-edit-hour-field,
+[data-theme='dark'] .fixed.inset-0.z-50 aside input[type='time']::-webkit-datetime-edit-minute-field,
+[data-theme='dark'] .fixed.inset-0.z-50 aside input[type='time']::-webkit-datetime-edit-ampm-field {
+  color: rgba(245, 245, 246, 0.98) !important;
+  -webkit-text-fill-color: rgba(245, 245, 246, 0.98) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside input[type='date']::-webkit-calendar-picker-indicator,
+[data-theme='dark'] .fixed.inset-0.z-50 aside input[type='time']::-webkit-calendar-picker-indicator {
+  opacity: 0.82;
+  filter: invert(1) brightness(1.35) contrast(0.85);
+  cursor: pointer;
+}
+
+/* Save success state must stay green and override generic drawer button polish */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside button[class*='border-emerald'][class*='bg-emerald'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside button[class*='bg-emerald'][class*='text-emerald'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside button[class*='text-emerald'][class*='border-emerald'] {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(52, 211, 153, 0.22), transparent 38%),
+    linear-gradient(180deg, rgba(6, 78, 59, 0.58), rgba(4, 47, 46, 0.72)) !important;
+  color: rgba(209, 250, 229, 0.98) !important;
+  border-color: rgba(52, 211, 153, 0.5) !important;
+  box-shadow:
+    0 0 0 1px rgba(52, 211, 153, 0.12),
+    0 14px 34px rgba(0, 0, 0, 0.28),
+    0 1px 0 rgba(255, 255, 255, 0.08) inset !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside button[class*='border-emerald'][class*='bg-emerald']:hover,
+[data-theme='dark'] .fixed.inset-0.z-50 aside button[class*='bg-emerald'][class*='text-emerald']:hover,
+[data-theme='dark'] .fixed.inset-0.z-50 aside button[class*='text-emerald'][class*='border-emerald']:hover {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(52, 211, 153, 0.28), transparent 38%),
+    linear-gradient(180deg, rgba(6, 95, 70, 0.68), rgba(4, 60, 55, 0.78)) !important;
+  color: #ecfdf5 !important;
+  border-color: rgba(52, 211, 153, 0.62) !important;
+}
+
+/* Keep active status badge readable, but do not affect the Save button */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside span[class*='bg-emerald'] {
+  background-color: rgba(6, 95, 70, 0.22) !important;
+  color: rgba(167, 243, 208, 0.98) !important;
+  border-color: rgba(52, 211, 153, 0.24) !important;
+}
+
+/* /CRM LeadDrawer Date Time + Save Success Fix v1 */
