@@ -2732,3 +2732,29 @@ body {
 }
 
 /* /CRM Light Mode Drawer Header Badge Fix v2 */
+
+/* CRM Light Mode Drawer Primary CTA Text Fix v1 */
+
+[data-theme='light'] .fixed.inset-0.z-50 aside button.bg-white,
+[data-theme='light'] .fixed.inset-0.z-50 aside button.bg-neutral-50,
+[data-theme='light'] .fixed.inset-0.z-50 aside button.bg-zinc-50,
+[data-theme='light'] .fixed.inset-0.z-50 aside button[class*='bg-white'],
+[data-theme='light'] .fixed.inset-0.z-50 aside button[class*='bg-neutral-50'],
+[data-theme='light'] .fixed.inset-0.z-50 aside button[class*='bg-zinc-50'] {
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+  font-weight: 600 !important;
+}
+
+[data-theme='light'] .fixed.inset-0.z-50 aside button.bg-white svg,
+[data-theme='light'] .fixed.inset-0.z-50 aside button.bg-neutral-50 svg,
+[data-theme='light'] .fixed.inset-0.z-50 aside button.bg-zinc-50 svg,
+[data-theme='light'] .fixed.inset-0.z-50 aside button[class*='bg-white'] svg,
+[data-theme='light'] .fixed.inset-0.z-50 aside button[class*='bg-neutral-50'] svg,
+[data-theme='light'] .fixed.inset-0.z-50 aside button[class*='bg-zinc-50'] svg {
+  color: #111827 !important;
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
+
+/* /CRM Light Mode Drawer Primary CTA Text Fix v1 */
