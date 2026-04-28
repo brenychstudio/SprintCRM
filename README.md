@@ -1,7 +1,5 @@
 ﻿# SprintCRM
 
-# SprintCRM
-
 Premium internal CRM for lead imports, daily outreach actions, pipeline tracking, reports, and AI-ready outbound workflows.
 
 SprintCRM is a focused operator-facing workspace built to manage the full outbound loop: import leads, review and deduplicate contacts, 

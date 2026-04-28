@@ -27,3 +27,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local scratch / backups
+.backups/
+README_PATCH.md
+supabase.zip
+
+# OS / editor noise
+Thumbs.db
