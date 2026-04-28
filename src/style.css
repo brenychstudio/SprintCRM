@@ -2361,3 +2361,157 @@ body {
 }
 
 /* /CRM Dark Mode Empty States + Capture Polish v1 */
+
+/* CRM Final Dark Light QA Polish Pass v1 */
+
+/*
+  Task 35F:
+  Final visual QA polish after dark mode pass.
+  Scope:
+  - native date/time picker visibility
+  - pipeline card readability
+  - table/capture text safety
+  - subtle final hover/focus consistency
+
+  CSS-only.
+  No component logic changes.
+  No drawer portal/fixed positioning changes.
+  No layout rewrite.
+*/
+
+/* Native date/time icons: make browser controls readable in dark drawer/forms */
+
+[data-theme='dark'] .crm-main input[type='date'],
+[data-theme='dark'] .crm-main input[type='time'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside input[type='date'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside input[type='time'] {
+  color-scheme: dark;
+  color: rgba(250, 250, 250, 0.98) !important;
+  -webkit-text-fill-color: rgba(250, 250, 250, 0.98) !important;
+}
+
+[data-theme='dark'] .crm-main input[type='date']::-webkit-calendar-picker-indicator,
+[data-theme='dark'] .crm-main input[type='time']::-webkit-calendar-picker-indicator,
+[data-theme='dark'] .fixed.inset-0.z-50 aside input[type='date']::-webkit-calendar-picker-indicator,
+[data-theme='dark'] .fixed.inset-0.z-50 aside input[type='time']::-webkit-calendar-picker-indicator {
+  opacity: 0.96 !important;
+  filter: invert(1) brightness(1.75) contrast(0.92) !important;
+  cursor: pointer;
+}
+
+[data-theme='dark'] .crm-main input[type='date']::-webkit-datetime-edit,
+[data-theme='dark'] .crm-main input[type='time']::-webkit-datetime-edit,
+[data-theme='dark'] .fixed.inset-0.z-50 aside input[type='date']::-webkit-datetime-edit,
+[data-theme='dark'] .fixed.inset-0.z-50 aside input[type='time']::-webkit-datetime-edit {
+  color: rgba(250, 250, 250, 0.98) !important;
+  -webkit-text-fill-color: rgba(250, 250, 250, 0.98) !important;
+}
+
+/* Pipeline/list cards: slightly improve content readability without making them loud */
+
+[data-theme='dark'] .crm-main [class*='rounded-xl'][class*='border'] [class*='text-zinc-900'],
+[data-theme='dark'] .crm-main [class*='rounded-xl'][class*='border'] [class*='text-zinc-800'],
+[data-theme='dark'] .crm-main [class*='rounded-2xl'][class*='border'] [class*='text-zinc-900'],
+[data-theme='dark'] .crm-main [class*='rounded-2xl'][class*='border'] [class*='text-zinc-800'] {
+  color: rgba(245, 245, 246, 0.94) !important;
+}
+
+[data-theme='dark'] .crm-main [class*='rounded-xl'][class*='border'] [class*='text-zinc-700'],
+[data-theme='dark'] .crm-main [class*='rounded-xl'][class*='border'] [class*='text-zinc-600'],
+[data-theme='dark'] .crm-main [class*='rounded-2xl'][class*='border'] [class*='text-zinc-700'],
+[data-theme='dark'] .crm-main [class*='rounded-2xl'][class*='border'] [class*='text-zinc-600'] {
+  color: rgba(194, 194, 202, 0.82) !important;
+}
+
+[data-theme='dark'] .crm-main [class*='rounded-xl'][class*='border'] [class*='text-zinc-500'],
+[data-theme='dark'] .crm-main [class*='rounded-xl'][class*='border'] [class*='text-zinc-400'],
+[data-theme='dark'] .crm-main [class*='rounded-2xl'][class*='border'] [class*='text-zinc-500'],
+[data-theme='dark'] .crm-main [class*='rounded-2xl'][class*='border'] [class*='text-zinc-400'] {
+  color: rgba(161, 161, 170, 0.78) !important;
+}
+
+/* Pipeline cards: give card titles a little more authority */
+
+[data-theme='dark'] .crm-main [class*='rounded-xl'][class*='border'] [class*='font-semibold'],
+[data-theme='dark'] .crm-main [class*='rounded-xl'][class*='border'] [class*='font-medium'],
+[data-theme='dark'] .crm-main [class*='rounded-2xl'][class*='border'] [class*='font-semibold'],
+[data-theme='dark'] .crm-main [class*='rounded-2xl'][class*='border'] [class*='font-medium'] {
+  color: rgba(245, 245, 246, 0.95) !important;
+}
+
+/* Tables: prevent long source/email values from creating awkward overflow in capture */
+
+[data-theme='dark'] .crm-main table td,
+[data-theme='dark'] .crm-main table th {
+  overflow-wrap: anywhere;
+}
+
+[data-theme='dark'] .crm-main table th {
+  letter-spacing: 0.015em;
+}
+
+[data-theme='dark'] .crm-main table tbody tr:hover {
+  background:
+    linear-gradient(90deg, rgba(244, 244, 245, 0.026), rgba(244, 244, 245, 0.01)) !important;
+}
+
+/* Buttons: final dark hover lift for recording, without changing layout */
+
+[data-theme='dark'] .crm-main button:not(:disabled):hover,
+[data-theme='dark'] .fixed.inset-0.z-50 aside button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+[data-theme='dark'] .crm-main button:not(:disabled):active,
+[data-theme='dark'] .fixed.inset-0.z-50 aside button:not(:disabled):active {
+  transform: translateY(0);
+}
+
+/* Avoid hover motion for theme switch buttons and users who prefer reduced motion */
+
+[data-theme='dark'] .crm-theme-choice:hover,
+[data-theme='dark'] .crm-theme-choice:active {
+  transform: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme='dark'] .crm-main button,
+  [data-theme='dark'] .fixed.inset-0.z-50 aside button {
+    transform: none !important;
+  }
+}
+
+/* Drawer: final readability for lower sections */
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='rounded-2xl'][class*='border'] label,
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='rounded-3xl'][class*='border'] label {
+  color: rgba(181, 181, 190, 0.82) !important;
+}
+
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='rounded-2xl'][class*='border'] p,
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='rounded-3xl'][class*='border'] p {
+  color: rgba(194, 194, 202, 0.78) !important;
+}
+
+/* Keep danger text visible but not aggressive */
+
+[data-theme='dark'] .crm-main [class*='text-red'],
+[data-theme='dark'] .fixed.inset-0.z-50 aside [class*='text-red'] {
+  color: rgba(248, 113, 113, 0.94) !important;
+}
+
+/* App capture edge safety */
+
+[data-theme='dark'] .crm-shell,
+[data-theme='dark'] .crm-main {
+  overflow-x: clip;
+}
+
+/* Light mode safety: keep native controls and buttons untouched */
+
+:root[data-theme='light'] .crm-main button:hover,
+:root[data-theme='light'] .fixed.inset-0.z-50 aside button:hover {
+  transform: none;
+}
+
+/* /CRM Final Dark Light QA Polish Pass v1 */
