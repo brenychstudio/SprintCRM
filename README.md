@@ -1,19 +1,26 @@
 ﻿# SprintCRM
 
-SprintCRM is an internal outbound CRM for managing imported lead databases, daily work queues, warm contacts, pipeline stages, reports, and safe data cleanup.
+# SprintCRM
 
-It was built as a personal-use operational CRM, not as a public SaaS or email automation tool.
+Premium internal CRM for lead imports, daily outreach actions, pipeline tracking, reports, and AI-ready outbound workflows.
 
-## Project Type
+SprintCRM is a focused operator-facing workspace built to manage the full outbound loop: import leads, review and deduplicate contacts, 
+prioritize daily actions, open a lead drawer, log outcomes, track pipeline stages, and review reporting signals.
 
-- Internal tool
-- Product prototype
-- Operational CRM system
-- Personal outbound workflow system
+The product is designed as a calm business tool rather than a generic sales dashboard. 
+It combines practical CRM workflows with a premium light/dark interface, multilingual UI, Supabase-backed data, 
+and a manual-control-first foundation for future AI-assisted outreach.
 
-## Core Workflow
+## Current product status
 
-Import CSV/XLSX → map columns → preview and deduplicate → create leads → work through Today queue → manage each lead in the Work Panel → monitor warm contacts and pipeline → review reports → export or clean data safely.
+- Lead import workflow: XLSX/CSV upload, preview, mapping, deduplication, import report, undo support.
+- Lead management: lead database, saved views, active contacts, next actions, due dates, and status tracking.
+- Daily workflow: Today queue for processing the next relevant lead.
+- Lead drawer: context, next action planning, activity timeline, stage updates, archive/delete controls.
+- Pipeline and reports: active stages, secondary stages, funnel metrics, top niches, top sources, overdue health.
+- Visual system: premium light/dark mode, tokenized app surfaces, refined drawer, badge/status system, and upgraded Signal Gate login.
+- AI readiness: data structure prepared for future manual AI-assisted outreach drafting without auto-send.
+
 
 ## Main Features
 
