@@ -123,6 +123,7 @@ create table if not exists public.leads (
   phone text,
 
   source_file text,
+  source_import_id uuid,
   stage public.lead_stage not null default 'new',
   status public.lead_status not null default 'active',
 
@@ -168,7 +169,9 @@ create table if not exists public.imports (
   rows_imported int not null default 0,
   rows_skipped int not null default 0,
   mapping_json jsonb not null default '{}'::jsonb,
-  dedup_rules jsonb not null default '{}'::jsonb
+  dedup_rules jsonb not null default '{}'::jsonb,
+  reverted_at timestamptz,
+  reverted_by uuid
 );
 
 -- 6) Triggers: updated_at + normalization
@@ -219,6 +222,7 @@ create index if not exists idx_leads_owner on public.leads(owner);
 create index if not exists idx_leads_next_action_at on public.leads(next_action_at);
 create index if not exists idx_leads_stage on public.leads(stage);
 create index if not exists idx_leads_status on public.leads(status);
+create index if not exists idx_leads_source_import_id on public.leads(source_import_id);
 
 create index if not exists idx_activities_org on public.activities(org_id);
 create index if not exists idx_activities_lead_id on public.activities(lead_id);

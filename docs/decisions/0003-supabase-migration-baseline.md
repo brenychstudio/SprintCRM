@@ -32,4 +32,4 @@ Repair updated migration metadata only; it did not execute SQL. `supabase db pus
 - Do not replay old migration SQL or run `db push` during reconciliation.
 - Future production schema changes are migrations only; direct Dashboard/Table Editor schema changes are forbidden.
 - Only one operator may run a migration write at a time, from a clean linked worktree after review and a dry run.
-- Manual import fields that predate this lineage remain documented drift and require a later bootstrap/adoption decision.
+- Manual import fields that predate the original lineage are captured by `20260722000001_capture_import_schema_drift.sql` as a forward adoption migration. The migration mirrors production and avoids rewriting historical migration files.
