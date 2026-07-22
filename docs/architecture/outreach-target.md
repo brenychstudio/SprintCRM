@@ -22,19 +22,19 @@ React UI -> Supabase Edge Function -> OpenAI Responses API
 
 ## Database delivery gate
 
-CRM studio's existing migration lineage was reconciled on 2026-07-22 and `db push --dry-run` is clean. All future production schema changes must be additive migrations from a clean, linked worktree; direct Dashboard/Table Editor schema changes are prohibited. One operator owns a migration write at a time. The existing manual import-schema drift remains a separately documented adoption gap and must not be silently overwritten.
+CRM studio's existing migration lineage was reconciled on 2026-07-22. The formerly manual import-schema drift is captured as a forward migration, and `db push --dry-run` is clean. All future production schema changes must be additive migrations from a clean, linked worktree; direct Dashboard/Table Editor schema changes are prohibited. One operator owns a migration write at a time.
 
 ## Target domain
 
 | Target entity | Responsibility | Current state |
 | --- | --- | --- |
-| `campaigns` | Shared offer, tone, language, cases, limits and autonomy profile. | Missing |
-| `campaign_members` | Lead/campaign relationship and campaign-specific workflow state. | Missing |
-| `research_snapshots` | Immutable versioned evidence and recommendation. | Missing |
-| `message_templates` / `template_versions` | Reusable, versioned campaign messaging. | Missing |
-| `outbound_messages` | Business message versions, approval and provider state. | Missing |
-| `suppression_entries` | Contact/sending prohibition. | Missing |
-| `audit_events` | Actor, transition and human/AI audit records. | Missing |
+| `campaigns` | Shared offer, tone and language context. Limits/autonomy are deferred. | Exists: OUTREACH-01R |
+| `campaign_members` | Lead/campaign relationship and campaign-specific workflow state. | Exists: OUTREACH-01R |
+| `research_snapshots` | Immutable versioned evidence and recommendation. | Exists: OUTREACH-01R |
+| `message_templates` / `template_versions` | Reusable, versioned campaign messaging. | Exists: OUTREACH-01R |
+| `outbound_messages` | Business message versions and approval state. Provider sync is deferred. | Exists: OUTREACH-01R |
+| `suppression_entries` | Contact/sending prohibition foundation. | Exists: OUTREACH-01R |
+| `audit_events` | Actor, transition and human/AI audit records. | Exists: OUTREACH-01R |
 | `activities` | Canonical CRM timeline. | Exists; retain |
 | `ai_generations` | Historical early draft-generation record. | Exists locally; evaluate compatibility in OUTREACH-01R |
 
@@ -42,7 +42,7 @@ Campaign-member state belongs in `campaign_members`, not in `leads`. Use interna
 
 ## Delivery sequence
 
-1. `OUTREACH-01R`: additive campaign domain, RLS, audit and generated types; no AI API.
+1. `OUTREACH-01R`: completed — additive campaign domain, RLS, audit and generated types; no AI API.
 2. `OUTREACH-02R`: manual campaign workspace, research/evidence and review shell.
 3. `OUTREACH-03R`: supervised Edge Function jobs with strict schemas and human approval.
 4. `OUTREACH-04R`: Gmail OAuth, Gmail draft-first and reconciliation.
