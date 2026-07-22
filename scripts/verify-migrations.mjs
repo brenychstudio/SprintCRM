@@ -2,7 +2,7 @@ import { readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
 
 const migrationsDirectory = path.resolve('supabase/migrations')
-const expectedFoundationMigration = '20260427_ai_outreach_foundation.sql'
+const expectedFoundationMigration = '20260427000001_ai_outreach_foundation.sql'
 const migrationName = /^\d{8,}_[a-z0-9_]+\.sql$/
 
 const files = (await readdir(migrationsDirectory))

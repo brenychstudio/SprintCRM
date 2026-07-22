@@ -20,6 +20,10 @@ React UI -> Supabase Edge Function -> OpenAI Responses API
 
 `OPENAI_API_KEY` is an Edge Function secret only. The browser receives no provider secret, and AI jobs have narrow domain operations rather than unrestricted SQL/service-role access.
 
+## Database delivery gate
+
+CRM studio's existing migration lineage was reconciled on 2026-07-22 and `db push --dry-run` is clean. All future production schema changes must be additive migrations from a clean, linked worktree; direct Dashboard/Table Editor schema changes are prohibited. One operator owns a migration write at a time. The existing manual import-schema drift remains a separately documented adoption gap and must not be silently overwritten.
+
 ## Target domain
 
 | Target entity | Responsibility | Current state |

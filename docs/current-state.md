@@ -25,7 +25,16 @@ On 2026-07-22, Supabase CLI `2.108.0` was initialized and linked to production p
 
 Read-only production checks confirm that `organizations`, `memberships`, `leads`, `activities`, `imports`, and `ai_generations` exist and have RLS enabled. Their policies match the intended organization-scoped policy names in the local schema and outreach foundation migration.
 
-However, `supabase migration list --linked` reports all four local migrations with blank remote versions, and `supabase_migrations.schema_migrations` does not exist. The production schema was therefore created outside the CLI migration-history workflow or its history was removed. **Do not run `supabase db push` until a dedicated reconciliation task has compared the full schema and documented the chosen repair path.**
+The schema was created manually before CLI migration history existed. After evidence-based reconciliation, remote history now matches the four local versions exactly:
+
+```text
+20260222
+20260427000001
+20260427000002
+20260427000003
+```
+
+`supabase db push --dry-run` reports `Remote database is up to date`; no legacy SQL was replayed. Future production schema changes must use reviewed migrations only.
 
 The Supabase database advisors reported these existing follow-ups:
 
@@ -48,5 +57,5 @@ The Supabase database advisors reported these existing follow-ups:
 2. The `aiGenerationsApi` permits authenticated browser clients to create/update AI generation records. This must be replaced or restricted before supervised AI jobs are introduced.
 3. Existing `ai_generations` RLS has select/insert/update policies but no delete policy; this is conservative but needs an explicit retention decision.
 4. The current `current_org_id()` function selects the oldest membership. This is adequate for a personal internal CRM but is not a future active-organization selector.
-5. Production schema and RLS state are verified, but migration history must be reconciled before any schema push.
+5. A manual import-schema drift remains outside the tracked lineage: `leads.source_import_id`, `idx_leads_source_import_id`, `imports.reverted_at`, and `imports.reverted_by` exist in production and are used by the frontend, but are absent from local schema/migrations. Do not alter them without a dedicated adoption migration decision.
 6. The supplied PDF references could not be text-extracted or visually opened in this runtime because neither Poppler/Python PDF tools nor an available browser runtime is installed. The master brief remains the authoritative source for this baseline; review the original PDFs before schema implementation if they contain constraints not repeated in it.

@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "typecheck": "tsc -b --pretty false",
+    "test": "npm run test:unit",
     "test:unit": "vitest run",
     "test:watch": "vitest",
     "verify:migrations": "node scripts/verify-migrations.mjs",
