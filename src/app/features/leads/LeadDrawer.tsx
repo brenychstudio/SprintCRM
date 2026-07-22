@@ -121,6 +121,8 @@ export function LeadDrawer({
   useEffect(() => {
     const nextDateTime = getLeadDateTimeInput(lead.next_action_at)
 
+    // This is intentional form-state reset when the selected lead changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStage(lead.stage)
     setNextAction(lead.next_action)
     setNextDate(nextDateTime.date)
@@ -529,7 +531,7 @@ export function LeadDrawer({
           <section className="rounded-3xl border border-zinc-200 bg-white p-5">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-zinc-900">{t('drawer.activityTitle')}</h3>
-              {!!activitiesQuery.data?.length ? (
+              {activitiesQuery.data?.length ? (
                 <span className="text-xs text-zinc-500">
                   {recentActivities.length} / {activitiesQuery.data?.length}
                 </span>
@@ -542,7 +544,7 @@ export function LeadDrawer({
               <p className="mt-3 text-sm text-zinc-500">{t('drawer.noActivities')}</p>
             ) : null}
 
-            {!!recentActivities.length ? (
+            {recentActivities.length ? (
               <div className="mt-3 max-h-64 overflow-y-auto pr-1">
                 <ul className="space-y-2">
                   {recentActivities.map((activity) => (

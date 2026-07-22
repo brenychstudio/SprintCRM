@@ -1,3 +1,5 @@
+/* Legacy Supabase query typing is replaced when generated database types are added. */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '../../lib/supabase'
 
 type Range = { fromISO?: string; toISO?: string }

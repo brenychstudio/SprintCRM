@@ -115,6 +115,8 @@ export function PipelinePage() {
     let activeWork = 0
 
     for (const lead of filteredLeads) {
+      // Queue summaries intentionally use the current clock at render time.
+      // eslint-disable-next-line react-hooks/purity
       if (new Date(lead.next_action_at).getTime() < Date.now()) overdue++
       if (activeStages.includes(lead.stage)) activeWork++
     }

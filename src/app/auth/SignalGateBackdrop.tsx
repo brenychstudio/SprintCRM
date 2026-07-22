@@ -200,7 +200,7 @@ export function SignalGateBackdrop() {
 
     let animationFrame = 0
     const startTime = performance.now()
-    let mouse = { x: 0, y: 0 }
+    const mouse = { x: 0, y: 0 }
     let targetMouse = { x: 0, y: 0 }
 
     const handlePointerMove = (event: PointerEvent) => {

@@ -176,6 +176,8 @@ export function LeadsPage() {
     let activeContacts = 0
 
     for (const lead of filteredLeads) {
+      // Queue summaries intentionally use the current clock at render time.
+      // eslint-disable-next-line react-hooks/purity
       if (new Date(lead.next_action_at).getTime() < Date.now()) overdue++
       if (lead.status === 'active' && ['contacted', 'replied', 'proposal'].includes(lead.stage)) activeContacts++
     }
@@ -442,6 +444,7 @@ export function LeadsPage() {
           <tbody className="divide-y divide-zinc-200 bg-white text-zinc-700">
             {filteredLeads.map((lead) => {
               const checked = selectedIds.includes(lead.id)
+              // eslint-disable-next-line react-hooks/purity
               const overdue = new Date(lead.next_action_at).getTime() < Date.now()
 
               return (
