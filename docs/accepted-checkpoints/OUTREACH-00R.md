@@ -18,10 +18,10 @@
 - `npm run build`
 - `git diff --check`
 
-## Outstanding external verification
+## Production verification
 
-An authorized Supabase operator must confirm the remote migration list and live RLS policies. This cannot be truthfully verified from the repository alone.
+Supabase CLI is linked to CRM studio. Production tables, RLS and policies were checked read-only. The schema exists, but remote migration history is missing; this must be reconciled before any migration is pushed.
 
 ## Recommended next task
 
-`OUTREACH-01R - Minimal Campaign Domain`: first verify remote schema state, then add campaign tables, organization-scoped RLS, audit functions, generated database types, and migration documentation. Do not call an AI provider in that task.
+`DB-RECONCILE-01 - Adopt production migration history`: compare full production/local schema, select and document a forward-safe history repair, then verify `supabase migration list --linked` shows the adopted baseline. After that, proceed to `OUTREACH-01R - Minimal Campaign Domain`. Do not call an AI provider in either task.

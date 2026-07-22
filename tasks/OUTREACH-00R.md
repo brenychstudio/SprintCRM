@@ -9,7 +9,8 @@ Record the real repository state and establish a safe engineering foundation for
 - Branch started from `main` at `23754b0` with a clean working tree.
 - Routes are limited to the established CRM surfaces; LeadDrawer remains a portal-backed operational panel.
 - `20260427_ai_outreach_foundation.sql` creates a lead-centric `ai_generations` foundation, not the campaign domain.
-- Remote migration/RLS state cannot be verified because this workspace has no linked Supabase CLI project or authorized database connection.
+- Supabase CLI is linked to CRM studio and read-only production checks confirm the current CRM tables and RLS policies exist.
+- Remote migration history is missing even though the schema is present; a reconciliation task is required before any `db push`.
 
 ## Files inspected
 
@@ -45,7 +46,7 @@ Record the real repository state and establish a safe engineering foundation for
 
 - Automated: `npm run verify:migrations`, `npm run typecheck`, `npm run lint`, `npm run test:unit`, `npm run build`, `git diff --check`.
 - Manual UI smoke: not required for behaviourless foundation changes; authenticated light/dark smoke remains an operator check because no authenticated browser session is available in this environment.
-- Production/RLS smoke: pending an authorized linked Supabase environment.
+- Production/RLS smoke: completed with read-only linked CLI queries. Migration-history reconciliation remains pending.
 
 ## Proposed commit
 

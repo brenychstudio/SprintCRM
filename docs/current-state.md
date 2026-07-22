@@ -21,14 +21,18 @@ This is an early lead-centric draft-history foundation, not the target OutreachO
 
 ## Production migration verification
 
-The repository has no `supabase/config.toml`, linked project reference, Supabase CLI setup, or safe production credential in the task environment. Therefore whether `20260427_ai_outreach_foundation.sql` is applied to production is **unverified**. Before `OUTREACH-01R`, an authorized operator must run:
+On 2026-07-22, Supabase CLI `2.108.0` was initialized and linked to production project `lyimwrbjyryojhprxdhk` (CRM studio). The database password stays only in the ignored root `.env` as `SUPABASE_DB_PASSWORD`; it is not in `config.toml`, source code, or Git.
 
-```text
-supabase link --project-ref <project-ref>
-supabase migration list --linked
-```
+Read-only production checks confirm that `organizations`, `memberships`, `leads`, `activities`, `imports`, and `ai_generations` exist and have RLS enabled. Their policies match the intended organization-scoped policy names in the local schema and outreach foundation migration.
 
-Record the remote/local result and, if it is missing, apply it only through the approved migration flow. Do not use the browser client or a frontend key to infer schema state.
+However, `supabase migration list --linked` reports all four local migrations with blank remote versions, and `supabase_migrations.schema_migrations` does not exist. The production schema was therefore created outside the CLI migration-history workflow or its history was removed. **Do not run `supabase db push` until a dedicated reconciliation task has compared the full schema and documented the chosen repair path.**
+
+The Supabase database advisors reported these existing follow-ups:
+
+- add fixed `search_path` to `normalize_lead_fields` and `set_updated_at`;
+- restrict unnecessary RPC execution of SECURITY DEFINER trigger/helper functions after confirming which calls require authenticated execution;
+- enable Auth leaked-password protection;
+- review indexes on owner foreign keys and the `memberships_select_own` policy initialization plan after measuring production workload.
 
 ## Engineering baseline added here
 
@@ -44,5 +48,5 @@ Record the remote/local result and, if it is missing, apply it only through the 
 2. The `aiGenerationsApi` permits authenticated browser clients to create/update AI generation records. This must be replaced or restricted before supervised AI jobs are introduced.
 3. Existing `ai_generations` RLS has select/insert/update policies but no delete policy; this is conservative but needs an explicit retention decision.
 4. The current `current_org_id()` function selects the oldest membership. This is adequate for a personal internal CRM but is not a future active-organization selector.
-5. Production migration state and live RLS policy state are unverified from this workspace.
+5. Production schema and RLS state are verified, but migration history must be reconciled before any schema push.
 6. The supplied PDF references could not be text-extracted or visually opened in this runtime because neither Poppler/Python PDF tools nor an available browser runtime is installed. The master brief remains the authoritative source for this baseline; review the original PDFs before schema implementation if they contain constraints not repeated in it.
