@@ -43,7 +43,7 @@ Campaign-member state belongs in `campaign_members`, not in `leads`. Use interna
 ## Delivery sequence
 
 1. `OUTREACH-01R`: completed — additive campaign domain, RLS, audit and generated types; no AI API.
-2. `OUTREACH-02R`: manual campaign workspace, research/evidence and review shell.
+2. `OUTREACH-02R`: implemented pending authenticated UI smoke — manual campaign workspace, research/evidence, review shell, and atomic human-controlled transitions.
 3. `OUTREACH-03R`: supervised Edge Function jobs with strict schemas and human approval.
 4. `OUTREACH-04R`: Gmail OAuth, Gmail draft-first and reconciliation.
 5. `OUTREACH-05R`: replies, follow-ups, Today and Pipeline routing.

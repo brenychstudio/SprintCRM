@@ -23,6 +23,11 @@ export type ActivityType =
   | 'followup_scheduled'
   | 'reply_marked'
   | 'manual_edit'
+  | 'campaign_added'
+  | 'research_saved'
+  | 'outreach_draft_saved'
+  | 'outreach_approved'
+  | 'campaign_skipped'
 
 export type ActivityChannel = 'email' | 'ig' | 'linkedin' | 'other'
 

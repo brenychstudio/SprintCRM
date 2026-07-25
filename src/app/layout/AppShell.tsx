@@ -4,6 +4,7 @@ import { useI18n } from '../../i18n/i18n'
 import type { SupportedLang } from '../../i18n/i18n'
 import { useAuth } from '../auth/AuthProvider'
 import { useThemeMode } from '../theme/useThemeMode'
+import { featureFlags } from '../../features/featureFlags/featureFlags'
 
 export function AppShell() {
   const { signOut } = useAuth()
@@ -19,6 +20,7 @@ export function AppShell() {
       { to: '/imports', label: t('nav.imports') },
       { to: '/pipeline', label: t('nav.pipeline') },
       { to: "/reports", label: t("nav.reports") },
+      ...(featureFlags.outreach_ops_enabled ? [{ to: '/campaigns', label: t('nav.campaigns') }] : []),
     ],
     [t],
   )

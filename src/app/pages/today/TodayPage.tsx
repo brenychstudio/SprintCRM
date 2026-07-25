@@ -1,10 +1,13 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { leadsQueryKeys, listLeads } from '../../../features/leads/leadsApi'
 import type { Lead } from '../../../features/leads/types'
 import { LeadDrawer } from '../../features/leads/LeadDrawer'
 import { useI18n } from '../../../i18n/i18n'
 import { endOfTodayISO, startOfTodayISO } from '../../../lib/dates'
+import { featureFlags } from '../../../features/featureFlags/featureFlags'
+
+const OutreachTodaySummary = lazy(() => import('../../features/outreach/OutreachTodaySummary').then((module) => ({ default: module.OutreachTodaySummary })))
 
 const PRIORITY_QUEUE_LIMIT = 12
 const WARM_STAGES = new Set(['contacted', 'replied', 'proposal'])
@@ -205,6 +208,10 @@ export function TodayPage() {
           </tbody>
         </table>
       </div>
+
+      {featureFlags.outreach_ops_enabled ? (
+        <Suspense fallback={null}><OutreachTodaySummary /></Suspense>
+      ) : null}
 
       {selectedLead ? (
         <LeadDrawer

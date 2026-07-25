@@ -6,6 +6,8 @@ const expectedFoundationMigration = '20260427000001_ai_outreach_foundation.sql'
 const expectedImportDriftMigration = '20260722000001_capture_import_schema_drift.sql'
 const expectedCampaignDomainMigration = '20260722000002_outreach_campaign_domain.sql'
 const expectedCampaignRlsMigration = '20260722000003_outreach_campaign_rls.sql'
+const expectedCampaignActivityMigration = '20260725000001_campaign_activity_types.sql'
+const expectedCampaignWorkspaceRpcMigration = '20260725000002_manual_campaign_workspace_rpc.sql'
 const requiredCampaignTables = [
   'campaigns',
   'campaign_members',
@@ -45,6 +47,10 @@ if (!files.includes(expectedCampaignDomainMigration) || !files.includes(expected
   throw new Error('Missing required OutreachOps campaign domain migrations.')
 }
 
+if (!files.includes(expectedCampaignActivityMigration) || !files.includes(expectedCampaignWorkspaceRpcMigration)) {
+  throw new Error('Missing required manual campaign workspace migrations.')
+}
+
 for (const file of files) {
   const sql = (await readFile(path.join(migrationsDirectory, file), 'utf8')).trim()
   if (!sql) throw new Error(`Migration is empty: ${file}`)
@@ -71,6 +77,20 @@ for (const marker of [
 ]) {
   if (!campaignDomainSql.includes(marker)) {
     throw new Error(`Campaign domain migration is missing required guard: ${marker}`)
+  }
+}
+
+const campaignWorkspaceRpcSql = await readFile(path.join(migrationsDirectory, expectedCampaignWorkspaceRpcMigration), 'utf8')
+for (const marker of [
+  'create_manual_campaign',
+  'add_campaign_members',
+  'save_manual_research_snapshot',
+  'save_manual_outbound_message',
+  'approve_manual_outbound_message',
+  'skip_manual_campaign_member',
+]) {
+  if (!campaignWorkspaceRpcSql.includes(marker)) {
+    throw new Error(`Manual campaign workspace migration is missing RPC: ${marker}`)
   }
 }
 

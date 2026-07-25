@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -12,6 +12,8 @@ import {
 import type { Lead, LeadStage, NextAction } from '../../../features/leads/types'
 import { useI18n } from '../../../i18n/i18n'
 import { isoAtMadridNineAMInDays, isoAtMadridTimeForDateInput, madridDateTimeInputFromISO } from '../../../lib/dates'
+
+const OutreachDrawerSummary = lazy(() => import('../outreach/OutreachDrawerSummary').then((module) => ({ default: module.OutreachDrawerSummary })))
 
 const stageValues: LeadStage[] = ['new', 'contacted', 'replied', 'proposal', 'won', 'lost']
 const nextActionOptions: NextAction[] = ['follow_up', 'send_proposal', 'request_call', 'nurture']
@@ -379,6 +381,8 @@ export function LeadDrawer({
               </button>
             </div>
           </section>
+
+          <Suspense fallback={null}><OutreachDrawerSummary leadId={lead.id} /></Suspense>
 
           <section className="rounded-3xl border border-zinc-200 bg-white p-5">
             <div>

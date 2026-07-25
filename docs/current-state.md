@@ -52,6 +52,12 @@ The schema was created manually before CLI migration history existed. After evid
 
 All eight tables have organization-member RLS. Composite foreign keys prevent cross-organization references among campaign records and existing leads/AI generation records. `activities` remains the canonical user-facing CRM timeline. No Campaign UI, AI API, Gmail, queues, or auto-send is included.
 
+## Manual campaign workspace
+
+`OUTREACH-02R` adds a default-off `outreach_ops_enabled` Campaign workflow: campaign list/setup/overview routes, deterministic member eligibility, manual versioned research and messages, Review Queue navigation, approval/skip operations, compact LeadDrawer context, and a minimal Today entry point. Campaign routes are lazy-loaded so the stable CRM shell does not eagerly load the workspace.
+
+`20260725000001_campaign_activity_types.sql` and `20260725000002_manual_campaign_workspace_rpc.sql` add only activity enum values and narrow `security invoker` RPCs. They atomically persist critical member/message/audit/activity transitions and do not send messages. The linked production database is current through both migrations.
+
 The Supabase database advisors reported these existing follow-ups:
 
 - add fixed `search_path` to `normalize_lead_fields` and `set_updated_at`;
@@ -76,3 +82,4 @@ The Supabase database advisors reported these existing follow-ups:
 4. The current `current_org_id()` function selects the oldest membership. This is adequate for a personal internal CRM but is not a future active-organization selector.
 5. DB-BASELINE-02 captured the former import-schema drift (`leads.source_import_id`, `idx_leads_source_import_id`, `imports.reverted_at`, and `imports.reverted_by`) as a forward migration. The repository now represents it.
 6. The supplied PDF references could not be text-extracted or visually opened in this runtime because neither Poppler/Python PDF tools nor an available browser runtime is installed. The master brief remains the authoritative source for this baseline; review the original PDFs before schema implementation if they contain constraints not repeated in it.
+7. OUTREACH-02R still needs authenticated browser smoke in an environment with a browser binding: feature flag behavior, light/dark, narrow viewport, all locales, and manual campaign transitions. This runtime can run build/test checks but has no browser available for that acceptance gate.

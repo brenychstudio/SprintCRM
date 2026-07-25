@@ -878,6 +878,79 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_campaign_members: {
+        Args: { p_campaign_id: string; p_lead_ids: string[] }
+        Returns: {
+          campaign_member_id: string
+          lead_id: string
+          outcome: string
+          reason: string
+        }[]
+      }
+      approve_manual_outbound_message: {
+        Args: { p_outbound_message_id: string }
+        Returns: {
+          ai_generation_id: string | null
+          approved_at: string | null
+          approved_by: string | null
+          body: string
+          campaign_member_id: string
+          channel: string
+          created_at: string
+          created_by: string
+          failure_code: string | null
+          failure_message: string | null
+          id: string
+          language: string
+          organization_id: string
+          research_snapshot_id: string | null
+          sent_at: string | null
+          source: string
+          status: string
+          subject: string | null
+          template_version_id: string | null
+          updated_at: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "outbound_messages"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_manual_campaign: {
+        Args: {
+          p_default_channel: string
+          p_default_language: string
+          p_description: string
+          p_name: string
+          p_offer_summary: string
+          p_target_segment: string
+          p_tone: string
+        }
+        Returns: {
+          created_at: string
+          created_by: string
+          default_channel: string
+          default_language: string
+          description: string | null
+          id: string
+          name: string
+          offer_summary: string | null
+          organization_id: string
+          status: string
+          target_segment: string | null
+          tone: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "campaigns"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       current_org_id: { Args: never; Returns: string }
       default_next_step_for_stage: {
         Args: {
@@ -891,6 +964,135 @@ export type Database = {
         }[]
       }
       is_org_member: { Args: { p_org_id: string }; Returns: boolean }
+      save_manual_outbound_message: {
+        Args: {
+          p_body: string
+          p_campaign_member_id: string
+          p_channel: string
+          p_language: string
+          p_research_snapshot_id: string
+          p_subject: string
+          p_submission_status: string
+          p_template_version_id: string
+        }
+        Returns: {
+          ai_generation_id: string | null
+          approved_at: string | null
+          approved_by: string | null
+          body: string
+          campaign_member_id: string
+          channel: string
+          created_at: string
+          created_by: string
+          failure_code: string | null
+          failure_message: string | null
+          id: string
+          language: string
+          organization_id: string
+          research_snapshot_id: string | null
+          sent_at: string | null
+          source: string
+          status: string
+          subject: string | null
+          template_version_id: string | null
+          updated_at: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "outbound_messages"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      save_manual_research_snapshot: {
+        Args: {
+          p_campaign_member_id: string
+          p_confidence: number
+          p_evidence: Json
+          p_observed_opportunity: string
+          p_recommended_case: string
+          p_recommended_offer: string
+          p_warnings: Json
+        }
+        Returns: {
+          ai_generation_id: string | null
+          campaign_member_id: string
+          confidence: number | null
+          created_at: string
+          created_by: string
+          evidence: Json
+          id: string
+          observed_opportunity: string | null
+          organization_id: string
+          recommended_case: string | null
+          recommended_offer: string | null
+          source: string
+          version: number
+          warnings: Json
+        }
+        SetofOptions: {
+          from: "*"
+          to: "research_snapshots"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      skip_manual_campaign_member: {
+        Args: { p_campaign_member_id: string; p_reason?: string }
+        Returns: {
+          added_by: string
+          campaign_id: string
+          created_at: string
+          id: string
+          last_error: string | null
+          lead_id: string
+          organization_id: string
+          skip_reason: string | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "campaign_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_manual_campaign: {
+        Args: {
+          p_campaign_id: string
+          p_default_channel: string
+          p_default_language: string
+          p_description: string
+          p_name: string
+          p_offer_summary: string
+          p_status: string
+          p_target_segment: string
+          p_tone: string
+        }
+        Returns: {
+          created_at: string
+          created_by: string
+          default_channel: string
+          default_language: string
+          description: string | null
+          id: string
+          name: string
+          offer_summary: string | null
+          organization_id: string
+          status: string
+          target_segment: string | null
+          tone: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "campaigns"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       activity_channel: "email" | "ig" | "linkedin" | "other"
@@ -911,6 +1113,11 @@ export type Database = {
         | "followup_scheduled"
         | "reply_marked"
         | "manual_edit"
+        | "campaign_added"
+        | "research_saved"
+        | "outreach_draft_saved"
+        | "outreach_approved"
+        | "campaign_skipped"
       lead_stage: "new" | "contacted" | "replied" | "proposal" | "won" | "lost"
       lead_status: "active" | "archived"
       next_action: "follow_up" | "send_proposal" | "request_call" | "nurture"
@@ -1060,6 +1267,11 @@ export const Constants = {
         "followup_scheduled",
         "reply_marked",
         "manual_edit",
+        "campaign_added",
+        "research_saved",
+        "outreach_draft_saved",
+        "outreach_approved",
+        "campaign_skipped",
       ],
       lead_stage: ["new", "contacted", "replied", "proposal", "won", "lost"],
       lead_status: ["active", "archived"],
