@@ -895,20 +895,24 @@ declare
   v_lead_id uuid;
   v_suppressed boolean;
 begin
-  select * into v_campaign
-  from public.campaigns
-  where id = p_campaign_id
-  for update;
+  select c.* into v_campaign
+  from public.campaigns as c
+  where c.id = p_campaign_id
+  for update of c;
 
   if v_campaign.id is null then
     raise exception 'Campaign not found or permission denied' using errcode = 'P0002';
   end if;
 
   foreach v_lead_id in array p_lead_ids loop
-    select * into v_lead
-    from public.leads
-    where id = v_lead_id
-      and org_id = v_campaign.organization_id;
+    v_lead := null;
+    v_member := null;
+    v_suppressed := false;
+
+    select l.* into v_lead
+    from public.leads as l
+    where l.id = v_lead_id
+      and l.org_id = v_campaign.organization_id;
 
     if v_lead.id is null then
       lead_id := v_lead_id;
@@ -930,7 +934,7 @@ begin
 
     select exists (
       select 1
-      from public.suppression_entries s
+      from public.suppression_entries as s
       where s.organization_id = v_campaign.organization_id
         and s.is_active
         and (s.expires_at is null or s.expires_at > now())
@@ -969,7 +973,7 @@ begin
 
     insert into public.campaign_members (organization_id, campaign_id, lead_id)
     values (v_campaign.organization_id, v_campaign.id, v_lead.id)
-    on conflict (campaign_id, lead_id) do nothing
+    on conflict on constraint campaign_members_campaign_id_lead_id_key do nothing
     returning * into v_member;
 
     if v_member.id is null then
@@ -1000,9 +1004,6 @@ begin
     reason := null;
     campaign_member_id := v_member.id;
     return next;
-
-    v_member := null;
-    v_lead := null;
   end loop;
 end;
 $$;

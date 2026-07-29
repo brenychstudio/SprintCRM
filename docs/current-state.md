@@ -71,6 +71,10 @@ The Supabase database advisors reported these existing follow-ups:
 
 The same form edits existing contact details. Successful saves invalidate Lead and Campaign query families, so the Drawer, list, campaign context, and eligibility refresh without a full application reload. Campaign wizard repair uses an allowlisted internal return path and session-scoped draft persistence. No database migration or production write is introduced; `supabase/schema.sql` was corrected to describe the already-applied organization-scoped normalized contact indexes.
 
+## Campaign workspace forward-fixes
+
+`OUTREACH-02R-FIX-03` adds an unapplied forward migration that replaces only `add_campaign_members`. The original function's table output variable `lead_id` conflicted with the unqualified `ON CONFLICT (campaign_id, lead_id)` target and raised PostgreSQL `42702`. The replacement uses qualified table aliases and the named unique constraint while preserving its signature, RLS execution mode, eligibility results, audit, and CRM activity behavior. Linked verification and production apply remain pending until the local database password authenticates successfully.
+
 ## Engineering baseline added here
 
 - Node pin: `.nvmrc` (`24.13.0`).

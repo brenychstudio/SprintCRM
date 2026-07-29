@@ -9,6 +9,7 @@ const expectedCampaignDomainMigration = '20260722000002_outreach_campaign_domain
 const expectedCampaignRlsMigration = '20260722000003_outreach_campaign_rls.sql'
 const expectedCampaignActivityMigration = '20260725000001_campaign_activity_types.sql'
 const expectedCampaignWorkspaceRpcMigration = '20260725000002_manual_campaign_workspace_rpc.sql'
+const expectedCampaignMemberAmbiguityFix = '20260729000001_fix_add_campaign_members_ambiguous_lead_id.sql'
 const requiredCampaignTables = [
   'campaigns',
   'campaign_members',
@@ -50,6 +51,10 @@ if (!files.includes(expectedCampaignDomainMigration) || !files.includes(expected
 
 if (!files.includes(expectedCampaignActivityMigration) || !files.includes(expectedCampaignWorkspaceRpcMigration)) {
   throw new Error('Missing required manual campaign workspace migrations.')
+}
+
+if (!files.includes(expectedCampaignMemberAmbiguityFix)) {
+  throw new Error(`Missing required campaign member RPC forward-fix: ${expectedCampaignMemberAmbiguityFix}`)
 }
 
 for (const file of files) {
@@ -95,6 +100,23 @@ for (const marker of [
   }
 }
 
+const campaignMemberFixSql = await readFile(path.join(migrationsDirectory, expectedCampaignMemberAmbiguityFix), 'utf8')
+for (const marker of [
+  'create or replace function public.add_campaign_members(',
+  'from public.campaigns as c',
+  'from public.leads as l',
+  'where l.id = v_lead_id',
+  'on conflict on constraint campaign_members_campaign_id_lead_id_key do nothing',
+  'security invoker',
+]) {
+  if (!campaignMemberFixSql.includes(marker)) {
+    throw new Error(`Campaign member RPC forward-fix is missing disambiguation guard: ${marker}`)
+  }
+}
+if (/on conflict\s*\([^)]*\blead_id\b[^)]*\)/i.test(campaignMemberFixSql)) {
+  throw new Error('Campaign member RPC forward-fix reintroduces an ambiguous lead_id conflict target.')
+}
+
 const schemaSnapshot = await readFile(schemaSnapshotPath, 'utf8')
 for (const marker of [
   'uidx_leads_org_email_norm on public.leads(org_id, email_norm)',
@@ -105,6 +127,9 @@ for (const marker of [
 }
 if (/uidx_leads_(email|domain|phone)_norm on public\.leads\(/.test(schemaSnapshot)) {
   throw new Error('Schema snapshot still contains superseded global lead dedup indexes.')
+}
+if (!schemaSnapshot.includes('on conflict on constraint campaign_members_campaign_id_lead_id_key do nothing')) {
+  throw new Error('Schema snapshot is missing the disambiguated campaign member conflict target.')
 }
 
 console.log(`Verified ${files.length} migration files, unique versions, and required OutreachOps guards.`)

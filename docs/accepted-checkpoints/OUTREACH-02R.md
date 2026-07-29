@@ -45,3 +45,4 @@ Docker-dependent local reset and behavioral RLS integration remain the pre-exist
 - `OUTREACH-02R` remains unaccepted until the authenticated browser smoke is repeated successfully.
 - `LEADS-EDIT-01` removes the next P1 blocker exposed by smoke: `New lead` no longer creates an empty row, existing contact details have a focused edit route, and Campaign eligibility can be repaired without losing wizard state.
 - Repeat the authenticated Campaign smoke only after the LEADS-EDIT-01 create/edit/duplicate/theme/localization checks pass. No AI or Gmail work starts before acceptance.
+- `OUTREACH-02R-FIX-03` implements an additive replacement for `add_campaign_members`, using the named membership constraint to remove the `lead_id` ambiguity that raised PostgreSQL `42702`. Static gates pass; linked apply and authenticated regression smoke are still pending.
