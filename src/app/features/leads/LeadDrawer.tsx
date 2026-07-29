@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import {
   defaultNextForStage,
   deleteLeadPermanently,
@@ -12,6 +13,9 @@ import {
 import type { Lead, LeadStage, NextAction } from '../../../features/leads/types'
 import { useI18n } from '../../../i18n/i18n'
 import { isoAtMadridNineAMInDays, isoAtMadridTimeForDateInput, madridDateTimeInputFromISO } from '../../../lib/dates'
+import { activityLabel } from '../../../features/leads/activityLabels'
+
+const OutreachDrawerSummary = lazy(() => import('../outreach/OutreachDrawerSummary').then((module) => ({ default: module.OutreachDrawerSummary })))
 
 const stageValues: LeadStage[] = ['new', 'contacted', 'replied', 'proposal', 'won', 'lost']
 const nextActionOptions: NextAction[] = ['follow_up', 'send_proposal', 'request_call', 'nurture']
@@ -44,10 +48,6 @@ function formatDrawerDate(iso: string): string {
 
 function isLeadOverdue(iso: string): boolean {
   return new Date(iso).getTime() < Date.now()
-}
-
-function pickPrimaryContact(lead: Lead): string {
-  return [lead.contact_name, lead.email, lead.phone].filter(Boolean).join(' · ') || lead.website_domain || lead.website || '—'
 }
 
 function getNoteLine(notes: string, labels: string[]): string {
@@ -121,6 +121,8 @@ export function LeadDrawer({
   useEffect(() => {
     const nextDateTime = getLeadDateTimeInput(lead.next_action_at)
 
+    // This is intentional form-state reset when the selected lead changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStage(lead.stage)
     setNextAction(lead.next_action)
     setNextDate(nextDateTime.date)
@@ -149,8 +151,14 @@ export function LeadDrawer({
   const contextRows = [
     { label: t('drawer.context.niche'), value: lead.niche },
     { label: t('drawer.context.location'), value: lead.country_city },
-    { label: t('drawer.context.website'), value: lead.website_domain || lead.website },
-    { label: t('drawer.context.source'), value: lead.source_file },
+    { label: t('drawer.context.language'), value: lead.language ? t(`lang.${lead.language}`) : null },
+  ].filter((row) => row.value)
+
+  const contactRows = [
+    { label: t('drawer.contact.contact'), value: lead.contact_name },
+    { label: t('drawer.contact.email'), value: lead.email },
+    { label: t('drawer.contact.phone'), value: lead.phone },
+    { label: t('drawer.contact.website'), value: lead.website },
   ].filter((row) => row.value)
 
   const handleChanged = (updatedLead: Lead) => {
@@ -312,16 +320,17 @@ export function LeadDrawer({
                 </span>
               </div>
 
-              <p className="mt-1 truncate text-sm text-zinc-500">{pickPrimaryContact(lead)}</p>
+              {lead.contact_name ? <p title={lead.contact_name} className="mt-1 truncate text-sm text-zinc-500">{lead.contact_name}</p> : null}
             </div>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="shrink-0 rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
-            >
-              {t('drawer.close')}
-            </button>
+            <div className="flex shrink-0 flex-wrap justify-end gap-2">
+              <Link to={`/leads/${lead.id}/edit`} data-testid="lead-edit-details" className="rounded-xl bg-zinc-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-zinc-800">
+                {t(contactRows.length ? 'drawer.contact.edit' : 'drawer.contact.add')}
+              </Link>
+              <button type="button" onClick={onClose} className="rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50">
+                {t('drawer.close')}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -376,6 +385,16 @@ export function LeadDrawer({
                 {saveMutation.isPending ? t('drawer.saving') : saveSuccess ? t('drawer.saved') : t('drawer.save')}
               </button>
             </div>
+          </section>
+
+          <Suspense fallback={null}><OutreachDrawerSummary leadId={lead.id} /></Suspense>
+
+          <section className="rounded-3xl border border-zinc-200 bg-white p-5" data-testid="drawer-contact-details">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold text-zinc-900">{t('drawer.contact.title')}</h3>
+              <Link to={`/leads/${lead.id}/edit`} className="text-sm font-medium text-zinc-700 underline-offset-4 hover:underline">{t(contactRows.length ? 'drawer.contact.edit' : 'drawer.contact.add')}</Link>
+            </div>
+            {contactRows.length ? <dl className="mt-4 grid gap-3 sm:grid-cols-2">{contactRows.map((row) => <div key={row.label} className="rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-3"><dt className="text-xs text-zinc-500">{row.label}</dt><dd className="mt-1 break-words text-sm font-medium text-zinc-800">{row.value}</dd></div>)}</dl> : <p className="mt-3 text-sm text-zinc-500">{t('drawer.contact.empty')}</p>}
           </section>
 
           <section className="rounded-3xl border border-zinc-200 bg-white p-5">
@@ -529,7 +548,7 @@ export function LeadDrawer({
           <section className="rounded-3xl border border-zinc-200 bg-white p-5">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-zinc-900">{t('drawer.activityTitle')}</h3>
-              {!!activitiesQuery.data?.length ? (
+              {activitiesQuery.data?.length ? (
                 <span className="text-xs text-zinc-500">
                   {recentActivities.length} / {activitiesQuery.data?.length}
                 </span>
@@ -542,12 +561,12 @@ export function LeadDrawer({
               <p className="mt-3 text-sm text-zinc-500">{t('drawer.noActivities')}</p>
             ) : null}
 
-            {!!recentActivities.length ? (
+            {recentActivities.length ? (
               <div className="mt-3 max-h-64 overflow-y-auto pr-1">
                 <ul className="space-y-2">
                   {recentActivities.map((activity) => (
                     <li key={activity.id} className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2">
-                      <p className="text-sm font-medium leading-tight text-zinc-800">{t(`activity.${activity.type}`)}</p>
+                      <p className="text-sm font-medium leading-tight text-zinc-800">{activityLabel(t, activity.type)}</p>
                       <p className="mt-1 text-xs text-zinc-500">{formatDrawerDate(activity.at)}</p>
                     </li>
                   ))}

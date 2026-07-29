@@ -1,4 +1,6 @@
-# SprintCRM - AI Outreach Foundation
+# SprintCRM - historical AI Outreach Foundation
+
+> Superseded as the implementation direction by `docs/architecture/outreach-target.md` and ADRs `0001` / `0002`. Keep this document as a record of the prior lead-centric foundation; do not implement its planned drawer panel.
 
 SprintCRM already contains the first technical foundation for the future AI Outreach MVP.
 

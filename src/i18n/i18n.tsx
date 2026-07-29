@@ -1,3 +1,5 @@
+/* Provider, supported language constants, and its companion hook intentionally share this module. */
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import en from './locales/en'

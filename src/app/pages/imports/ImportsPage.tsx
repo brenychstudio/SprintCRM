@@ -1,3 +1,5 @@
+/* Legacy Supabase rows are untyped; OUTREACH-01R introduces generated database types. */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../../../i18n/i18n'
 import { supabase } from '../../../lib/supabase'
@@ -356,6 +358,8 @@ export function ImportsPage() {
 
   useEffect(() => {
     if (view === 'history') loadHistory()
+    // loadHistory is intentionally invoked only when the view changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view])
 
   function openFilePicker() {
@@ -923,7 +927,7 @@ export function ImportsPage() {
           {historyLoading ? <p className="mt-4 text-sm text-zinc-500">{t('imports.history.loading')}</p> : null}
           {!historyLoading && !history.length ? <p className="mt-4 text-sm text-zinc-500">{t('imports.history.empty')}</p> : null}
 
-          {!!history.length ? (
+          {history.length ? (
             <div className="mt-4 overflow-hidden rounded-xl border border-zinc-200">
               <table className="min-w-full divide-y divide-zinc-200 text-sm">
                 <thead className="bg-zinc-50 text-left text-xs uppercase tracking-wide text-zinc-500">
