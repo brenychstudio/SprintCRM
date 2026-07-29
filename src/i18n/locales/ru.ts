@@ -581,6 +581,7 @@ const ru: Record<string, string> = {
   'drawer.outreach.multiple': '{count} active campaigns',
   'today.outreach.title': 'Outreach',
   'today.outreach.summary': '{review} items need review · {research} contacts need research · {attention} need attention',
+  'today.outreach.empty': 'Сейчас нет задач для outreach',
   'today.outreach.open': 'Open next task',
 }
 

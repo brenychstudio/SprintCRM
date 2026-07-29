@@ -79,6 +79,8 @@ The same form edits existing contact details. Successful saves invalidate Lead a
 
 `OUTREACH-02R-FIX-05` removes raw `activity.*` keys from the LeadDrawer timeline. All known CRM and Outreach activity types now have `en`, `uk`, `es`, and `ru` labels, and an unknown type receives a user-facing fallback instead of its internal identifier. The compact Outreach summary now includes latest immutable Research and Message versions in addition to campaign and status.
 
+`OUTREACH-02R-FIX-06` makes the Today Outreach CTA truthful: when review, research, and attention counts are all zero, it renders a disabled `Open next task` button with a localized empty-queue message; any actionable count retains the existing Campaigns link.
+
 ## Engineering baseline added here
 
 - Node pin: `.nvmrc` (`24.13.0`).

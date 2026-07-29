@@ -588,6 +588,7 @@ const uk: Record<string, string> = {
   'drawer.outreach.multiple': 'Активних кампаній: {count}',
   'today.outreach.title': 'Аутріч',
   'today.outreach.summary': '{review} потребують перевірки · {research} контактів потребують дослідження · {attention} потребують уваги',
+  'today.outreach.empty': 'Зараз немає завдань для аутрічу',
   'today.outreach.open': 'Відкрити наступне завдання',
 }
 
