@@ -2,7 +2,7 @@ import { supabase } from '../../lib/supabase'
 import type { Json } from '../../lib/supabase/database.types'
 import { listLeads } from '../leads/leadsApi'
 import type { Lead } from '../leads/types'
-import type { Campaign, CampaignInput, CampaignMember, CampaignMemberWithLead, EligibilityResult, MessageInput, OutboundMessage, ResearchInput, ResearchSnapshot } from './types'
+import type { ActiveSuppression, Campaign, CampaignInput, CampaignMember, CampaignMemberWithLead, EligibilityResult, MessageInput, OutboundMessage, ResearchInput, ResearchSnapshot } from './types'
 
 const asCampaign = (value: unknown) => value as Campaign
 const asMember = (value: unknown) => value as CampaignMember
@@ -17,6 +17,7 @@ export const campaignQueryKeys = {
   workspace: (campaignId: string, memberId: string) => ['campaigns', campaignId, 'member', memberId] as const,
   leadSummary: (leadId: string) => ['campaigns', 'lead', leadId] as const,
   tasks: () => ['campaigns', 'tasks'] as const,
+  suppressions: () => ['campaigns', 'suppressions'] as const,
 }
 function fail(error: { code?: string; message?: string } | null, fallback: string): never {
   if (error?.code === '23505') throw new Error('This lead is already in the campaign.')
@@ -64,6 +65,15 @@ export async function addCampaignMembers(campaignId: string, leadIds: string[]):
   const { data, error } = await supabase.rpc('add_campaign_members', { p_campaign_id: campaignId, p_lead_ids: leadIds })
   if (error) fail(error, 'Unable to add selected leads.')
   return (data ?? []) as EligibilityResult[]
+}
+export async function listActiveSuppressions(): Promise<ActiveSuppression[]> {
+  const { data, error } = await supabase.from('suppression_entries').select('subject_type,subject_value_normalized,expires_at').eq('is_active', true)
+  if (error) fail(error, 'Unable to check suppression entries.')
+  const now = Date.now()
+  return (data ?? []).filter((item) => !item.expires_at || new Date(item.expires_at).getTime() > now)
+    .filter((item): item is typeof item & { subject_type: ActiveSuppression['subject_type']; subject_value_normalized: string } =>
+      ['lead', 'email', 'domain'].includes(item.subject_type) && Boolean(item.subject_value_normalized))
+    .map(({ subject_type, subject_value_normalized }) => ({ subject_type, subject_value_normalized }))
 }
 export async function listResearchSnapshots(memberId: string): Promise<ResearchSnapshot[]> {
   const { data, error } = await supabase.from('research_snapshots').select('*').eq('campaign_member_id', memberId).order('version', { ascending: false })

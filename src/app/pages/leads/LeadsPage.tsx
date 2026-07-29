@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
+import { Link, useSearchParams } from 'react-router-dom'
 import { LeadDrawer } from '../../features/leads/LeadDrawer'
 import { BulkActionsBar } from '../../features/leads/BulkActionsBar'
-import { createLead, leadsQueryKeys, listLeads } from '../../../features/leads/leadsApi'
+import { leadsQueryKeys, listLeads } from '../../../features/leads/leadsApi'
 import type { Lead, LeadDueFilter, LeadStage } from '../../../features/leads/types'
 import { useI18n } from '../../../i18n/i18n'
 import { endOfTodayISO, startOfTodayISO } from '../../../lib/dates'
@@ -45,8 +46,8 @@ function saveSavedViews(views: SavedLeadView[]) {
 }
 
 export function LeadsPage() {
-  const queryClient = useQueryClient()
   const { t } = useI18n()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [search, setSearch] = useState('')
   const [stage, setStage] = useState<LeadStage | 'all'>('all')
@@ -68,6 +69,13 @@ export function LeadsPage() {
   useEffect(() => {
     saveSavedViews(savedViews)
   }, [savedViews])
+
+  useEffect(() => {
+    const openLeadId = searchParams.get('open')
+    if (!openLeadId || !leadsQuery.data) return
+    const lead = leadsQuery.data.find((item) => item.id === openLeadId)
+    if (lead) setSelectedLead(lead)
+  }, [leadsQuery.data, searchParams])
 
   const nicheOptions = useMemo(() => {
     const values = new Set<string>()
@@ -163,14 +171,6 @@ export function LeadsPage() {
 
   const clearSelection = () => setSelectedIds([])
 
-  const createMutation = useMutation({
-    mutationFn: () => createLead({ company_name: t('leads.newCompanyDefault') }),
-    onSuccess: (createdLead) => {
-      queryClient.invalidateQueries({ queryKey: leadsQueryKeys.all })
-      setSelectedLead(createdLead)
-    },
-  })
-
   const summary = useMemo(() => {
     let overdue = 0
     let activeContacts = 0
@@ -258,14 +258,9 @@ export function LeadsPage() {
           <p className="mt-1 text-sm text-zinc-600">{t('leads.subtitle')}</p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => createMutation.mutate()}
-          disabled={createMutation.isPending}
-          className="rounded-xl bg-zinc-900 px-4 py-2 text-sm text-white"
-        >
-          {createMutation.isPending ? t('leads.creating') : t('leads.newLead')}
-        </button>
+        <Link to="/leads/new" data-testid="lead-create" className="rounded-xl bg-zinc-900 px-4 py-2 text-sm text-white">
+          {t('leads.newLead')}
+        </Link>
       </div>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -522,7 +517,7 @@ export function LeadsPage() {
         </table>
       </div>
 
-      {selectedLead ? <LeadDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} onLeadChange={setSelectedLead} /> : null}
+      {selectedLead ? <LeadDrawer lead={selectedLead} onClose={() => { setSelectedLead(null); if (searchParams.has('open')) { const next = new URLSearchParams(searchParams); next.delete('open'); setSearchParams(next, { replace: true }) } }} onLeadChange={setSelectedLead} /> : null}
     </section>
   )
 }

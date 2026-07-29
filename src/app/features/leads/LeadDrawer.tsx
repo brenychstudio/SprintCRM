@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import {
   defaultNextForStage,
   deleteLeadPermanently,
@@ -155,6 +156,14 @@ export function LeadDrawer({
     { label: t('drawer.context.location'), value: lead.country_city },
     { label: t('drawer.context.website'), value: lead.website_domain || lead.website },
     { label: t('drawer.context.source'), value: lead.source_file },
+  ].filter((row) => row.value)
+
+  const contactRows = [
+    { label: t('drawer.contact.contact'), value: lead.contact_name },
+    { label: t('drawer.contact.email'), value: lead.email },
+    { label: t('drawer.contact.phone'), value: lead.phone },
+    { label: t('drawer.contact.website'), value: lead.website },
+    { label: t('drawer.contact.location'), value: lead.country_city },
   ].filter((row) => row.value)
 
   const handleChanged = (updatedLead: Lead) => {
@@ -319,13 +328,14 @@ export function LeadDrawer({
               <p className="mt-1 truncate text-sm text-zinc-500">{pickPrimaryContact(lead)}</p>
             </div>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="shrink-0 rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
-            >
-              {t('drawer.close')}
-            </button>
+            <div className="flex shrink-0 flex-wrap justify-end gap-2">
+              <Link to={`/leads/${lead.id}/edit`} data-testid="lead-edit-details" className="rounded-xl bg-zinc-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-zinc-800">
+                {t(contactRows.length ? 'drawer.contact.edit' : 'drawer.contact.add')}
+              </Link>
+              <button type="button" onClick={onClose} className="rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50">
+                {t('drawer.close')}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -383,6 +393,14 @@ export function LeadDrawer({
           </section>
 
           <Suspense fallback={null}><OutreachDrawerSummary leadId={lead.id} /></Suspense>
+
+          <section className="rounded-3xl border border-zinc-200 bg-white p-5" data-testid="drawer-contact-details">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold text-zinc-900">{t('drawer.contact.title')}</h3>
+              <Link to={`/leads/${lead.id}/edit`} className="text-sm font-medium text-zinc-700 underline-offset-4 hover:underline">{t(contactRows.length ? 'drawer.contact.edit' : 'drawer.contact.add')}</Link>
+            </div>
+            {contactRows.length ? <dl className="mt-4 grid gap-3 sm:grid-cols-2">{contactRows.map((row) => <div key={row.label} className="rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-3"><dt className="text-xs text-zinc-500">{row.label}</dt><dd className="mt-1 break-words text-sm font-medium text-zinc-800">{row.value}</dd></div>)}</dl> : <p className="mt-3 text-sm text-zinc-500">{t('drawer.contact.empty')}</p>}
+          </section>
 
           <section className="rounded-3xl border border-zinc-200 bg-white p-5">
             <div>

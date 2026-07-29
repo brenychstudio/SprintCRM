@@ -230,10 +230,10 @@ create index if not exists idx_activities_lead_id on public.activities(lead_id);
 create index if not exists idx_imports_org on public.imports(org_id);
 create index if not exists idx_imports_uploaded_at on public.imports(uploaded_at);
 
--- Dedup uniques (nulls allowed), scoped globally in v2
-create unique index if not exists uidx_leads_email_norm on public.leads(email_norm) where email_norm is not null;
-create unique index if not exists uidx_leads_domain_norm on public.leads(website_domain_norm) where website_domain_norm is not null;
-create unique index if not exists uidx_leads_phone_norm on public.leads(phone_norm) where phone_norm is not null;
+-- Dedup uniques (nulls allowed), scoped to the current organization.
+create unique index if not exists uidx_leads_org_email_norm on public.leads(org_id, email_norm) where email_norm is not null;
+create unique index if not exists uidx_leads_org_domain_norm on public.leads(org_id, website_domain_norm) where website_domain_norm is not null;
+create unique index if not exists uidx_leads_org_phone_norm on public.leads(org_id, phone_norm) where phone_norm is not null;
 
 -- 8) RLS
 alter table public.organizations enable row level security;

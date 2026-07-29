@@ -1,4 +1,6 @@
-import type { CampaignMember, CampaignMemberStatus, CampaignProgress, EligibilityOutcome } from './types'
+import type { Lead } from '../leads/types'
+import type { ActiveSuppression, CampaignMember, CampaignMemberStatus, CampaignProgress, EligibilityOutcome } from './types'
+import { hasLeadContactChannel } from '../leads/leadDetails'
 
 export const campaignWizardSteps = [1, 2, 3, 4] as const
 export type CampaignWizardStep = (typeof campaignWizardSteps)[number]
@@ -64,4 +66,21 @@ export function nextReviewMemberId(members: CampaignMember[], currentMemberId?: 
 
 export function eligibilityLabelKey(outcome: EligibilityOutcome): string {
   return 'campaigns.eligibility.' + outcome
+}
+
+export function campaignPickerEligibility(
+  lead: Lead,
+  existingLeadIds: Set<string>,
+  suppressions: ActiveSuppression[],
+): { outcome: EligibilityOutcome; reasonKey: string | null } {
+  if (existingLeadIds.has(lead.id)) return { outcome: 'already_added', reasonKey: 'campaigns.eligibilityReason.alreadyAdded' }
+  if (lead.status !== 'active') return { outcome: 'archived', reasonKey: 'campaigns.eligibilityReason.archived' }
+
+  const suppressed = suppressions.some((entry) =>
+    (entry.subject_type === 'lead' && entry.subject_value_normalized === lead.id.toLowerCase()) ||
+    (entry.subject_type === 'email' && Boolean(lead.email_norm) && entry.subject_value_normalized === lead.email_norm) ||
+    (entry.subject_type === 'domain' && Boolean(lead.website_domain_norm) && entry.subject_value_normalized === lead.website_domain_norm))
+  if (suppressed) return { outcome: 'suppressed', reasonKey: 'campaigns.eligibilityReason.suppressed' }
+  if (!hasLeadContactChannel(lead)) return { outcome: 'needs_information', reasonKey: 'campaigns.eligibilityReason.noChannel' }
+  return { outcome: 'eligible', reasonKey: null }
 }

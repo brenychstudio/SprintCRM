@@ -1,4 +1,4 @@
-# Current state - OUTREACH-01R
+# Current state - LEADS-EDIT-01 implementation
 
 Baseline recorded on 2026-07-22 from `codex/outreach-00r-rebaseline` (created from `main` at `23754b0`). The working tree was clean before this task.
 
@@ -6,8 +6,8 @@ Baseline recorded on 2026-07-22 from `codex/outreach-00r-rebaseline` (created fr
 
 | Area | Current implementation |
 | --- | --- |
-| Routes | `/today`, `/active-contacts`, `/leads`, `/imports`, `/pipeline`, `/reports`; all authenticated behind `RequireAuth`. |
-| Lead workspace | `LeadDrawer` is a portal-backed, fixed-position operational panel for identity, next action, result/stage changes, notes, context, activity history, archive and safe delete. |
+| Routes | `/today`, `/active-contacts`, `/leads`, `/leads/new`, `/leads/:leadId/edit`, `/imports`, `/pipeline`, `/reports`, plus default-off Campaign routes; all authenticated behind `RequireAuth`. |
+| Lead workspace | `LeadDrawer` remains a portal-backed operational panel for next action, result/stage changes, notes, activity history, archive and safe delete. It now shows compact read-only contact details and links to a focused create/edit form route. |
 | Data access | Client-side Supabase wrappers live in `src/features/leads/leadsApi.ts`, `src/features/ai/aiGenerationsApi.ts`, and `src/features/reports/exportCsv.ts`. Generated public-schema types are stored at `src/lib/supabase/database.types.ts`; existing client wrappers remain handwritten. |
 | Database | Core CRM tables remain intact. OutreachOps now adds campaign, versioning, suppression, and technical-audit domain tables through reviewed additive migrations. |
 | Localization | `en`, `uk`, `es`, `ru` dictionaries via `src/i18n`. |
@@ -65,6 +65,12 @@ The Supabase database advisors reported these existing follow-ups:
 - enable Auth leaked-password protection;
 - review indexes on owner foreign keys and the `memberships_select_own` policy initialization plan after measuring production workload.
 
+## Manual lead creation and editing
+
+`LEADS-EDIT-01` replaces the immediate empty-row `New lead` mutation with a focused form. The form uses only existing `leads` columns, protects dirty navigation and duplicate submission, validates and normalizes contact data, and blocks exact organization-scoped email/domain/phone duplicates while treating a company-name match as a warning.
+
+The same form edits existing contact details. Successful saves invalidate Lead and Campaign query families, so the Drawer, list, campaign context, and eligibility refresh without a full application reload. Campaign wizard repair uses an allowlisted internal return path and session-scoped draft persistence. No database migration or production write is introduced; `supabase/schema.sql` was corrected to describe the already-applied organization-scoped normalized contact indexes.
+
 ## Engineering baseline added here
 
 - Node pin: `.nvmrc` (`24.13.0`).
@@ -83,3 +89,4 @@ The Supabase database advisors reported these existing follow-ups:
 5. DB-BASELINE-02 captured the former import-schema drift (`leads.source_import_id`, `idx_leads_source_import_id`, `imports.reverted_at`, and `imports.reverted_by`) as a forward migration. The repository now represents it.
 6. The supplied PDF references could not be text-extracted or visually opened in this runtime because neither Poppler/Python PDF tools nor an available browser runtime is installed. The master brief remains the authoritative source for this baseline; review the original PDFs before schema implementation if they contain constraints not repeated in it.
 7. OUTREACH-02R still needs authenticated browser smoke in an environment with a browser binding: feature flag behavior, light/dark, narrow viewport, all locales, and manual campaign transitions. This runtime can run build/test checks but has no browser available for that acceptance gate.
+8. LEADS-EDIT-01 also requires authenticated browser smoke before acceptance, including no-write Cancel, create/edit refresh, duplicate UX, campaign repair round-trip, responsive/theme/localization checks, and normal-workflow cleanup of two historical empty test leads.

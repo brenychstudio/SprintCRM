@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { campaignLeadsWizardStep, campaignProgress, canSubmitCampaignWizard, eligibilityLabelKey, isCampaignWizardSubmitStep, nextCampaignWizardStep, nextReviewMemberId, previousCampaignWizardStep, reviewQueue } from './workflow'
+import { campaignLeadsWizardStep, campaignPickerEligibility, campaignProgress, canSubmitCampaignWizard, eligibilityLabelKey, isCampaignWizardSubmitStep, nextCampaignWizardStep, nextReviewMemberId, previousCampaignWizardStep, reviewQueue } from './workflow'
+import type { Lead } from '../leads/types'
 import type { CampaignMember } from './types'
 
 function member(id: string, status: CampaignMember['status']): CampaignMember {
@@ -27,5 +28,10 @@ describe('campaign workflow helpers', () => {
     expect(canSubmitCampaignWizard(campaignLeadsWizardStep)).toBe(true)
     expect(nextCampaignWizardStep(campaignLeadsWizardStep)).toBe(campaignLeadsWizardStep)
     expect(previousCampaignWizardStep(campaignLeadsWizardStep)).toBe(3)
+  })
+  it('recalculates campaign eligibility after a contact channel is added', () => {
+    const lead = { id: 'lead-1', status: 'active', email: null, phone: null, website: null, email_norm: null, website_domain_norm: null } as Lead
+    expect(campaignPickerEligibility(lead, new Set(), []).outcome).toBe('needs_information')
+    expect(campaignPickerEligibility({ ...lead, email: 'hello@example.com', email_norm: 'hello@example.com' }, new Set(), []).outcome).toBe('eligible')
   })
 })

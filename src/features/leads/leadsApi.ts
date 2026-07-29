@@ -12,6 +12,7 @@ import type {
   UpdateLeadInput,
 } from './types'
 import { cleanNullable, deriveWebsiteDomain, normalizeEmail, normalizePhone } from '../../lib/normalize'
+import { classifyLeadDuplicates, type LeadDetailFieldName, type LeadDuplicateMatch, type NormalizedLeadDetails } from './leadDetails'
 
 export type LeadFilters = {
   scope?: string
@@ -23,7 +24,30 @@ export type LeadFilters = {
 export const leadsQueryKeys = {
   all: ['leads'] as const,
   list: (filters: LeadFilters) => ['leads', filters] as const,
+  detail: (leadId: string) => ['leads', 'detail', leadId] as const,
   activities: (leadId: string) => ['activities', leadId] as const,
+}
+
+export class LeadUniqueViolationError extends Error {
+  readonly duplicateKind: 'email' | 'domain' | 'phone' | 'unknown'
+
+  constructor(kind: 'email' | 'domain' | 'phone' | 'unknown') {
+    super('A lead with this contact information already exists.')
+    this.name = 'LeadUniqueViolationError'
+    this.duplicateKind = kind
+  }
+}
+
+function uniqueViolationKind(message?: string): LeadUniqueViolationError['duplicateKind'] {
+  if (message?.includes('uidx_leads_org_email_norm')) return 'email'
+  if (message?.includes('uidx_leads_org_domain_norm')) return 'domain'
+  if (message?.includes('uidx_leads_org_phone_norm')) return 'phone'
+  return 'unknown'
+}
+
+function throwLeadMutationError(error: { code?: string; message?: string } | null, fallback: string): never {
+  if (error?.code === '23505') throw new LeadUniqueViolationError(uniqueViolationKind(error.message))
+  throw new Error(fallback)
 }
 
 export async function listLeads(filters: LeadFilters = {}): Promise<Lead[]> {
@@ -48,16 +72,23 @@ export async function listLeads(filters: LeadFilters = {}): Promise<Lead[]> {
   return (data ?? []) as Lead[]
 }
 
+export async function getLeadForEdit(id: string): Promise<Lead> {
+  const { data, error } = await supabase.from('leads').select('*').eq('id', id).maybeSingle()
+  if (error) throw new Error('Unable to load this lead.')
+  if (!data) throw new Error('Lead not found or unavailable.')
+  return data as Lead
+}
+
 export async function createLead(input: CreateLeadInput): Promise<Lead> {
   const website = cleanNullable(input.website)
   const website_domain = deriveWebsiteDomain(website, input.website_domain)
   const email = normalizeEmail(input.email)
-  const phone = normalizePhone(input.phone)
+  const phone = cleanNullable(input.phone)
 
   const { data, error } = await supabase
     .from('leads')
     .insert({
-      company_name: input.company_name,
+      company_name: input.company_name.trim(),
       website,
       website_domain,
       niche: cleanNullable(input.niche),
@@ -73,11 +104,13 @@ export async function createLead(input: CreateLeadInput): Promise<Lead> {
       next_action_at: input.next_action_at,
       notes: cleanNullable(input.notes),
       revenue: input.revenue ?? null,
+      preferred_channel: input.preferred_channel ?? null,
+      language: input.language ?? null,
     })
     .select('*')
     .single()
 
-  if (error) throw error
+  if (error) throwLeadMutationError(error, 'Unable to create this lead.')
   return data as Lead
 }
 
@@ -97,6 +130,44 @@ export async function updateLead(id: string, patch: UpdateLeadInput): Promise<Le
 
   const { data, error } = await supabase.from('leads').update(nextPatch).eq('id', id).select('*').single()
   if (error) throw error
+  return data as Lead
+}
+
+export async function createLeadFromDetails(input: NormalizedLeadDetails): Promise<Lead> {
+  return createLead(input)
+}
+
+export async function findLeadDuplicates(
+  input: Parameters<typeof classifyLeadDuplicates>[0],
+  excludeLeadId?: string,
+): Promise<LeadDuplicateMatch[]> {
+  try {
+    return classifyLeadDuplicates(input, await listLeads(), excludeLeadId)
+  } catch {
+    throw new Error('Unable to check for duplicate leads.')
+  }
+}
+
+export async function updateLeadDetails(
+  id: string,
+  input: NormalizedLeadDetails,
+  changedFields: LeadDetailFieldName[],
+): Promise<Lead> {
+  const { data, error } = await supabase.from('leads').update(input).eq('id', id).select('*').single()
+  if (error) throwLeadMutationError(error, 'Unable to save lead details.')
+
+  if (changedFields.length) {
+    try {
+      await logActivity({
+        lead_id: id,
+        type: 'manual_edit',
+        meta: { changed_fields: changedFields },
+      })
+    } catch {
+      // Contact details are already saved. Timeline logging remains best-effort.
+    }
+  }
+
   return data as Lead
 }
 

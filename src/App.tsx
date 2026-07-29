@@ -18,6 +18,8 @@ const CampaignEditorPage = lazy(() => import('./app/pages/campaigns/CampaignEdit
 const CampaignOverviewPage = lazy(() => import('./app/pages/campaigns/CampaignOverviewPage').then((module) => ({ default: module.CampaignOverviewPage })))
 const CampaignReviewStartPage = lazy(() => import('./app/pages/campaigns/CampaignReviewStartPage').then((module) => ({ default: module.CampaignReviewStartPage })))
 const CampaignWorkspacePage = lazy(() => import('./app/pages/campaigns/CampaignWorkspacePage').then((module) => ({ default: module.CampaignWorkspacePage })))
+const LeadCreatePage = lazy(() => import('./app/pages/leads/LeadCreatePage').then((module) => ({ default: module.LeadCreatePage })))
+const LeadEditPage = lazy(() => import('./app/pages/leads/LeadEditPage').then((module) => ({ default: module.LeadEditPage })))
 
 function OutreachRoute({ children }: { children: ReactNode }) {
   const { t } = useI18n()
@@ -35,6 +37,8 @@ export default function App() {
           <Route path="/today" element={<TodayPage />} />
           <Route path="/active-contacts" element={<ActiveContactsPage />} />
           <Route path="/leads" element={<LeadsPage />} />
+          <Route path="/leads/new" element={<Suspense fallback={null}><LeadCreatePage /></Suspense>} />
+          <Route path="/leads/:leadId/edit" element={<Suspense fallback={null}><LeadEditPage /></Suspense>} />
           <Route path="/imports" element={<ImportsPage />} />
           <Route path="/pipeline" element={<PipelinePage />} />
           <Route path="/reports" element={<ReportsPage />} />

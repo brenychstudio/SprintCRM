@@ -2,6 +2,7 @@ import { readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
 
 const migrationsDirectory = path.resolve('supabase/migrations')
+const schemaSnapshotPath = path.resolve('supabase/schema.sql')
 const expectedFoundationMigration = '20260427000001_ai_outreach_foundation.sql'
 const expectedImportDriftMigration = '20260722000001_capture_import_schema_drift.sql'
 const expectedCampaignDomainMigration = '20260722000002_outreach_campaign_domain.sql'
@@ -92,6 +93,18 @@ for (const marker of [
   if (!campaignWorkspaceRpcSql.includes(marker)) {
     throw new Error(`Manual campaign workspace migration is missing RPC: ${marker}`)
   }
+}
+
+const schemaSnapshot = await readFile(schemaSnapshotPath, 'utf8')
+for (const marker of [
+  'uidx_leads_org_email_norm on public.leads(org_id, email_norm)',
+  'uidx_leads_org_domain_norm on public.leads(org_id, website_domain_norm)',
+  'uidx_leads_org_phone_norm on public.leads(org_id, phone_norm)',
+]) {
+  if (!schemaSnapshot.includes(marker)) throw new Error(`Schema snapshot is missing organization-scoped dedup guard: ${marker}`)
+}
+if (/uidx_leads_(email|domain|phone)_norm on public\.leads\(/.test(schemaSnapshot)) {
+  throw new Error('Schema snapshot still contains superseded global lead dedup indexes.')
 }
 
 console.log(`Verified ${files.length} migration files, unique versions, and required OutreachOps guards.`)
