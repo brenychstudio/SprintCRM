@@ -1,6 +1,6 @@
 # ADR 0005: Manual-first Campaign Workspace uses routes and atomic workflow RPCs
 
-**Status:** Proposed pending authenticated UI smoke on 2026-07-25.
+**Status:** Accepted on 2026-07-29 after authenticated manual smoke.
 
 ## Context
 
@@ -33,4 +33,4 @@ The Review Queue orders `needs_review`, then `draft_ready`, then `research_ready
 - The UI remains hidden and direct Campaign routes redirect when the feature flag is off.
 - `activities` stays the user-facing timeline; `audit_events` remains the technical/security trail.
 - AI, Gmail, auto-send, queues, replies, follow-ups, template library, and policy/autonomy work remain deferred.
-- Authenticated browser smoke, light/dark, narrow viewport, and four-locale verification are acceptance gates still required in an environment with browser access.
+- Authenticated browser smoke confirmed feature-flag behavior, light/dark, responsive views, four locales, manual versioning, review/approval, Drawer context, and Today navigation. Docker-backed local reset and behavioral RLS integration remain separate pre-staging verification debt.

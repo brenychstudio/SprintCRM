@@ -1,4 +1,4 @@
-# Current state - LEADS-EDIT-01 implementation
+# Current state - OUTREACH-02R accepted manual workspace
 
 Baseline recorded on 2026-07-22 from `codex/outreach-00r-rebaseline` (created from `main` at `23754b0`). The working tree was clean before this task.
 
@@ -35,9 +35,13 @@ The schema was created manually before CLI migration history existed. After evid
 20260722000001
 20260722000002
 20260722000003
+20260725000001
+20260725000002
+20260729000001
+20260729000002
 ```
 
-`supabase db push --dry-run` reports `Remote database is up to date`; no legacy SQL was replayed. Future production schema changes must use reviewed migrations only.
+`supabase db push --dry-run` reports `Remote database is up to date`; no legacy SQL was replayed. FIX-03 and FIX-04 were applied through the Supabase CLI. Future production schema changes must use reviewed migrations only.
 
 ## Minimal campaign domain
 
@@ -54,7 +58,7 @@ All eight tables have organization-member RLS. Composite foreign keys prevent cr
 
 ## Manual campaign workspace
 
-`OUTREACH-02R` adds a default-off `outreach_ops_enabled` Campaign workflow: campaign list/setup/overview routes, deterministic member eligibility, manual versioned research and messages, Review Queue navigation, approval/skip operations, compact LeadDrawer context, and a minimal Today entry point. Campaign routes are lazy-loaded so the stable CRM shell does not eagerly load the workspace.
+`OUTREACH-02R` is accepted. It adds a default-off `outreach_ops_enabled` Campaign workflow: campaign list/setup/overview routes, deterministic member eligibility, manual versioned research and messages, Review Queue navigation, approval/skip operations, compact LeadDrawer context, and a minimal Today entry point. Campaign routes are lazy-loaded so the stable CRM shell does not eagerly load the workspace. At zero actionable Outreach items, Today shows a localized empty state and disables `Open next task`.
 
 `20260725000001_campaign_activity_types.sql` and `20260725000002_manual_campaign_workspace_rpc.sql` add only activity enum values and narrow `security invoker` RPCs. They atomically persist critical member/message/audit/activity transitions and do not send messages. The linked production database is current through both migrations.
 
@@ -67,15 +71,15 @@ The Supabase database advisors reported these existing follow-ups:
 
 ## Manual lead creation and editing
 
-`LEADS-EDIT-01` replaces the immediate empty-row `New lead` mutation with a focused form. The form uses only existing `leads` columns, protects dirty navigation and duplicate submission, validates and normalizes contact data, and blocks exact organization-scoped email/domain/phone duplicates while treating a company-name match as a warning.
+`LEADS-EDIT-01` is accepted. It replaces the immediate empty-row `New lead` mutation with a focused form. The form uses only existing `leads` columns, protects dirty navigation and duplicate submission, validates and normalizes contact data, and blocks exact organization-scoped email/domain/phone duplicates while treating a company-name match as a warning.
 
 The same form edits existing contact details. Successful saves invalidate Lead and Campaign query families, so the Drawer, list, campaign context, and eligibility refresh without a full application reload. Campaign wizard repair uses an allowlisted internal return path and session-scoped draft persistence. No database migration or production write is introduced; `supabase/schema.sql` was corrected to describe the already-applied organization-scoped normalized contact indexes.
 
 ## Campaign workspace forward-fixes
 
-`OUTREACH-02R-FIX-03` adds an unapplied forward migration that replaces only `add_campaign_members`. The original function's table output variable `lead_id` conflicted with the unqualified `ON CONFLICT (campaign_id, lead_id)` target and raised PostgreSQL `42702`. The replacement uses qualified table aliases and the named unique constraint while preserving its signature, RLS execution mode, eligibility results, audit, and CRM activity behavior. Linked verification and production apply remain pending until the local database password authenticates successfully.
+`OUTREACH-02R-FIX-03` replaces only `add_campaign_members`. The original function's table output variable `lead_id` conflicted with the unqualified `ON CONFLICT (campaign_id, lead_id)` target and raised PostgreSQL `42702`. The replacement uses qualified table aliases and the named unique constraint while preserving its signature, RLS execution mode, eligibility results, audit, and CRM activity behavior. It is applied to production through the Supabase CLI and regression-smoked.
 
-`OUTREACH-02R-FIX-04` adds the next unapplied forward migration for manual message save and approval. Canonical `outbound_messages.channel` remains text/check, while CRM `activities.channel` is `public.activity_channel`; the replacement RPCs validate the unchanged text parameter once, persist canonical text, and use the typed enum for timeline writes. This removes PostgreSQL `42804` without creating a PostgREST overload and proactively protects the approval transition. Generated types are unchanged because both RPC signatures and return types are unchanged.
+`OUTREACH-02R-FIX-04` updates manual message save and approval. Canonical `outbound_messages.channel` remains text/check, while CRM `activities.channel` is `public.activity_channel`; the replacement RPCs validate the unchanged text parameter once, persist canonical text, and use the typed enum for timeline writes. This removes PostgreSQL `42804` without creating a PostgREST overload and protects the approval transition. It is applied to production through the Supabase CLI and regression-smoked. Generated types are unchanged because both RPC signatures and return types are unchanged.
 
 `OUTREACH-02R-FIX-05` removes raw `activity.*` keys from the LeadDrawer timeline. All known CRM and Outreach activity types now have `en`, `uk`, `es`, and `ru` labels, and an unknown type receives a user-facing fallback instead of its internal identifier. The compact Outreach summary now includes latest immutable Research and Message versions in addition to campaign and status.
 
@@ -98,5 +102,4 @@ The same form edits existing contact details. Successful saves invalidate Lead a
 4. The current `current_org_id()` function selects the oldest membership. This is adequate for a personal internal CRM but is not a future active-organization selector.
 5. DB-BASELINE-02 captured the former import-schema drift (`leads.source_import_id`, `idx_leads_source_import_id`, `imports.reverted_at`, and `imports.reverted_by`) as a forward migration. The repository now represents it.
 6. The supplied PDF references could not be text-extracted or visually opened in this runtime because neither Poppler/Python PDF tools nor an available browser runtime is installed. The master brief remains the authoritative source for this baseline; review the original PDFs before schema implementation if they contain constraints not repeated in it.
-7. OUTREACH-02R still needs authenticated browser smoke in an environment with a browser binding: feature flag behavior, light/dark, narrow viewport, all locales, and manual campaign transitions. This runtime can run build/test checks but has no browser available for that acceptance gate.
-8. LEADS-EDIT-01 also requires authenticated browser smoke before acceptance, including no-write Cancel, create/edit refresh, duplicate UX, campaign repair round-trip, responsive/theme/localization checks, and normal-workflow cleanup of two historical empty test leads.
+7. Docker Desktop/local `supabase db reset` and behavioral RLS integration remain verification debt before staging/private beta. The accepted production-linked manual smoke covered feature flags, themes, locales, responsive workspace behavior, and manual Campaign transitions.

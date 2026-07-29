@@ -1,8 +1,8 @@
 # OUTREACH-02R Checkpoint
 
-Status: implementation complete; awaiting authenticated browser smoke.
+Status: accepted.
 
-Date: 2026-07-25
+Date: 2026-07-29
 Branch: `codex/outreach-02r-manual-campaign-workspace`
 Recommended commit: `feat(outreach): add manual campaign workspace`
 
@@ -17,6 +17,7 @@ Recommended commit: `feat(outreach): add manual campaign workspace`
 ## Production verification
 
 - `20260725000001_campaign_activity_types.sql` and `20260725000002_manual_campaign_workspace_rpc.sql` are applied to linked production.
+- `20260729000001_fix_add_campaign_members_ambiguous_lead_id.sql` (FIX-03) and `20260729000002_fix_manual_message_channel_cast.sql` (FIX-04) were applied through the Supabase CLI, not the Dashboard.
 - `supabase migration list` matched local and remote after apply.
 - `supabase db push --dry-run` reported the remote database is up to date.
 - Catalog query confirmed all seven RPCs exist and are `security invoker`.
@@ -24,28 +25,40 @@ Recommended commit: `feat(outreach): add manual campaign workspace`
 ## Automated verification
 
 ```text
-npm run verify:migrations - pass (9 migrations)
+npm run verify:migrations - pass (11 migrations)
 npm run typecheck - pass
 npm run lint - pass
-npm run test - pass (5 tests)
+npm run test:unit - pass (32 tests)
 npm run build - pass; Campaign surfaces are route-level lazy chunks
 git diff --check - pass
 ```
 
-## Remaining acceptance gate
+## Authenticated acceptance smoke
 
-This runtime has no available browser binding, so authenticated visual smoke could not run here. Before marking accepted, run the brief manual smoke with `VITE_OUTREACH_OPS_ENABLED=true`: feature flag off/on, campaign creation, eligibility, research/message versioning, approve/skip, activity/audit, Drawer, Today, light/dark, narrow viewport, route refresh/back, and all four locales.
+The product owner completed the authenticated smoke with `outreach_ops_enabled` enabled. The accepted path is:
 
-Docker-dependent local reset and behavioral RLS integration remain the pre-existing verification debt before staging/private beta.
+```text
+Create/Edit lead
+→ Add to campaign
+→ Research versions
+→ Message versions
+→ Submit for review
+→ Approve
+→ Drawer summary
+→ Full Workspace
+→ Today queue
+```
+
+The smoke also confirmed light/dark themes, `en`/`uk`/`es`/`ru`, responsive layouts, production migrations, and Supabase synchronization. Approval remains human-controlled and does not send a message.
+
+Docker-dependent local reset and behavioral RLS integration remain the pre-existing verification debt before staging/private beta; they do not block this manual UI milestone.
 
 ## Smoke follow-up
 
 - `OUTREACH-02R-FIX-01` fixed a P1 wizard blocker where the Offer step could proceed to campaign overview before the Leads step was usable.
 - The campaign editor now treats Leads as the only submit step, uses explicit wizard navigation helpers, and supports adding new leads in edit mode without deleting or duplicating existing members.
-- `OUTREACH-02R` remains unaccepted until the authenticated browser smoke is repeated successfully.
 - `LEADS-EDIT-01` removes the next P1 blocker exposed by smoke: `New lead` no longer creates an empty row, existing contact details have a focused edit route, and Campaign eligibility can be repaired without losing wizard state.
-- Repeat the authenticated Campaign smoke only after the LEADS-EDIT-01 create/edit/duplicate/theme/localization checks pass. No AI or Gmail work starts before acceptance.
-- `OUTREACH-02R-FIX-03` implements an additive replacement for `add_campaign_members`, using the named membership constraint to remove the `lead_id` ambiguity that raised PostgreSQL `42702`. Static gates pass; linked apply and authenticated regression smoke are still pending.
-- `OUTREACH-02R-FIX-04` implements additive replacements for manual message save and approval, explicitly bridging text campaign channels to the `activities.channel` enum while preserving RPC signatures. Static gates pass; linked apply and authenticated draft/version/review/approval smoke remain pending.
-- `OUTREACH-02R-FIX-05` localizes every known activity type, adds an unknown-activity fallback in LeadDrawer, and exposes the latest Research/Message versions in its compact Outreach summary. Automated UI/i18n coverage passes; authenticated visual smoke remains pending.
-- `OUTREACH-02R-FIX-06` disables the Outreach `Open next task` CTA at zero actionable items and explains the empty state. Component coverage verifies both disabled and active states.
+- FIX-03 removes the `add_campaign_members` `lead_id` ambiguity that raised PostgreSQL `42702`; production regression smoke passed after its CLI apply.
+- FIX-04 bridges text campaign channels to the `activities.channel` enum while preserving RPC signatures; production draft/version/review/approval smoke passed after its CLI apply.
+- FIX-05 localizes every known activity type, adds an unknown-activity fallback in LeadDrawer, and exposes latest Research/Message versions in its compact Outreach summary.
+- FIX-06 disables the Outreach `Open next task` CTA at zero actionable items and explains the localized empty state.

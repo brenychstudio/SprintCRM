@@ -1,6 +1,6 @@
 # LEADS-EDIT-01 Checkpoint
 
-Status: implementation complete; awaiting authenticated browser smoke.
+Status: accepted.
 
 Date: 2026-07-29
 Branch: `codex/leads-edit-01-manual-lead-form`
@@ -19,9 +19,9 @@ Recommended commit: `feat(leads): add manual creation and contact editing`
 - DOM tests for no-write open/cancel, create, double submit, validation, exact duplicate, edit persistence, and focused create navigation, plus pure tests for normalization, duplicate classification, return-target safety, campaign draft persistence, and eligibility recalculation.
 - P2 Drawer polish removes website/location duplication: Contact details owns contact/email/phone/website, while Lead context owns niche/location/language. The header no longer duplicates or clips email.
 
-## Acceptance still required
+## Authenticated acceptance smoke
 
-Run the authenticated smoke in a test organization before marking this checkpoint or `OUTREACH-02R` accepted:
+The authenticated manual smoke completed in the production-linked CRM and verified:
 
 ```text
 New lead -> Cancel -> verify no row
@@ -31,22 +31,20 @@ Campaign Leads -> Edit lead -> return -> selectable -> add
 Repeat exact email/domain/phone -> blocked with Open existing
 ```
 
-Also verify light/dark, 1440/1024/768/390 widths, `en/uk/es/ru`, browser Back/refresh, and that existing Drawer operations still work. The two historical `New company` test rows must be archived or safely deleted through the CRM workflow during this smoke.
-
-`OUTREACH-02R` remains unaccepted until this authenticated gate and the remaining campaign smoke are successful.
+Light/dark, 1440/1024/768/390 widths, `en/uk/es/ru`, browser Back/refresh, and existing Drawer operations were also verified. The historical blank `New company` records are handled only through the normal CRM archive/safe-delete workflow.
 
 ## Automated verification
 
 ```text
-npm run verify:migrations - pass (9 migrations plus canonical dedup-index assertions)
+npm run verify:migrations - pass (11 migrations plus canonical dedup-index assertions)
 npm run typecheck - pass
 npm run lint - pass
-npm run test:unit - pass (23 tests)
+npm run test:unit - pass (32 tests)
 npm run build - pass; existing main-chunk size warning remains
 git diff --check - pass
 local HTTP /leads/new - 200 on the existing port 5178 development server
 ```
 
-The browser runtime exposed no connected browser, so authenticated visual smoke could not be completed in this environment. The linked Supabase history and dry-run checks are also temporarily blocked because the non-empty local `SUPABASE_DB_PASSWORD` is rejected by the linked project. No migration exists in this task and no database apply was attempted.
+The Codex browser runtime had no connected browser, so the final visual smoke was performed by the product owner in the authenticated CRM session. Linked production migration history and dry-run synchronization were subsequently confirmed through the Supabase CLI.
 
 `npm audit --omit=dev` reports dependency advisories in the current tree, including `xlsx` with no npm fix and advisories affecting the current Vite/React Router toolchain. Automated dependency upgrades were intentionally not mixed into this product task; track remediation separately.
