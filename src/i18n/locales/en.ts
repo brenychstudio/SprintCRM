@@ -257,6 +257,7 @@ const en: Record<string, string> = {
   'drawer.noContext': 'No context added yet.',
   'drawer.context.niche': 'Niche',
   'drawer.context.location': 'Location',
+  'drawer.context.language': 'Language',
   'drawer.context.website': 'Website',
   'drawer.context.source': 'Source',
   'drawer.archive': 'Archive',

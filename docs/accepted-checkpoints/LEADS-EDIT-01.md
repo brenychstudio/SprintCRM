@@ -17,6 +17,7 @@ Recommended commit: `feat(leads): add manual creation and contact editing`
 - One `manual_edit` activity per successful detail update with changed field names only.
 - Repository schema snapshot and migration verifier synchronized to the already-applied organization-scoped dedup indexes. No migration or production write is part of this task.
 - DOM tests for no-write open/cancel, create, double submit, validation, exact duplicate, edit persistence, and focused create navigation, plus pure tests for normalization, duplicate classification, return-target safety, campaign draft persistence, and eligibility recalculation.
+- P2 Drawer polish removes website/location duplication: Contact details owns contact/email/phone/website, while Lead context owns niche/location/language. The header no longer duplicates or clips email.
 
 ## Acceptance still required
 

@@ -242,6 +242,7 @@ const ru: Record<string, string> = {
   'drawer.noContext': 'Контекст пока не заполнен.',
   'drawer.context.niche': 'Ниша',
   'drawer.context.location': 'Локация',
+  'drawer.context.language': 'Язык',
   'drawer.context.website': 'Сайт',
   'drawer.context.source': 'Источник',
   'drawer.archive': 'Архивировать',

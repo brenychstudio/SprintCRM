@@ -255,6 +255,7 @@ const uk: Record<string, string> = {
   'drawer.noContext': 'Контекст поки не заповнений.',
   'drawer.context.niche': 'Ніша',
   'drawer.context.location': 'Локація',
+  'drawer.context.language': 'Мова',
   'drawer.context.website': 'Сайт',
   'drawer.context.source': 'Джерело',
   'drawer.archive': 'Архівувати',

@@ -242,6 +242,7 @@ const es: Record<string, string> = {
   'drawer.noContext': 'Todavía no hay contexto.',
   'drawer.context.niche': 'Nicho',
   'drawer.context.location': 'Ubicación',
+  'drawer.context.language': 'Idioma',
   'drawer.context.website': 'Web',
   'drawer.context.source': 'Fuente',
   'drawer.archive': 'Archivar',

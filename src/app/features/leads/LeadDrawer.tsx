@@ -49,10 +49,6 @@ function isLeadOverdue(iso: string): boolean {
   return new Date(iso).getTime() < Date.now()
 }
 
-function pickPrimaryContact(lead: Lead): string {
-  return [lead.contact_name, lead.email, lead.phone].filter(Boolean).join(' · ') || lead.website_domain || lead.website || '—'
-}
-
 function getNoteLine(notes: string, labels: string[]): string {
   const lines = notes
     .split('\n')
@@ -154,8 +150,7 @@ export function LeadDrawer({
   const contextRows = [
     { label: t('drawer.context.niche'), value: lead.niche },
     { label: t('drawer.context.location'), value: lead.country_city },
-    { label: t('drawer.context.website'), value: lead.website_domain || lead.website },
-    { label: t('drawer.context.source'), value: lead.source_file },
+    { label: t('drawer.context.language'), value: lead.language ? t(`lang.${lead.language}`) : null },
   ].filter((row) => row.value)
 
   const contactRows = [
@@ -163,7 +158,6 @@ export function LeadDrawer({
     { label: t('drawer.contact.email'), value: lead.email },
     { label: t('drawer.contact.phone'), value: lead.phone },
     { label: t('drawer.contact.website'), value: lead.website },
-    { label: t('drawer.contact.location'), value: lead.country_city },
   ].filter((row) => row.value)
 
   const handleChanged = (updatedLead: Lead) => {
@@ -325,7 +319,7 @@ export function LeadDrawer({
                 </span>
               </div>
 
-              <p className="mt-1 truncate text-sm text-zinc-500">{pickPrimaryContact(lead)}</p>
+              {lead.contact_name ? <p title={lead.contact_name} className="mt-1 truncate text-sm text-zinc-500">{lead.contact_name}</p> : null}
             </div>
 
             <div className="flex shrink-0 flex-wrap justify-end gap-2">
