@@ -9,6 +9,7 @@ Fix the campaign setup wizard so `Offer -> Next` opens the `Leads` step and only
 - Browser smoke found a P1 workflow blocker: clicking `Next` on the Offer step redirected to campaign overview before leads could be selected.
 - Code already keeps OutreachOps feature-gated and uses the campaign editor as the only create/edit wizard surface.
 - Edit mode also showed only an informational hint on the Leads step, so new members could not be added from the edit wizard.
+- Follow-up smoke reported that the Leads step appeared to disappear immediately. The editor's native form had an unguarded `onSubmit`, so any implicit submit could create and redirect before the final step.
 
 ## Files inspected
 
@@ -28,11 +29,13 @@ Fix the campaign setup wizard so `Offer -> Next` opens the `Leads` step and only
 
 ## Implementation plan
 
-1. Keep `Next` buttons as `type="button"` and make them local step transitions only.
+1. Keep `Next` buttons as `type="button"`, prevent form event propagation, and make them local step transitions only.
 2. Make the Leads step the only submit step.
-3. In edit mode, load current campaign members, show them checked/disabled, and submit only newly selected lead IDs.
-4. Preserve existing members; do not remove unchecked or already-added records.
-5. Re-run required local gates and Supabase dry-run.
+3. Guard the form submit handler itself so no implicit submit can create or redirect before Leads.
+4. In edit mode, load current campaign members, show them checked/disabled, and submit only newly selected lead IDs.
+5. Preserve existing members; do not remove unchecked or already-added records.
+6. Show an explicit, localized empty state when no active leads exist.
+7. Re-run required local gates and Supabase dry-run.
 
 ## Risks
 

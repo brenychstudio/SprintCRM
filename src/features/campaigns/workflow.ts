@@ -16,6 +16,15 @@ export function isCampaignWizardSubmitStep(step: CampaignWizardStep): boolean {
   return step === campaignLeadsWizardStep
 }
 
+/**
+ * The editor is a single native form. Keep the submit boundary explicit so an
+ * implicit submit (for example, from the keyboard) can never create a
+ * campaign before the user reaches the Leads step.
+ */
+export function canSubmitCampaignWizard(step: CampaignWizardStep): boolean {
+  return isCampaignWizardSubmitStep(step)
+}
+
 const reviewPriority: Record<CampaignMemberStatus, number> = {
   needs_review: 0, draft_ready: 1, research_ready: 2, failed: 3, queued: 4, researching: 5,
   followup_due: 6, approved: 7, provider_draft: 8, sent: 9, replied: 10, skipped: 11, suppressed: 12,

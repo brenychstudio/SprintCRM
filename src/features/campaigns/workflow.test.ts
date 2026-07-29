@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { campaignLeadsWizardStep, campaignProgress, eligibilityLabelKey, isCampaignWizardSubmitStep, nextCampaignWizardStep, nextReviewMemberId, previousCampaignWizardStep, reviewQueue } from './workflow'
+import { campaignLeadsWizardStep, campaignProgress, canSubmitCampaignWizard, eligibilityLabelKey, isCampaignWizardSubmitStep, nextCampaignWizardStep, nextReviewMemberId, previousCampaignWizardStep, reviewQueue } from './workflow'
 import type { CampaignMember } from './types'
 
 function member(id: string, status: CampaignMember['status']): CampaignMember {
@@ -23,6 +23,8 @@ describe('campaign workflow helpers', () => {
     expect(nextCampaignWizardStep(3)).toBe(campaignLeadsWizardStep)
     expect(isCampaignWizardSubmitStep(3)).toBe(false)
     expect(isCampaignWizardSubmitStep(campaignLeadsWizardStep)).toBe(true)
+    expect(canSubmitCampaignWizard(3)).toBe(false)
+    expect(canSubmitCampaignWizard(campaignLeadsWizardStep)).toBe(true)
     expect(nextCampaignWizardStep(campaignLeadsWizardStep)).toBe(campaignLeadsWizardStep)
     expect(previousCampaignWizardStep(campaignLeadsWizardStep)).toBe(3)
   })
