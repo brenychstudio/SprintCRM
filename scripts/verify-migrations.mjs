@@ -10,6 +10,7 @@ const expectedCampaignRlsMigration = '20260722000003_outreach_campaign_rls.sql'
 const expectedCampaignActivityMigration = '20260725000001_campaign_activity_types.sql'
 const expectedCampaignWorkspaceRpcMigration = '20260725000002_manual_campaign_workspace_rpc.sql'
 const expectedCampaignMemberAmbiguityFix = '20260729000001_fix_add_campaign_members_ambiguous_lead_id.sql'
+const expectedManualMessageChannelFix = '20260729000002_fix_manual_message_channel_cast.sql'
 const requiredCampaignTables = [
   'campaigns',
   'campaign_members',
@@ -55,6 +56,10 @@ if (!files.includes(expectedCampaignActivityMigration) || !files.includes(expect
 
 if (!files.includes(expectedCampaignMemberAmbiguityFix)) {
   throw new Error(`Missing required campaign member RPC forward-fix: ${expectedCampaignMemberAmbiguityFix}`)
+}
+
+if (!files.includes(expectedManualMessageChannelFix)) {
+  throw new Error(`Missing required manual message channel forward-fix: ${expectedManualMessageChannelFix}`)
 }
 
 for (const file of files) {
@@ -117,6 +122,25 @@ if (/on conflict\s*\([^)]*\blead_id\b[^)]*\)/i.test(campaignMemberFixSql)) {
   throw new Error('Campaign member RPC forward-fix reintroduces an ambiguous lead_id conflict target.')
 }
 
+const manualMessageChannelFixSql = await readFile(path.join(migrationsDirectory, expectedManualMessageChannelFix), 'utf8')
+for (const marker of [
+  'create or replace function public.save_manual_outbound_message(',
+  'create or replace function public.approve_manual_outbound_message(',
+  'v_channel := p_channel::public.activity_channel',
+  "v_channel::text, p_language",
+  "'outreach_draft_saved', v_channel",
+  'v_channel := v_message.channel::public.activity_channel',
+  "'outreach_approved', v_channel",
+  'security invoker',
+]) {
+  if (!manualMessageChannelFixSql.includes(marker)) {
+    throw new Error(`Manual message channel forward-fix is missing enum boundary guard: ${marker}`)
+  }
+}
+if (/outreach_(draft_saved|approved)'\s*,\s*v_message\.channel/i.test(manualMessageChannelFixSql)) {
+  throw new Error('Manual message channel forward-fix writes text directly into activities.channel.')
+}
+
 const schemaSnapshot = await readFile(schemaSnapshotPath, 'utf8')
 for (const marker of [
   'uidx_leads_org_email_norm on public.leads(org_id, email_norm)',
@@ -130,6 +154,14 @@ if (/uidx_leads_(email|domain|phone)_norm on public\.leads\(/.test(schemaSnapsho
 }
 if (!schemaSnapshot.includes('on conflict on constraint campaign_members_campaign_id_lead_id_key do nothing')) {
   throw new Error('Schema snapshot is missing the disambiguated campaign member conflict target.')
+}
+for (const marker of [
+  'v_channel := p_channel::public.activity_channel',
+  "v_channel::text, p_language",
+  "'outreach_draft_saved', v_channel",
+  "'outreach_approved', v_channel",
+]) {
+  if (!schemaSnapshot.includes(marker)) throw new Error(`Schema snapshot is missing manual message channel guard: ${marker}`)
 }
 
 console.log(`Verified ${files.length} migration files, unique versions, and required OutreachOps guards.`)

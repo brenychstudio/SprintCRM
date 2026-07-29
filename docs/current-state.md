@@ -75,6 +75,8 @@ The same form edits existing contact details. Successful saves invalidate Lead a
 
 `OUTREACH-02R-FIX-03` adds an unapplied forward migration that replaces only `add_campaign_members`. The original function's table output variable `lead_id` conflicted with the unqualified `ON CONFLICT (campaign_id, lead_id)` target and raised PostgreSQL `42702`. The replacement uses qualified table aliases and the named unique constraint while preserving its signature, RLS execution mode, eligibility results, audit, and CRM activity behavior. Linked verification and production apply remain pending until the local database password authenticates successfully.
 
+`OUTREACH-02R-FIX-04` adds the next unapplied forward migration for manual message save and approval. Canonical `outbound_messages.channel` remains text/check, while CRM `activities.channel` is `public.activity_channel`; the replacement RPCs validate the unchanged text parameter once, persist canonical text, and use the typed enum for timeline writes. This removes PostgreSQL `42804` without creating a PostgREST overload and proactively protects the approval transition. Generated types are unchanged because both RPC signatures and return types are unchanged.
+
 ## Engineering baseline added here
 
 - Node pin: `.nvmrc` (`24.13.0`).
