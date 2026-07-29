@@ -131,12 +131,23 @@ export async function getCampaignMemberContext(campaignId: string, memberId: str
   const [research, messages] = await Promise.all([listResearchSnapshots(memberId), listOutboundMessages(memberId)])
   return { campaign, member, lead: leads.get(member.lead_id) ?? null, research, messages }
 }
-export async function listCampaignSummariesForLead(leadId: string): Promise<Array<{ campaign: Campaign; member: CampaignMember }>> {
+export type CampaignLeadSummary = {
+  campaign: Campaign
+  member: CampaignMember
+  latestResearch: ResearchSnapshot | null
+  latestMessage: OutboundMessage | null
+}
+
+export async function listCampaignSummariesForLead(leadId: string): Promise<CampaignLeadSummary[]> {
   const [campaigns, response] = await Promise.all([listCampaigns(), supabase.from('campaign_members').select('*').eq('lead_id', leadId)])
   if (response.error) fail(response.error, 'Unable to load outreach summary.')
   const byId = new Map(campaigns.map((campaign) => [campaign.id, campaign]))
-  return (response.data ?? []).map(asMember).map((member) => ({ member, campaign: byId.get(member.campaign_id) }))
+  const summaries = (response.data ?? []).map(asMember).map((member) => ({ member, campaign: byId.get(member.campaign_id) }))
     .filter((item): item is { campaign: Campaign; member: CampaignMember } => Boolean(item.campaign))
+  return Promise.all(summaries.map(async ({ campaign, member }) => {
+    const [research, messages] = await Promise.all([listResearchSnapshots(member.id), listOutboundMessages(member.id)])
+    return { campaign, member, latestResearch: research[0] ?? null, latestMessage: messages[0] ?? null }
+  }))
 }
 export async function outreachTaskCounts(): Promise<{ needsReview: number; researchRequired: number; needsAttention: number }> {
   const { data, error } = await supabase.from('campaign_members').select('status')

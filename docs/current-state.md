@@ -77,6 +77,8 @@ The same form edits existing contact details. Successful saves invalidate Lead a
 
 `OUTREACH-02R-FIX-04` adds the next unapplied forward migration for manual message save and approval. Canonical `outbound_messages.channel` remains text/check, while CRM `activities.channel` is `public.activity_channel`; the replacement RPCs validate the unchanged text parameter once, persist canonical text, and use the typed enum for timeline writes. This removes PostgreSQL `42804` without creating a PostgREST overload and proactively protects the approval transition. Generated types are unchanged because both RPC signatures and return types are unchanged.
 
+`OUTREACH-02R-FIX-05` removes raw `activity.*` keys from the LeadDrawer timeline. All known CRM and Outreach activity types now have `en`, `uk`, `es`, and `ru` labels, and an unknown type receives a user-facing fallback instead of its internal identifier. The compact Outreach summary now includes latest immutable Research and Message versions in addition to campaign and status.
+
 ## Engineering baseline added here
 
 - Node pin: `.nvmrc` (`24.13.0`).

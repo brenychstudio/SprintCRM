@@ -13,6 +13,7 @@ import {
 import type { Lead, LeadStage, NextAction } from '../../../features/leads/types'
 import { useI18n } from '../../../i18n/i18n'
 import { isoAtMadridNineAMInDays, isoAtMadridTimeForDateInput, madridDateTimeInputFromISO } from '../../../lib/dates'
+import { activityLabel } from '../../../features/leads/activityLabels'
 
 const OutreachDrawerSummary = lazy(() => import('../outreach/OutreachDrawerSummary').then((module) => ({ default: module.OutreachDrawerSummary })))
 
@@ -565,7 +566,7 @@ export function LeadDrawer({
                 <ul className="space-y-2">
                   {recentActivities.map((activity) => (
                     <li key={activity.id} className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2">
-                      <p className="text-sm font-medium leading-tight text-zinc-800">{t(`activity.${activity.type}`)}</p>
+                      <p className="text-sm font-medium leading-tight text-zinc-800">{activityLabel(t, activity.type)}</p>
                       <p className="mt-1 text-xs text-zinc-500">{formatDrawerDate(activity.at)}</p>
                     </li>
                   ))}
