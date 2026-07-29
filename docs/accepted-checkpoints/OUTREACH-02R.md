@@ -37,3 +37,9 @@ git diff --check - pass
 This runtime has no available browser binding, so authenticated visual smoke could not run here. Before marking accepted, run the brief manual smoke with `VITE_OUTREACH_OPS_ENABLED=true`: feature flag off/on, campaign creation, eligibility, research/message versioning, approve/skip, activity/audit, Drawer, Today, light/dark, narrow viewport, route refresh/back, and all four locales.
 
 Docker-dependent local reset and behavioral RLS integration remain the pre-existing verification debt before staging/private beta.
+
+## Smoke follow-up
+
+- `OUTREACH-02R-FIX-01` fixed a P1 wizard blocker where the Offer step could proceed to campaign overview before the Leads step was usable.
+- The campaign editor now treats Leads as the only submit step, uses explicit wizard navigation helpers, and supports adding new leads in edit mode without deleting or duplicating existing members.
+- `OUTREACH-02R` remains unaccepted until the authenticated browser smoke is repeated successfully.

@@ -1,5 +1,21 @@
 import type { CampaignMember, CampaignMemberStatus, CampaignProgress, EligibilityOutcome } from './types'
 
+export const campaignWizardSteps = [1, 2, 3, 4] as const
+export type CampaignWizardStep = (typeof campaignWizardSteps)[number]
+export const campaignLeadsWizardStep: CampaignWizardStep = 4
+
+export function nextCampaignWizardStep(step: CampaignWizardStep): CampaignWizardStep {
+  return step >= campaignLeadsWizardStep ? campaignLeadsWizardStep : (step + 1) as CampaignWizardStep
+}
+
+export function previousCampaignWizardStep(step: CampaignWizardStep): CampaignWizardStep {
+  return step <= 1 ? 1 : (step - 1) as CampaignWizardStep
+}
+
+export function isCampaignWizardSubmitStep(step: CampaignWizardStep): boolean {
+  return step === campaignLeadsWizardStep
+}
+
 const reviewPriority: Record<CampaignMemberStatus, number> = {
   needs_review: 0, draft_ready: 1, research_ready: 2, failed: 3, queued: 4, researching: 5,
   followup_due: 6, approved: 7, provider_draft: 8, sent: 9, replied: 10, skipped: 11, suppressed: 12,

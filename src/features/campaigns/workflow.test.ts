@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { campaignProgress, eligibilityLabelKey, nextReviewMemberId, reviewQueue } from './workflow'
+import { campaignLeadsWizardStep, campaignProgress, eligibilityLabelKey, isCampaignWizardSubmitStep, nextCampaignWizardStep, nextReviewMemberId, previousCampaignWizardStep, reviewQueue } from './workflow'
 import type { CampaignMember } from './types'
 
 function member(id: string, status: CampaignMember['status']): CampaignMember {
@@ -18,5 +18,12 @@ describe('campaign workflow helpers', () => {
   })
   it('uses stable eligibility keys', () => {
     expect(eligibilityLabelKey('suppressed')).toBe('campaigns.eligibility.suppressed')
+  })
+  it('keeps the campaign wizard on Leads after clicking Next from Offer', () => {
+    expect(nextCampaignWizardStep(3)).toBe(campaignLeadsWizardStep)
+    expect(isCampaignWizardSubmitStep(3)).toBe(false)
+    expect(isCampaignWizardSubmitStep(campaignLeadsWizardStep)).toBe(true)
+    expect(nextCampaignWizardStep(campaignLeadsWizardStep)).toBe(campaignLeadsWizardStep)
+    expect(previousCampaignWizardStep(campaignLeadsWizardStep)).toBe(3)
   })
 })
