@@ -51,6 +51,8 @@ Create/Edit lead
 
 The smoke also confirmed light/dark themes, `en`/`uk`/`es`/`ru`, responsive layouts, production migrations, and Supabase synchronization. Approval remains human-controlled and does not send a message.
 
+Acceptance outcome: P0 = `0`; workflow-blocking P1 = `0`.
+
 Docker-dependent local reset and behavioral RLS integration remain the pre-existing verification debt before staging/private beta; they do not block this manual UI milestone.
 
 ## Smoke follow-up

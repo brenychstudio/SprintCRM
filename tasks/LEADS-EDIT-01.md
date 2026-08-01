@@ -57,7 +57,7 @@ Replace the blank-record `New lead` behavior with focused create/edit routes, ad
 - Contact detail update and `manual_edit` activity are two client writes. Activity failure must not encourage a duplicate update retry; this behavior will be documented and handled as best-effort timeline logging.
 - Campaign wizard state is currently component-local, so route round-trips need explicit session-scoped persistence.
 - The repository had no DOM test harness. A dev-only Testing Library/jsdom setup now covers the critical create/edit contracts without changing production runtime dependencies.
-- Authenticated browser smoke remains required before this task and `OUTREACH-02R` are accepted.
+- Authenticated browser smoke is required before acceptance and was completed as part of the accepted `OUTREACH-02R-CLOSE` workflow.
 
 ## Acceptance criteria
 
@@ -108,8 +108,8 @@ feat(leads): add manual creation and contact editing
 
 - Create `docs/accepted-checkpoints/LEADS-EDIT-01.md` after evidence is available.
 - Create an ADR for the focused lead form and duplicate behavior.
-- Update `docs/current-state.md`, `docs/architecture/outreach-target.md`, and the pending `OUTREACH-02R` checkpoint.
+- Update `docs/current-state.md`, `docs/architecture/outreach-target.md`, and the `OUTREACH-02R` checkpoint.
 
 ## Implementation result
 
-Implementation and automated gates are complete on 2026-07-29. Authenticated theme/localization/responsive smoke remains open because no browser was connected. Linked migration verification is also open because the current local database password is rejected; this task contains no migration or production database write.
+Implementation, automated gates, and authenticated production-linked smoke were complete on 2026-07-29. The product owner verified create/edit persistence, duplicate UX, Campaign repair round-trip, themes, localization, responsive layouts, refresh/back, and normal Drawer operations. The Codex browser runtime had no connected browser, but this does not leave an acceptance gap: the final smoke was performed in the authenticated CRM session. This task contains no migration or production database write; linked migration synchronization was confirmed through the Supabase CLI as part of `OUTREACH-02R-CLOSE`.
