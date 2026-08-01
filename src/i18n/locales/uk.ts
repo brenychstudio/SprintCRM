@@ -409,6 +409,7 @@ const uk: Record<string, string> = {
   'campaigns.memberNotFound': 'Учасника кампанії не знайдено або він недоступний.',
   'campaigns.unspecified': 'Цільовий сегмент не вказано',
   'campaigns.none': 'Ще не підготовлено',
+  'campaigns.contactPersonNotSpecified': 'Контактну особу не вказано',
   'campaigns.updated': 'Оновлено {date}',
   'campaigns.version': 'Версія {version}',
   'campaigns.previous': 'Назад',
@@ -500,6 +501,7 @@ const uk: Record<string, string> = {
   'campaigns.research.evidenceUrl': 'URL',
   'campaigns.research.evidenceClaim': 'Твердження або спостереження',
   'campaigns.research.addEvidence': 'Додати доказ',
+  'campaigns.research.sourceNumber': 'Джерело {number}',
   'campaigns.research.save': 'Зберегти версію дослідження',
   'campaigns.remove': 'Видалити',
   'campaigns.message.title': 'Ручне повідомлення',
@@ -604,6 +606,9 @@ const uk: Record<string, string> = {
   'campaigns.aiRuntime.costNotConfigured': 'Не налаштовано',
   'campaigns.aiRuntime.identifier': 'ID перевірки',
   'campaigns.aiRuntime.failedHint': 'Перевірка AI-з’єднання не вдалася.',
+  'campaigns.field.proofContext': 'Релевантні кейси або докази', 'campaigns.field.proofContextHint': 'Додайте перевірені кейси портфоліо, посилання або докази, на які може посилатися AI. AI не має вигадувати кейси, яких тут немає.',
+  'campaigns.aiResearch.title': 'AI-дослідження', 'campaigns.aiResearch.status': 'Статус', 'campaigns.aiResearch.notGenerated': 'Не згенеровано', 'campaigns.aiResearch.ready': 'Готово', 'campaigns.aiResearch.researching': 'Дослідження…', 'campaigns.aiResearch.completed': 'Завершено', 'campaigns.aiResearch.failed': 'Помилка', 'campaigns.aiResearch.websiteRequired': 'Потрібен сайт', 'campaigns.aiResearch.explanation': 'Досліджує лише публічний сайт компанії та потребує перевірки людиною.', 'campaigns.aiResearch.domain': 'Публічний сайт', 'campaigns.aiResearch.websiteRequiredHint': 'Додайте дійсний публічний сайт. Ручне дослідження залишається доступним.', 'campaigns.aiResearch.generate': 'Згенерувати AI-дослідження', 'campaigns.aiResearch.generateNew': 'Згенерувати нову версію', 'campaigns.aiResearch.laterStatusWarning': 'Існуючі повідомлення не перегенеровуються автоматично.', 'campaigns.aiResearch.version': 'Версія дослідження', 'campaigns.aiResearch.reviewVersion': 'Остання згенерована версія', 'campaigns.aiResearch.model': 'Модель', 'campaigns.aiResearch.tokens': 'Усього токенів', 'campaigns.aiResearch.duration': 'Тривалість', 'campaigns.aiResearch.identifier': 'ID завдання', 'campaigns.aiResearch.reviewRequired': 'AI-дослідження потрібно перевірити перед аутрічем.', 'campaigns.aiResearch.failedHint': 'AI-дослідження не вдалося згенерувати. Версію не збережено.', 'campaigns.aiResearch.confidence': 'Впевненість', 'campaigns.aiResearch.sources': 'Джерела доказів',
+  'campaigns.aiResearch.versionValue': 'Версія {version}',
 }
 
 export default uk

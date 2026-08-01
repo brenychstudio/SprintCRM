@@ -19,6 +19,7 @@ export function CampaignsPage() {
         default_channel: campaign.default_channel,
         default_language: campaign.default_language,
         tone: campaign.tone ?? undefined,
+        proof_context: campaign.proof_context ?? undefined,
         status,
       })
     },

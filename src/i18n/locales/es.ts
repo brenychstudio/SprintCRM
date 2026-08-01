@@ -402,6 +402,7 @@ const es: Record<string, string> = {
   'campaigns.memberNotFound': 'Campaign member not found or unavailable.',
   'campaigns.unspecified': 'No target segment specified',
   'campaigns.none': 'Not prepared yet',
+  'campaigns.contactPersonNotSpecified': 'Persona de contacto no especificada',
   'campaigns.updated': 'Updated {date}',
   'campaigns.version': 'Version {version}',
   'campaigns.previous': 'Previous',
@@ -493,6 +494,7 @@ const es: Record<string, string> = {
   'campaigns.research.evidenceUrl': 'URL',
   'campaigns.research.evidenceClaim': 'Claim or observation',
   'campaigns.research.addEvidence': 'Add evidence',
+  'campaigns.research.sourceNumber': 'Fuente {number}',
   'campaigns.research.save': 'Save research version',
   'campaigns.remove': 'Remove',
   'campaigns.message.title': 'Manual message',
@@ -597,6 +599,11 @@ const es: Record<string, string> = {
   'campaigns.aiRuntime.costNotConfigured': 'Sin configurar',
   'campaigns.aiRuntime.identifier': 'ID de prueba',
   'campaigns.aiRuntime.failedHint': 'La prueba de conexión de IA falló.',
+  'campaigns.field.proofContext': 'Casos o pruebas relevantes', 'campaigns.field.proofContextHint': 'Añade casos, enlaces o pruebas verificadas que la IA pueda citar. La IA no debe inventar casos no incluidos aquí.',
+  'campaigns.aiResearch.title': 'Investigación con IA', 'campaigns.aiResearch.status': 'Estado', 'campaigns.aiResearch.notGenerated': 'No generada', 'campaigns.aiResearch.ready': 'Lista', 'campaigns.aiResearch.researching': 'Investigando…', 'campaigns.aiResearch.completed': 'Completada', 'campaigns.aiResearch.failed': 'Fallida', 'campaigns.aiResearch.websiteRequired': 'Se requiere sitio web', 'campaigns.aiResearch.explanation': 'Investiga solo el sitio web público y requiere verificación humana.', 'campaigns.aiResearch.domain': 'Sitio público', 'campaigns.aiResearch.websiteRequiredHint': 'Añade un sitio público válido. La investigación manual sigue disponible.', 'campaigns.aiResearch.generate': 'Generar investigación con IA', 'campaigns.aiResearch.generateNew': 'Generar nueva versión', 'campaigns.aiResearch.laterStatusWarning': 'Los mensajes existentes no se regeneran automáticamente.', 'campaigns.aiResearch.version': 'Versión', 'campaigns.aiResearch.reviewVersion': 'Última versión generada', 'campaigns.aiResearch.model': 'Modelo', 'campaigns.aiResearch.tokens': 'Tokens totales', 'campaigns.aiResearch.duration': 'Duración', 'campaigns.aiResearch.identifier': 'ID de trabajo', 'campaigns.aiResearch.reviewRequired': 'La investigación de IA debe revisarse antes del outreach.', 'campaigns.aiResearch.failedHint': 'No se guardó ninguna versión de investigación.',
+  'campaigns.aiResearch.confidence': 'Confianza',
+  'campaigns.aiResearch.sources': 'Fuentes de evidencia',
+  'campaigns.aiResearch.versionValue': 'Versión {version}',
 }
 
 export default es
