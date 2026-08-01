@@ -2,7 +2,7 @@
 
 ## OUTREACH-03B research boundary
 
-The next supervised research workflow is a single-contact, explicit user action in Campaign Full Workspace. It sends no messages and changes no later workflow status. A validated public HTTP(S) company hostname is the sole OpenAI built-in web-search domain; the Edge Function never fetches an arbitrary supplied URL. URL validation rejects credentials, localhost, `.local`, loopback/private IP literals, non-default ports, and placeholder domains. Strict `research_v2` evidence must be source-returned or on that validated domain. `proof_context` is human-entered verified portfolio material: without it, `recommended_case` must be null and output must contain the localized no-proof warning; with it, a recommended case must match a recognizable verified title/identifying phrase and warnings cannot claim proof is absent. Trusted Responses instructions are separate from serialized untrusted CRM/site data, all narrative fields use the resolved lead/campaign language, confidence is limited to 0.85 for website-only research, and two to three unique concise evidence cards remain visible for human review.
+The accepted supervised research workflow is a single-contact, explicit user action in Campaign Full Workspace. It sends no messages and changes no later workflow status. A validated public HTTP(S) company hostname is the sole OpenAI built-in web-search domain; the Edge Function never fetches an arbitrary supplied URL. URL validation rejects credentials, localhost, `.local`, loopback/private IP literals, non-default ports, and placeholder domains. Strict `research_v2` evidence must be source-returned or on that validated domain. `proof_context` is human-entered verified portfolio material: without it, `recommended_case` must be null and output must contain the localized no-proof warning; with it, a recommended case must match a recognizable verified title/identifying phrase and warnings cannot claim proof is absent. Trusted Responses instructions are separate from serialized untrusted CRM/site data, all narrative fields use the resolved lead/campaign language, confidence is limited to 0.85 for website-only research, and two to three unique concise evidence cards remain visible for human review. Language is an execution-time resolved constraint, not a persisted `research_v2` or `research_snapshots` field; reporting must not infer it from an absent output-payload key.
 
 ## Product boundary
 
@@ -53,11 +53,12 @@ Campaign-member state belongs in `campaign_members`, not in `leads`. Use interna
 3. `LEADS-EDIT-01`: accepted — focused manual contact create/edit and Campaign eligibility repair.
 4. `OUTREACH-PILOT-01`: one test campaign with 3 real contacts, then 3–7 more; manual workflow, ChatGPT Work browser assistance, and human approval only. Record actual cycle time, missing fields, confusing transitions, and version churn before automating.
 5. `OUTREACH-03A`: accepted — safe supervised AI runtime foundation. Production migrations `20260801000001` and forward fix `20260801000002` are applied, the authenticated `outreach-ai-runtime` Edge Function is ACTIVE, and the synthetic production probe completed on `gpt-5.4-mini` with 82 total tokens in 2164 ms. The probe created no research/message content or status mutation and made no Gmail/sending operation. The OpenAI boundary remains server-only; client and server kill switches remain available.
-6. `OUTREACH-03B` — AI Research Job: next engineering checkpoint. Scope a supervised, human-reviewed research job from the proven pilot workflow; do not add automatic sends.
-7. `OUTREACH-03C` / `OUTREACH-03D`: supervised AI draft and QA respectively, each scoped from the proven pilot workflow.
-8. `OUTREACH-04R`: Gmail OAuth, Gmail draft-first and reconciliation.
-9. `OUTREACH-05R`: replies, follow-ups, Today and Pipeline routing.
-10. `AUTONOMY`: policy engine, queues, idempotency, kill switches and Shadow Mode only after validated supervised use.
+6. `OUTREACH-03B`: accepted — supervised, domain-restricted AI research with immutable snapshots, strict V2 quality validation, production forward fixes, and no automatic sends.
+7. `OUTREACH-03C`: next milestone — supervised AI Draft Generation. Generate only from campaign context, the reviewed latest research snapshot, verified proof context, resolved lead/campaign language, campaign tone, and offer; require an explicit single click and immutable human-reviewed message versions. No Gmail send, automatic approval, or automatic campaign progression.
+8. `OUTREACH-03D`: supervised AI QA, scoped from proven draft-generation use.
+9. `OUTREACH-04R`: Gmail OAuth, Gmail draft-first and reconciliation.
+10. `OUTREACH-05R`: replies, follow-ups, Today and Pipeline routing.
+11. `AUTONOMY`: policy engine, queues, idempotency, kill switches and Shadow Mode only after validated supervised use.
 
 ## Runtime foundation constraints
 

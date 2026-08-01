@@ -1,5 +1,18 @@
 # OUTREACH-03B — Supervised AI Research Job
 
+## Production acceptance closure record
+
+- **Task goal:** record completed production acceptance for supervised AI research, perform a read-only language-metadata investigation without an OpenAI call, update the acceptance/roadmap documentation, and merge PR #20 after all required checks and green CI.
+- **Current-state evidence:** branch `codex/outreach-03b-ai-research` is clean and tracks its origin. Production reports completed research job `d0a4f643-7407-42dd-b951-9a4ac16c3505` for request `6cd4d50f-cd3e-41aa-865a-c4e597596aab`, using `outreach_research_v2` / `research_v2` on `gpt-5.4-mini`; Version 1 and Version 2 are immutable and the observed workflow remains supervised.
+- **Files inspected:** `AGENTS.md`, branch status, this task record, accepted-checkpoint conventions, current-state/architecture/ADR documentation, migration history, research helper/runtime code, client mappers, and the production ledger/snapshot shape through read-only queries that exclude narrative and lead data.
+- **File plan:** update only `tasks/OUTREACH-03B.md`, `docs/current-state.md`, `docs/architecture/outreach-target.md`, `docs/decisions/0004-domain-restricted-ai-research.md`, and `docs/accepted-checkpoints/OUTREACH-03B.md` unless the investigation proves a future runtime language value is persisted or exposed incorrectly. No migration, deployment, secret, completed production row, or provider request is planned.
+- **Implementation plan:** inspect only output-payload keys, language-metadata values, snapshot columns, and relevant mapper/resolver code; distinguish persisted metadata, diagnostic inference, mapper defaulting, and wrong-field reporting. If runtime is correct, document the diagnostic finding only. If future Draft generation could consume a wrong runtime value, make the smallest code-only resolver-based correction and add focused tests.
+- **Risks and safeguards:** do not print generated narrative, website text, lead data, credentials, or provider prompts. Preserve immutable snapshots and ledger rows. Do not start OUTREACH-03C, call OpenAI, apply migrations, deploy a function, or send/approve/generate a message.
+- **Acceptance criteria:** evidence records the completed job and all stated no-outbound safeguards; the language finding is evidenced without private content; documentation marks OUTREACH-03B ACCEPTED and defines OUTREACH-03C only as the next supervised-draft milestone; all required checks and linked read-only/dry-run migration checks pass; PR #20 is updated, green, ready, merged by the repository method, and local `main` equals `origin/main` with a clean worktree.
+- **Test and manual-smoke plan:** run `verify:migrations`, typecheck, lint, unit tests, build, diff check, migration list, and dry-run. This documentation-only closure has no UI change; authenticated light/dark acceptance was completed in the supplied production evidence.
+- **Proposed commit:** `docs(outreach): accept supervised AI research`.
+- **Documentation impact:** retain the earlier wrapper/activity-owner/V2-start forward fixes and quality fix history, record non-blocking token/pre-staging debt, publish the language-diagnostic conclusion, and add the accepted OUTREACH-03B checkpoint.
+
 ## Pre-edit record
 
 - **Task goal:** add one explicit, supervised AI research operation for a single Campaign Full Workspace member. It may create a versioned AI research snapshot from public website context, but must never generate messages, approve/send outreach, invoke Gmail, create follow-ups, batch work, retry providers, or run in the background.
@@ -59,9 +72,9 @@ The migration is additive. Keep `AI_RESEARCH_ENABLED=false` and `VITE_AI_RESEARC
 - Completed local static verification: `npm run verify:migrations`, `npm run typecheck`, `npm run lint`, `npm run test:unit`, `npm run build`, and `git diff --check` (build retains the known Vite large-bundle warning).
 - Linked read-only verification after the production smoke confirms remote migrations end at `20260801000003`; `npx supabase migration list --password $env:SUPABASE_DB_PASSWORD` identifies only `20260801000004` as pending, and `npx supabase db push --dry-run --password $env:SUPABASE_DB_PASSWORD` would push only the campaign proof-context wrapper forward-fix. Nothing was applied or deployed.
 
-## Acceptance status
+## Historical rollout status
 
-**Not accepted.** Still required: reviewed migration apply; Edge Function deployment; `AI_RESEARCH_ENABLED` secret configuration; local `VITE_AI_RESEARCH_ENABLED` activation; authenticated real-site browser smoke in light/dark themes; evidence/OpenAI usage/ledger/snapshot/audit inspection; and confirmation that no message, send, or later-status regression occurred.
+This historical status is superseded by the production acceptance closure record at the end of this task file.
 
 ## OUTREACH-03B-QUALITY-02 — Research parser diagnostics and proof-title matching
 
@@ -128,3 +141,16 @@ The migration is additive. Keep `AI_RESEARCH_ENABLED=false` and `VITE_AI_RESEARC
 - Completed: `npm run verify:migrations` (17 migrations), `npm run typecheck`, `npm run lint`, `npm run test:unit` (53 tests), `npm run build`, and `git diff --check`. The build retains only the existing Vite large-chunk warning.
 - Both linked non-applying commands were attempted with the existing `SUPABASE_DB_PASSWORD`: `npx supabase migration list --password $env:SUPABASE_DB_PASSWORD` and `npx supabase db push --dry-run --password $env:SUPABASE_DB_PASSWORD`. Both were blocked before migration inspection by PostgreSQL authentication SQLSTATE `28P01`; no secret, migration, Edge Function, provider call, or production data changed. The expected state—only `20260801000006_fix_ai_research_v2_start_contract.sql` pending—must be confirmed after the existing credential is corrected.
 - Authenticated Version 2 production retest remains pending reviewed migration application. No authenticated browser session is available here; this backend-only migration has no light/dark UI change.
+
+## Production acceptance closure
+
+**Status: ACCEPTED.**
+
+- Reviewed production rollout applied the campaign-wrapper, activity-owner, and V2 start-contract forward fixes; the deployed Edge Function then completed the successful V2 research job without an OpenAI request during this closure task.
+- Completed job: `d0a4f643-7407-42dd-b951-9a4ac16c3505`; request: `6cd4d50f-cd3e-41aa-865a-c4e597596aab`; status: `completed`; prompt/schema: `outreach_research_v2` / `research_v2`; provider/model: `openai` / `gpt-5.4-mini`.
+- Usage and quality: 9,309 input, 0 cached-input, 438 output, and 9,747 total tokens in 4,669 ms; confidence 0.78; three distinct reviewable evidence sources; verified Oria House Barcelona proof context; Spanish narrative; strict schema and semantic validation passed; human review remains required.
+- State and safety: immutable Version 1 remains and immutable Version 2 exists; exactly two versions are saved; Version 2 links to the completed ledger; requested/completed audit events exist; the canonical `research_saved` activity has an owner; the member is `research_ready`; no message version, approval, Gmail draft/send, outbound send, campaign-status regression, or pending/failed job for the successful request exists.
+- Language-metadata investigation was read-only and did not expose narrative or lead data. The completed payload has only `confidence`, `evidence`, `observed_opportunity`, `recommended_case`, `recommended_offer`, and `warnings`; no `language`, `output_language`, or `locale` key exists. `research_snapshots` has no language column. The server resolves language from lead, then campaign default, before the provider call; no client/server mapper persists or exposes a research-language value. The reported `en` was therefore a diagnostic/report fallback from an absent field, not an incorrect production value or a future Draft-generation runtime dependency. No runtime code or production row changed.
+- Closure verification passed: `npm run verify:migrations` (17 migration files), `npm run typecheck`, `npm run lint`, `npm run test:unit` (59 tests), `npm run build` (known Vite large-bundle warning only), and `git diff --check`. Linked `npx supabase migration list --password $env:SUPABASE_DB_PASSWORD` matched local and remote through `20260801000006`; linked `npx supabase db push --dry-run --password $env:SUPABASE_DB_PASSWORD` reported the remote database up to date with no migration, seed, or role change.
+- Non-blocking debt: token reduction was not achieved (Version 1: 9,603 total tokens; Version 2: 9,747); cost estimation remains unconfigured; Docker/local Supabase reset, behavioral RLS integration tests, and the existing Vite large-bundle warning remain pre-staging debt.
+- Next milestone only: **OUTREACH-03C — Supervised AI Draft Generation**. It may generate an explicit single-click message draft only from campaign context, the reviewed latest research snapshot, verified proof context, lead/campaign language, campaign tone, and offer. It must use immutable message versions and human review, with no Gmail send, automatic approval, or automatic campaign progression.
