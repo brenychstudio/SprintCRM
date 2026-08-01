@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { I18nProvider } from '../../../i18n/i18n'
 import type { ResearchEvidence } from '../../../features/campaigns/types'
-import { contactNameOrFallback, ResearchEvidenceCards } from './CampaignWorkspacePage'
+import { contactNameOrFallback, ResearchEvidenceCards } from './CampaignWorkspaceResearchReview'
 
 function EvidenceHarness() {
   const [evidence, setEvidence] = useState<ResearchEvidence[]>([{ url: 'https://hotel.example.com/a/very/long/path/to/a/page', note: 'The public page clearly presents the hotel’s rooms, services, and visitor-facing information.' }])
