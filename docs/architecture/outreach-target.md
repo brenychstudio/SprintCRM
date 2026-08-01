@@ -1,5 +1,9 @@
 # OutreachOps target architecture
 
+## OUTREACH-03B research boundary
+
+The next supervised research workflow is a single-contact, explicit user action in Campaign Full Workspace. It sends no messages and changes no later workflow status. A validated public HTTP(S) company hostname is the sole OpenAI built-in web-search domain; the Edge Function never fetches an arbitrary supplied URL. URL validation rejects credentials, localhost, `.local`, loopback/private IP literals, non-default ports, and placeholder domains. Strict `research_v1` evidence must be source-returned or on that validated domain. `proof_context` is human-entered verified portfolio material: without it, `recommended_case` must be null and output must warn that no verified case context was provided.
+
 ## Product boundary
 
 SprintCRM remains an internal, human-controlled Client Acquisition OS. The core CRM loop remains intact. OutreachOps adds the following workflow:

@@ -1,4 +1,12 @@
-# Current state - OUTREACH-03A accepted supervised AI runtime foundation
+# Current state - OUTREACH-03B supervised AI research implementation pending rollout
+
+## OUTREACH-03B supervised AI research job
+
+`20260801000003_ai_research_job.sql` additively introduces optional `campaigns.proof_context` and service-role-only research lifecycle RPCs. An explicit user-triggered research job derives campaign/lead server-side, validates a public HTTP(S) website, records an idempotent pending `ai_generations` job, then either records a safe failure or atomically creates an immutable AI `research_snapshots` version. Completion preserves later workflow statuses, writes `ai.research.*` audit events, and adds a canonical `research_saved` activity. Browser clients retain organization-scoped ledger reads but cannot write the ledger.
+
+`outreach-ai-runtime` keeps `runtime_probe` compatible and adds `generate_research`. It uses user scope for CRM reads, service role only for start/finish RPCs, and sends OpenAI only permitted public campaign/lead context. It uses `store:false`, strict JSON Schema, a 45-second timeout, no retries, and `web_search` constrained to the validated company domain. No message, approval, Gmail, send, queue, follow-up, or autonomous action is included.
+
+The Campaign Full Workspace shows its explicit AI Research card only when the three UI flags are enabled. `AI_RESEARCH_ENABLED` and `VITE_AI_RESEARCH_ENABLED` default to false. Production acceptance remains pending reviewed migration apply, function deployment, flag configuration, authenticated real-site smoke, evidence/provider/ledger/snapshot/audit inspection, and no-regression confirmation.
 
 ## OUTREACH-03A accepted production runtime foundation
 

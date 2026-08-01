@@ -597,6 +597,10 @@ const ru: Record<string, string> = {
   'campaigns.aiRuntime.costNotConfigured': 'Не настроено',
   'campaigns.aiRuntime.identifier': 'ID проверки',
   'campaigns.aiRuntime.failedHint': 'Проверка подключения ИИ не удалась.',
+  'campaigns.field.proofContext': 'Релевантные кейсы или доказательства', 'campaigns.field.proofContextHint': 'Добавьте проверенные кейсы портфолио, ссылки или доказательства, на которые может ссылаться AI. AI не должен выдумывать кейсы, которых здесь нет.',
+  'campaigns.aiResearch.title': 'AI-исследование', 'campaigns.aiResearch.status': 'Статус', 'campaigns.aiResearch.notGenerated': 'Не сгенерировано', 'campaigns.aiResearch.ready': 'Готово', 'campaigns.aiResearch.researching': 'Исследование…', 'campaigns.aiResearch.completed': 'Завершено', 'campaigns.aiResearch.failed': 'Ошибка', 'campaigns.aiResearch.websiteRequired': 'Нужен сайт', 'campaigns.aiResearch.explanation': 'Исследует только публичный сайт компании и требует проверки человеком.', 'campaigns.aiResearch.domain': 'Публичный сайт', 'campaigns.aiResearch.websiteRequiredHint': 'Добавьте действительный публичный сайт. Ручное исследование остается доступным.', 'campaigns.aiResearch.generate': 'Сгенерировать AI-исследование', 'campaigns.aiResearch.generateNew': 'Сгенерировать новую версию', 'campaigns.aiResearch.laterStatusWarning': 'Существующие сообщения не перегенерируются автоматически.', 'campaigns.aiResearch.version': 'Версия исследования', 'campaigns.aiResearch.reviewVersion': 'Последняя сгенерированная версия', 'campaigns.aiResearch.model': 'Модель', 'campaigns.aiResearch.tokens': 'Всего токенов', 'campaigns.aiResearch.duration': 'Длительность', 'campaigns.aiResearch.identifier': 'ID задачи', 'campaigns.aiResearch.reviewRequired': 'AI-исследование нужно проверить перед аутричем.', 'campaigns.aiResearch.failedHint': 'AI-исследование не удалось сгенерировать. Версия не сохранена.',
+  'campaigns.aiResearch.confidence': 'Уверенность',
+  'campaigns.aiResearch.sources': 'Источники доказательств',
 }
 
 export default ru

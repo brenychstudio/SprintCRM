@@ -612,6 +612,10 @@ const en: Record<string, string> = {
   'campaigns.aiRuntime.costNotConfigured': 'Not configured',
   'campaigns.aiRuntime.identifier': 'Probe ID',
   'campaigns.aiRuntime.failedHint': 'AI connection test failed.',
+  'campaigns.field.proofContext': 'Relevant cases or proof',
+  'campaigns.field.proofContextHint': 'Add verified portfolio cases, links, or proof the AI may reference. AI must not invent cases that are not listed here.',
+  'campaigns.aiResearch.title': 'AI research', 'campaigns.aiResearch.status': 'Status', 'campaigns.aiResearch.notGenerated': 'Not generated', 'campaigns.aiResearch.ready': 'Ready', 'campaigns.aiResearch.researching': 'Researching…', 'campaigns.aiResearch.completed': 'Completed', 'campaigns.aiResearch.failed': 'Failed', 'campaigns.aiResearch.websiteRequired': 'Website required',
+  'campaigns.aiResearch.explanation': 'Researches only the public company website and always requires human verification.', 'campaigns.aiResearch.domain': 'Public website', 'campaigns.aiResearch.websiteRequiredHint': 'Add a valid public company website to generate AI research. Manual research remains available.', 'campaigns.aiResearch.generate': 'Generate AI research', 'campaigns.aiResearch.generateNew': 'Generate new AI research version', 'campaigns.aiResearch.laterStatusWarning': 'Existing messages are not automatically regenerated.', 'campaigns.aiResearch.version': 'Research version', 'campaigns.aiResearch.reviewVersion': 'Latest generated version', 'campaigns.aiResearch.model': 'Model', 'campaigns.aiResearch.tokens': 'Total tokens', 'campaigns.aiResearch.duration': 'Duration', 'campaigns.aiResearch.identifier': 'Job ID', 'campaigns.aiResearch.reviewRequired': 'AI-generated research must be reviewed before outreach.', 'campaigns.aiResearch.failedHint': 'AI research could not be generated. No research version was saved.', 'campaigns.aiResearch.confidence': 'Confidence', 'campaigns.aiResearch.sources': 'Evidence sources',
 }
 
 export default en

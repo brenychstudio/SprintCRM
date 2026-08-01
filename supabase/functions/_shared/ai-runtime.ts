@@ -23,11 +23,15 @@ export type RuntimeErrorCode =
   | 'unauthorized'
   | 'unavailable'
   | 'runtime_disabled'
+  | 'research_disabled'
   | 'configuration_missing'
+  | 'website_required'
+  | 'invalid_website'
   | 'provider_rate_limited'
   | 'provider_timeout'
   | 'provider_error'
   | 'invalid_provider_response'
+  | 'invalid_evidence'
   | 'persistence_error'
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -108,11 +112,15 @@ export function safeErrorMessage(code: RuntimeErrorCode): string {
     unauthorized: 'You are not authorized to test this AI connection.',
     unavailable: 'The AI connection is currently unavailable.',
     runtime_disabled: 'AI runtime is disabled.',
+    research_disabled: 'AI research is disabled.',
     configuration_missing: 'AI runtime configuration is incomplete.',
+    website_required: 'A public company website is required for AI research.',
+    invalid_website: 'The company website is not safe for AI research.',
     provider_rate_limited: 'The AI provider is temporarily rate limited.',
     provider_timeout: 'The AI provider did not respond in time.',
     provider_error: 'The AI provider could not complete the probe.',
     invalid_provider_response: 'The AI provider returned an invalid probe result.',
+    invalid_evidence: 'The AI provider returned evidence outside the allowed public website.',
     persistence_error: 'The AI probe result could not be recorded.',
   }
   return messages[code]

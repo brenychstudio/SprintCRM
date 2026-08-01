@@ -2,7 +2,7 @@ import { supabase } from '../../lib/supabase'
 import type { Json } from '../../lib/supabase/database.types'
 import { listLeads } from '../leads/leadsApi'
 import type { Lead } from '../leads/types'
-import type { ActiveSuppression, AiRuntimeProbe, AiRuntimeProbeResult, Campaign, CampaignInput, CampaignMember, CampaignMemberWithLead, EligibilityResult, MessageInput, OutboundMessage, ResearchInput, ResearchSnapshot } from './types'
+import type { ActiveSuppression, AiResearchJob, AiResearchResult, AiRuntimeProbe, AiRuntimeProbeResult, Campaign, CampaignInput, CampaignMember, CampaignMemberWithLead, EligibilityResult, MessageInput, OutboundMessage, ResearchInput, ResearchSnapshot } from './types'
 
 const asCampaign = (value: unknown) => value as Campaign
 const asMember = (value: unknown) => value as CampaignMember
@@ -18,7 +18,19 @@ export const campaignQueryKeys = {
   leadSummary: (leadId: string) => ['campaigns', 'lead', leadId] as const,
   tasks: () => ['campaigns', 'tasks'] as const,
   aiRuntimeProbe: (memberId: string) => ['campaigns', 'member', memberId, 'ai-runtime-probe'] as const,
+  aiResearch: (memberId: string) => ['campaigns', 'member', memberId, 'ai-research'] as const,
   suppressions: () => ['campaigns', 'suppressions'] as const,
+}
+export async function getLatestAiResearchJob(memberId: string): Promise<AiResearchJob | null> {
+  const { data, error } = await supabase.from('ai_generations').select('id,generation_status,model_name,total_tokens,duration_ms,request_id,created_at,error_code,output_payload')
+    .eq('campaign_member_id', memberId).eq('job_type', 'research').order('created_at', { ascending: false }).limit(1).maybeSingle()
+  if (error) fail(error, 'Unable to load AI research status.')
+  return data as AiResearchJob | null
+}
+export async function generateAiResearch(memberId: string, clientRequestId: string): Promise<AiResearchResult> {
+  const { data, error } = await supabase.functions.invoke('outreach-ai-runtime', { body: { operation: 'generate_research', campaign_member_id: memberId, client_request_id: clientRequestId } })
+  if (error || !data || data.ok !== true) throw new Error('AI research could not be generated.')
+  return data as AiResearchResult
 }
 export async function getLatestAiRuntimeProbe(memberId: string): Promise<AiRuntimeProbe | null> {
   const { data, error } = await supabase.from('ai_generations')
@@ -56,7 +68,7 @@ export async function createCampaign(input: CampaignInput): Promise<Campaign> {
   const { data, error } = await supabase.rpc('create_manual_campaign', {
     p_name: input.name.trim(), p_description: input.description ?? '', p_target_segment: input.target_segment ?? '',
     p_offer_summary: input.offer_summary ?? '', p_default_channel: input.default_channel,
-    p_default_language: input.default_language, p_tone: input.tone ?? '',
+    p_default_language: input.default_language, p_tone: input.tone ?? '', p_proof_context: input.proof_context ?? '',
   })
   if (error) fail(error, 'Unable to create campaign.')
   return asCampaign(data)
@@ -66,7 +78,7 @@ export async function updateCampaign(id: string, input: CampaignInput): Promise<
     p_campaign_id: id, p_name: input.name.trim(), p_description: input.description ?? '',
     p_target_segment: input.target_segment ?? '', p_offer_summary: input.offer_summary ?? '',
     p_default_channel: input.default_channel, p_default_language: input.default_language,
-    p_tone: input.tone ?? '', p_status: input.status ?? 'draft',
+    p_tone: input.tone ?? '', p_status: input.status ?? 'draft', p_proof_context: input.proof_context ?? '',
   })
   if (error) fail(error, 'Unable to update campaign.')
   return asCampaign(data)

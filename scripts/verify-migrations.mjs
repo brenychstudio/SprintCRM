@@ -12,6 +12,7 @@ const expectedCampaignWorkspaceRpcMigration = '20260725000002_manual_campaign_wo
 const expectedCampaignMemberAmbiguityFix = '20260729000001_fix_add_campaign_members_ambiguous_lead_id.sql'
 const expectedManualMessageChannelFix = '20260729000002_fix_manual_message_channel_cast.sql'
 const expectedAiRuntimeProbeRequestIdFix = '20260801000002_fix_ai_runtime_probe_request_id_ambiguity.sql'
+const expectedAiResearchJobMigration = '20260801000003_ai_research_job.sql'
 const requiredCampaignTables = [
   'campaigns',
   'campaign_members',
@@ -65,6 +66,9 @@ if (!files.includes(expectedManualMessageChannelFix)) {
 
 if (!files.includes(expectedAiRuntimeProbeRequestIdFix)) {
   throw new Error(`Missing required AI runtime probe request-id forward-fix: ${expectedAiRuntimeProbeRequestIdFix}`)
+}
+if (!files.includes(expectedAiResearchJobMigration)) {
+  throw new Error(`Missing required supervised AI research migration: ${expectedAiResearchJobMigration}`)
 }
 
 for (const file of files) {
@@ -169,6 +173,27 @@ for (const marker of [
 }
 if (/from\s+public\.ai_generations\s*\n\s*where\s+org_id\s*=\s*v_member\.organization_id\s+and\s+request_id\s*=\s*p_request_id/i.test(aiRuntimeProbeRequestIdFixSql)) {
   throw new Error('AI runtime probe request-id forward-fix reintroduces an ambiguous retry lookup.')
+}
+
+const aiResearchJobSql = await readFile(path.join(migrationsDirectory, expectedAiResearchJobMigration), 'utf8')
+for (const marker of [
+  'add column if not exists proof_context text',
+  'create or replace function public.start_ai_research_job(',
+  'create or replace function public.finish_ai_research_job(',
+  "'research'", "'research_v1'", "'outreach_research_v1'",
+  "'ai.research.requested'", "'ai.research.completed'", "'ai.research.failed'",
+  "source, observed_opportunity", "'ai'", 'ai_generation_id',
+  "campaign_member.status in ('queued', 'researching', 'research_ready')",
+  'for update;', 'coalesce(max(snapshot.version), 0) + 1',
+  'revoke insert, update on table public.ai_generations from public, anon, authenticated;',
+  'revoke all on function public.start_ai_research_job(uuid, uuid, uuid, text, text) from public, anon, authenticated;',
+  'grant execute on function public.start_ai_research_job(uuid, uuid, uuid, text, text) to service_role;',
+  'grant execute on function public.finish_ai_research_job(uuid, uuid, text, text, text, jsonb, integer, integer, integer, integer, integer, text, text) to service_role;',
+]) {
+  if (!aiResearchJobSql.includes(marker)) throw new Error(`AI research migration is missing required guard: ${marker}`)
+}
+if (!aiResearchJobSql.includes("where generation.id = v_job.id returning generation.* into v_job") || !aiResearchJobSql.includes("if v_job.generation_status <> 'pending'")) {
+  throw new Error('AI research migration is missing terminal-state protection.')
 }
 
 const schemaSnapshot = await readFile(schemaSnapshotPath, 'utf8')
