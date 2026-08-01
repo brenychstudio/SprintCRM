@@ -1067,6 +1067,11 @@ export type Database = {
         Args: { p_actor_user_id: string; p_cached_input_tokens: number | null; p_duration_ms: number; p_error_code: string | null; p_error_message: string | null; p_input_tokens: number | null; p_job_id: string; p_output_payload: Json | null; p_output_tokens: number | null; p_provider_request_id: string | null; p_provider_response_id: string | null; p_status: string; p_total_tokens: number | null }
         Returns: { cached_input_tokens: number | null; duration_ms: number | null; estimated_cost_usd: number | null; generation_status: string; input_tokens: number | null; job_id: string; model_name: string | null; output_tokens: number | null; request_id: string | null; research_snapshot_id: string | null; research_version: number | null; schema_version: string | null; total_tokens: number | null }[]
       }
+      fail_stale_ai_research_job: {
+        Args: { p_actor_user_id: string; p_error_code: string; p_job_id: string }
+        Returns: Database["public"]["Tables"]["ai_generations"]["Row"]
+        SetofOptions: { from: "*"; to: "ai_generations"; isOneToOne: true; isSetofReturn: false }
+      }
       start_ai_research_job: {
         Args: { p_actor_user_id: string; p_campaign_member_id: string; p_model: string; p_prompt_version: string; p_request_id: string }
         Returns: { cached_input_tokens: number | null; duration_ms: number | null; estimated_cost_usd: number | null; generation_status: string; input_tokens: number | null; job_id: string; model_name: string | null; output_tokens: number | null; request_id: string | null; schema_version: string | null; total_tokens: number | null; was_created: boolean }[]

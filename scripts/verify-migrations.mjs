@@ -14,6 +14,7 @@ const expectedManualMessageChannelFix = '20260729000002_fix_manual_message_chann
 const expectedAiRuntimeProbeRequestIdFix = '20260801000002_fix_ai_runtime_probe_request_id_ambiguity.sql'
 const expectedAiResearchJobMigration = '20260801000003_ai_research_job.sql'
 const expectedCampaignProofContextWrapperFix = '20260801000004_fix_campaign_proof_context_wrapper_assignment.sql'
+const expectedAiResearchActivityOwnerFix = '20260801000005_fix_ai_research_activity_owner.sql'
 const requiredCampaignTables = [
   'campaigns',
   'campaign_members',
@@ -76,6 +77,12 @@ if (!files.includes(expectedCampaignProofContextWrapperFix)) {
 }
 if (files.indexOf(expectedCampaignProofContextWrapperFix) <= files.indexOf(expectedAiResearchJobMigration)) {
   throw new Error('Campaign proof-context wrapper forward-fix must follow the AI research migration.')
+}
+if (!files.includes(expectedAiResearchActivityOwnerFix)) {
+  throw new Error(`Missing required AI research activity-owner forward-fix: ${expectedAiResearchActivityOwnerFix}`)
+}
+if (files.indexOf(expectedAiResearchActivityOwnerFix) <= files.indexOf(expectedCampaignProofContextWrapperFix)) {
+  throw new Error('AI research activity-owner forward-fix must follow the campaign proof-context wrapper forward-fix.')
 }
 
 for (const file of files) {
@@ -232,6 +239,50 @@ for (const functionName of ['create_manual_campaign', 'update_manual_campaign'])
   const brokenScalarCompositeAssignment = new RegExp(`select\\s+public\\.${functionName}\\s*\\([\\s\\S]*?\\)\\s+into\\s+v_campaign`, 'i')
   if (brokenScalarCompositeAssignment.test(campaignProofContextWrapperFixSql)) {
     throw new Error(`Campaign proof-context wrapper forward-fix retains broken scalar composite assignment: ${functionName}`)
+  }
+}
+
+const aiResearchActivityOwnerFixSql = await readFile(path.join(migrationsDirectory, expectedAiResearchActivityOwnerFix), 'utf8')
+for (const marker of [
+  'create or replace function public.finish_ai_research_job(',
+  'p_job_id uuid, p_actor_user_id uuid, p_status text, p_provider_response_id text,',
+  'p_provider_request_id text, p_output_payload jsonb, p_input_tokens integer,',
+  'p_cached_input_tokens integer, p_output_tokens integer, p_total_tokens integer,',
+  'p_duration_ms integer, p_error_code text, p_error_message text',
+  'language plpgsql security definer set search_path = public',
+  "if p_status = 'completed' and v_job.owner is null",
+  'insert into public.activities as activity (org_id, owner, lead_id, type, meta)',
+  "values (v_member.organization_id, v_job.owner, v_member.lead_id, 'research_saved'",
+  'create or replace function public.fail_stale_ai_research_job(',
+  "where generation.id = p_job_id and generation.job_type = 'research'",
+  "if v_job.generation_status <> 'pending'",
+  "v_job.created_at > v_completed_at - interval '5 minutes'",
+  "p_error_code is distinct from 'persistence_recovery'",
+  "generation_status = 'failed'",
+  'completed_at = v_completed_at',
+  'duration_ms = least(',
+  "error_code = 'persistence_recovery'",
+  "error_message = 'Recovered stale pending research job after persistence failure.'",
+  "'ai.research.failed'",
+  "'initiating_user_id', v_job.owner",
+  "'recovery_reason', p_error_code",
+  "interval '5 minutes'",
+  'revoke all on function public.finish_ai_research_job(uuid, uuid, text, text, text, jsonb, integer, integer, integer, integer, integer, text, text) from public, anon, authenticated;',
+  'grant execute on function public.finish_ai_research_job(uuid, uuid, text, text, text, jsonb, integer, integer, integer, integer, integer, text, text) to service_role;',
+  'revoke all on function public.fail_stale_ai_research_job(uuid, uuid, text) from public, anon, authenticated;',
+  'grant execute on function public.fail_stale_ai_research_job(uuid, uuid, text) to service_role;',
+]) {
+  if (!aiResearchActivityOwnerFixSql.includes(marker)) {
+    throw new Error(`AI research activity-owner forward-fix is missing required guard: ${marker}`)
+  }
+}
+if (/insert\s+into\s+public\.activities\s+as\s+activity\s*\(\s*org_id\s*,\s*lead_id\s*,\s*type\s*,\s*meta\s*\)/i.test(aiResearchActivityOwnerFixSql)) {
+  throw new Error('AI research activity-owner forward-fix retains the broken ownerless activity insert.')
+}
+for (const functionName of ['finish_ai_research_job', 'fail_stale_ai_research_job']) {
+  const browserExecuteGrant = new RegExp(`grant\\s+execute\\s+on\\s+function\\s+public\\.${functionName}\\([^;]*?\\)\\s+to\\s+(?:public|anon|authenticated)`, 'i')
+  if (browserExecuteGrant.test(aiResearchActivityOwnerFixSql)) {
+    throw new Error(`AI research activity-owner forward-fix grants browser execution for ${functionName}.`)
   }
 }
 
