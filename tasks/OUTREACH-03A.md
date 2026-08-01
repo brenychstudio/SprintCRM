@@ -32,4 +32,48 @@ The migration is additive. If a production issue is discovered, keep the ledger 
 - Confirmed production smoke error: `column reference "request_id" is ambiguous` inside `public.start_ai_runtime_probe`. The `RETURNS TABLE` output name conflicted with an unqualified retry lookup against `ai_generations`.
 - The failure occurred before an AI call, so it consumed no OpenAI tokens and recorded no provider usage.
 - `20260801000002_fix_ai_runtime_probe_request_id_ambiguity.sql` is an additive forward fix. It recreates only `start_ai_runtime_probe`, aliases all `ai_generations` references, uses targetless `ON CONFLICT DO NOTHING`, and retains the fully qualified idempotent retry lookup, service-role restriction, organization/membership validation, runtime-probe scope, audit event, and grants/revokes.
-- The migration has not been applied, and the Edge Function has not been redeployed. An authenticated smoke retest remains pending after the reviewed forward-fix migration is applied.
+- The forward-fix migration is now applied and the Edge Function is deployed. The authenticated smoke retest passed; the acceptance evidence below records the independently verified completed probe and audit trail.
+
+## Acceptance closure record
+
+- **Task goal:** close OUTREACH-03A only after read-only production verification; do not begin AI research work.
+- **Current-state evidence:** the authenticated SprintCRM probe reported Connected on `gpt-5.4-mini`, with 82 total tokens in 2164 ms. The production ledger and audit trail below independently confirm that completed probe.
+- **Files inspected:** `AGENTS.md`, this task record, `docs/current-state.md`, `docs/architecture/outreach-target.md`, the OUTREACH-03A migrations, existing accepted-checkpoint conventions, package scripts, Git state, and PR #19.
+- **File plan:** update this task record, current state, the OutreachOps delivery roadmap, and the accepted checkpoint only.
+- **Implementation plan:** preserve the implementation and forward fix; record the reviewed production evidence; run the required read-only validation; commit only the acceptance documents; then publish, ready, and merge PR #19.
+- **Risks:** this closing task must not invoke OpenAI, alter Supabase secrets, deploy a function, apply a migration, or disclose credentials. Production values are limited to the approved ledger fields below.
+- **Acceptance criteria:** both runtime migrations are present remotely; the Edge Function is ACTIVE; a completed synthetic probe is persisted and audited; no research, message, member-status, Gmail, or sending action resulted; all required validation is clean; PR #19 is merged.
+- **Tests and manual smoke:** run migration verification, typecheck, lint, test, build, diff check, migration list, dry-run, and Git status. The authenticated production smoke is the completed Connected probe recorded below; no new probe is run for closure.
+- **Proposed commit:** `docs(outreach): accept supervised AI runtime foundation`.
+- **Documentation impact:** this record, `docs/current-state.md`, `docs/architecture/outreach-target.md`, and `docs/accepted-checkpoints/OUTREACH-03A.md` now capture acceptance and the next checkpoint.
+
+## Acceptance evidence
+
+Status: **ACCEPTED**.
+
+- Production migration apply: passed. `20260801000001_outreach_ai_runtime_foundation.sql` and forward fix `20260801000002_fix_ai_runtime_probe_request_id_ambiguity.sql` are applied.
+- Edge Function deployment: passed. `outreach-ai-runtime` is deployed and ACTIVE.
+- Authenticated production runtime probe: passed. The fixed synthetic probe connected using `gpt-5.4-mini`; it did not create research or message content, mutate campaign-member status, invoke Gmail, or send anything.
+- The OpenAI API boundary remains server-only. Client and server kill switches remain available.
+
+| Field | Verified value |
+| --- | --- |
+| id | `098c87cc-e510-4856-8174-6e610fafbb03` |
+| request_id | `4639e1e5-994b-46f9-8e2d-829532cea683` |
+| generation_status | `completed` |
+| provider | `openai` |
+| model_name | `gpt-5.4-mini` |
+| schema_version | `runtime_probe_v1` |
+| input_tokens | `61` |
+| cached_input_tokens | `0` |
+| output_tokens | `21` |
+| total_tokens | `82` |
+| duration_ms | `2164` |
+| estimated_cost_usd | `null` (not configured) |
+| error_code | `null` |
+| created_at | `2026-08-01 10:35:42.209194+00` |
+| completed_at | `2026-08-01 10:35:44.495649+00` |
+
+Matching audit events for that `request_id`: `ai.runtime_probe.requested` and `ai.runtime_probe.completed`.
+
+Remaining pre-staging debt: Docker/local Supabase reset; behavioral RLS integration tests; and the existing Vite large-bundle warning.

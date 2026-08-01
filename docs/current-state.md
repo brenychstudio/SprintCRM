@@ -1,12 +1,16 @@
-# Current state - OUTREACH-02R accepted manual workspace
+# Current state - OUTREACH-03A accepted supervised AI runtime foundation
 
-## OUTREACH-03A implementation pending deployed acceptance
+## OUTREACH-03A accepted production runtime foundation
 
 `20260801000001_outreach_ai_runtime_foundation.sql` additively extends `ai_generations` into the generic organization-scoped runtime ledger, preserving legacy rows as `legacy_draft`, preserving existing research/message foreign keys, and removing authenticated browser insert/update policies. Narrow service-role RPCs create and finalize only `runtime_probe` jobs with membership checks, idempotent request IDs, terminal-state guards, and append-only audit events. No CRM activities are created for the technical probe.
 
 `outreach-ai-runtime` is an authenticated Supabase Edge Function using a user-scoped client for authorization and a service-role client exclusively for the narrow RPCs. It calls OpenAI Responses only with fixed synthetic input, `store: false`, strict JSON Schema, allowlisted CORS, a bounded timeout, and no automatic retry. `OPENAI_API_KEY`, model configuration, the server kill switch, and origins are runtime secrets/configuration, never browser values.
 
-The existing Campaign Full Workspace contains an opt-in AI runtime probe card only when `outreach_ops_enabled` and `ai_runtime_enabled` are both enabled. It shows compact connection metadata and does not mutate research, message, or campaign-member workflow state. It is not accepted until the reviewed production migration, user-configured secrets, deployed function, authenticated probe smoke, non-mutation verification, OpenAI project usage check, and ledger/audit inspection have occurred.
+The existing Campaign Full Workspace contains an opt-in AI runtime probe card only when `outreach_ops_enabled` and `ai_runtime_enabled` are both enabled. It shows compact connection metadata and does not mutate research, message, or campaign-member workflow state.
+
+OUTREACH-03A is accepted. Production migrations `20260801000001_outreach_ai_runtime_foundation.sql` and `20260801000002_fix_ai_runtime_probe_request_id_ambiguity.sql` are applied, the `outreach-ai-runtime` Edge Function is ACTIVE, and the authenticated synthetic runtime probe completed on `gpt-5.4-mini` with 82 total tokens in 2164 ms. The forward fix resolves the `request_id` ambiguity. Ledger and audit inspection confirms the requested and completed probe events; the probe generated no research or message content, made no status mutation, and performed no Gmail or sending operation. The OpenAI API boundary remains server-only, with both client and server kill switches available.
+
+The next engineering checkpoint is `OUTREACH-03B — AI Research Job`. Docker/local Supabase reset, behavioral RLS integration tests, and the existing Vite large-bundle warning remain pre-staging debt.
 
 Baseline recorded on 2026-07-22 from `codex/outreach-00r-rebaseline` (created from `main` at `23754b0`). The working tree was clean before this task.
 
@@ -105,7 +109,7 @@ The same form edits existing contact details. Successful saves invalidate Lead a
 ## Known gaps and risks
 
 1. Generated database types are stored, but current client wrappers still use handwritten domain types and casts. Integrating them deliberately is future cleanup, not a prerequisite for this domain-only task.
-2. The `aiGenerationsApi` permits authenticated browser clients to create/update AI generation records. This must be replaced or restricted before supervised AI jobs are introduced.
+2. Runtime-probe writes are now restricted to narrow service-role RPCs; the legacy client helper remains technical-debt cleanup and must not be used to bypass the supervised runtime boundary.
 3. Existing `ai_generations` RLS has select/insert/update policies but no delete policy; this is conservative but needs an explicit retention decision.
 4. The current `current_org_id()` function selects the oldest membership. This is adequate for a personal internal CRM but is not a future active-organization selector.
 5. DB-BASELINE-02 captured the former import-schema drift (`leads.source_import_id`, `idx_leads_source_import_id`, `imports.reverted_at`, and `imports.reverted_by`) as a forward migration. The repository now represents it.
