@@ -22,6 +22,13 @@
 
 The migration is additive. Keep `AI_RESEARCH_ENABLED=false` and `VITE_AI_RESEARCH_ENABLED=false` until reviewed rollout. For a production issue, disable either kill switch and deploy an additive SQL/function/client forward-fix. Never delete/rewrite completed ledger rows or immutable snapshots.
 
+## Production campaign wrapper forward-fix
+
+- A production campaign-creation smoke confirmed PostgreSQL error `22P02`: `invalid input syntax for type uuid: "(<campaign composite row>)"`.
+- Root cause: the eight- and ten-argument proof-context wrappers in the applied `20260801000003_ai_research_job.sql` used scalar `select public.create_manual_campaign(...) into v_campaign` and `select public.update_manual_campaign(...) into v_campaign`. The legacy RPCs return `public.campaigns` composite rows, so PL/pgSQL attempted to coerce the composite row text into `v_campaign.id`.
+- Forward fix: `20260801000004_fix_campaign_proof_context_wrapper_assignment.sql` recreates the same authenticated-only, `security invoker` wrappers with `select * into v_campaign from public.…`, retaining legacy organization/RLS behavior and nullable `nullif(btrim(p_proof_context), '')` updates.
+- Campaign creation retest is pending reviewed migration application. No OpenAI call occurred during the failing smoke or this forward-fix work.
+
 ## Implementation record
 
 - Added `20260801000003_ai_research_job.sql` with nullable campaign proof context, compatible campaign RPC overloads, service-role-only idempotent research start/finish RPCs, terminal-state guards, immutable AI snapshots, canonical CRM activity/audit records, browser ledger read preservation, and browser write revocation.
@@ -29,7 +36,7 @@ The migration is additive. Keep `AI_RESEARCH_ENABLED=false` and `VITE_AI_RESEARC
 - Added pure URL, request, prompt, strict result/source, usage, and safe-error helpers; domain-restricted OpenAI web search is configured with `store:false`, a 45-second abort, bounded output, and no retry/background mode.
 - Added default-off client/server research gates, proof-context campaign form/API/types support, generated type synchronization, four-locale workspace strings, and a feature-gated AI Research card that invalidates workspace/overview/lead/job queries and never invokes message or approval mutations.
 - Completed local static verification: `npm run verify:migrations`, `npm run typecheck`, `npm run lint`, `npm run test:unit`, `npm run build`, and `git diff --check` (build retains the known Vite large-bundle warning).
-- Linked read-only verification passed: remote migrations end at `20260801000002`; `npx supabase migration list --password $env:SUPABASE_DB_PASSWORD` identifies only `20260801000003` as pending, and `npx supabase db push --dry-run --password $env:SUPABASE_DB_PASSWORD` would push only that migration. Nothing was applied or deployed.
+- Linked read-only verification after the production smoke confirms remote migrations end at `20260801000003`; `npx supabase migration list --password $env:SUPABASE_DB_PASSWORD` identifies only `20260801000004` as pending, and `npx supabase db push --dry-run --password $env:SUPABASE_DB_PASSWORD` would push only the campaign proof-context wrapper forward-fix. Nothing was applied or deployed.
 
 ## Acceptance status
 

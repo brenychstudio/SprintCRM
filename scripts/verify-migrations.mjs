@@ -13,6 +13,7 @@ const expectedCampaignMemberAmbiguityFix = '20260729000001_fix_add_campaign_memb
 const expectedManualMessageChannelFix = '20260729000002_fix_manual_message_channel_cast.sql'
 const expectedAiRuntimeProbeRequestIdFix = '20260801000002_fix_ai_runtime_probe_request_id_ambiguity.sql'
 const expectedAiResearchJobMigration = '20260801000003_ai_research_job.sql'
+const expectedCampaignProofContextWrapperFix = '20260801000004_fix_campaign_proof_context_wrapper_assignment.sql'
 const requiredCampaignTables = [
   'campaigns',
   'campaign_members',
@@ -69,6 +70,12 @@ if (!files.includes(expectedAiRuntimeProbeRequestIdFix)) {
 }
 if (!files.includes(expectedAiResearchJobMigration)) {
   throw new Error(`Missing required supervised AI research migration: ${expectedAiResearchJobMigration}`)
+}
+if (!files.includes(expectedCampaignProofContextWrapperFix)) {
+  throw new Error(`Missing required campaign proof-context wrapper forward-fix: ${expectedCampaignProofContextWrapperFix}`)
+}
+if (files.indexOf(expectedCampaignProofContextWrapperFix) <= files.indexOf(expectedAiResearchJobMigration)) {
+  throw new Error('Campaign proof-context wrapper forward-fix must follow the AI research migration.')
 }
 
 for (const file of files) {
@@ -194,6 +201,38 @@ for (const marker of [
 }
 if (!aiResearchJobSql.includes("where generation.id = v_job.id returning generation.* into v_job") || !aiResearchJobSql.includes("if v_job.generation_status <> 'pending'")) {
   throw new Error('AI research migration is missing terminal-state protection.')
+}
+
+const campaignProofContextWrapperFixSql = await readFile(path.join(migrationsDirectory, expectedCampaignProofContextWrapperFix), 'utf8')
+for (const marker of [
+  'create or replace function public.create_manual_campaign(',
+  'p_default_channel text, p_default_language text, p_tone text, p_proof_context text',
+  'create or replace function public.update_manual_campaign(',
+  'p_tone text, p_status text, p_proof_context text',
+  'returns public.campaigns',
+  'security invoker',
+  'set search_path = public',
+  'from public.create_manual_campaign(',
+  'from public.update_manual_campaign(',
+  "nullif(btrim(p_proof_context), '')",
+  'revoke all on function public.create_manual_campaign(text, text, text, text, text, text, text, text) from public;',
+  'revoke all on function public.update_manual_campaign(uuid, text, text, text, text, text, text, text, text, text) from public;',
+  'grant execute on function public.create_manual_campaign(text, text, text, text, text, text, text, text) to authenticated;',
+  'grant execute on function public.update_manual_campaign(uuid, text, text, text, text, text, text, text, text, text) to authenticated;',
+]) {
+  if (!campaignProofContextWrapperFixSql.includes(marker)) {
+    throw new Error(`Campaign proof-context wrapper forward-fix is missing required guard: ${marker}`)
+  }
+}
+for (const functionName of ['create_manual_campaign', 'update_manual_campaign']) {
+  const rowExpandedCompositeAssignment = new RegExp(`select\\s+\\*\\s+into\\s+v_campaign\\s+from\\s+public\\.${functionName}\\s*\\(`, 'i')
+  if (!rowExpandedCompositeAssignment.test(campaignProofContextWrapperFixSql)) {
+    throw new Error(`Campaign proof-context wrapper forward-fix is missing row-expanded composite assignment: ${functionName}`)
+  }
+  const brokenScalarCompositeAssignment = new RegExp(`select\\s+public\\.${functionName}\\s*\\([\\s\\S]*?\\)\\s+into\\s+v_campaign`, 'i')
+  if (brokenScalarCompositeAssignment.test(campaignProofContextWrapperFixSql)) {
+    throw new Error(`Campaign proof-context wrapper forward-fix retains broken scalar composite assignment: ${functionName}`)
+  }
 }
 
 const schemaSnapshot = await readFile(schemaSnapshotPath, 'utf8')
