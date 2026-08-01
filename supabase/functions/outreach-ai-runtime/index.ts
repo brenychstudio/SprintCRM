@@ -28,6 +28,7 @@ import {
   validateResearchRequest,
 } from '../_shared/ai-research.ts'
 import {
+  buildRejectedDraftFailure,
   buildDraftResponsesRequest,
   draftPromptVersion,
   draftSchemaVersion,
@@ -357,7 +358,10 @@ async function generateDraft(request: Request, body: unknown, requestId: string,
     const refusal = providerBody && typeof providerBody === 'object' && ((providerBody as { status?: unknown }).status === 'incomplete' || (providerBody as { status?: unknown }).status === 'failed')
     const parsed = refusal ? { ok: false as const, reason: 'provider_refusal' as const } : parseDraftResultDetailed(responseText, campaignResponse.data.proof_context, resolveResearchLanguage(leadResponse.data.language, campaignResponse.data.default_language), leadResponse.data.contact_name)
     if (!parsed.ok) {
-      const persisted = await finishDraftFailure(service, row, userId, 'invalid_provider_response', Date.now() - startedAt, providerResponseId, providerRequestId, usage, `draft_validation:${parsed.reason}`)
+      const rejected = buildRejectedDraftFailure(parsed.reason, usage, providerResponseId, providerRequestId)
+      const persisted = await finishDraftFailure(service, row, userId, rejected.error_code, Date.now() - startedAt, rejected.provider_response_id, rejected.provider_request_id, {
+        input_tokens: rejected.input_tokens, cached_input_tokens: rejected.cached_input_tokens, output_tokens: rejected.output_tokens, total_tokens: rejected.total_tokens,
+      }, rejected.error_message)
       return draftErrorResponse(persisted ? 'invalid_provider_response' : 'persistence_error', clientRequestId, cors)
     }
     const { data: finished, error: finishError } = await service.rpc('finish_ai_draft_job', {
