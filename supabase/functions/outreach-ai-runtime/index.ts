@@ -12,16 +12,16 @@ import {
   type RuntimeErrorCode,
 } from '../_shared/ai-runtime.ts'
 import {
-  buildResearchPrompt,
+  buildResearchResponsesRequest,
   evidenceMatchesSources,
   extractOutputText,
   extractWebSearchSourceUrls,
   mapResearchProviderError,
   normalizeResearchUsage,
   parseResearchResult,
-  researchJsonSchema,
   researchPromptVersion,
   researchSchemaVersion,
+  resolveResearchLanguage,
   validatePublicWebsite,
   validateResearchRequest,
 } from '../_shared/ai-research.ts'
@@ -190,10 +190,7 @@ async function generateResearch(request: Request, body: unknown, requestId: stri
         method: 'POST', signal: abort.signal,
         headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'X-Client-Request-Id': clientRequestId },
         body: JSON.stringify({
-          model, store: false, max_output_tokens: 1400,
-          input: buildResearchPrompt({ lead: leadResponse.data, campaign: campaignResponse.data, hostname: website.hostname }),
-          tools: [{ type: 'web_search', search_context_size: 'low', filters: { allowed_domains: [website.hostname] } }],
-          text: { format: { type: 'json_schema', name: 'outreach_research', strict: true, schema: researchJsonSchema() } },
+          ...buildResearchResponsesRequest(model, { lead: leadResponse.data, campaign: campaignResponse.data, hostname: website.hostname }),
         }),
       })
     } finally { clearTimeout(timeout) }
@@ -205,7 +202,7 @@ async function generateResearch(request: Request, body: unknown, requestId: stri
     }
     const providerBody: unknown = await provider.json()
     providerResponseId = providerBody && typeof providerBody === 'object' && typeof (providerBody as { id?: unknown }).id === 'string' ? (providerBody as { id: string }).id : null
-    const result = parseResearchResult(extractOutputText(providerBody), campaignResponse.data.proof_context)
+    const result = parseResearchResult(extractOutputText(providerBody), campaignResponse.data.proof_context, resolveResearchLanguage(leadResponse.data.language, campaignResponse.data.default_language))
     if (!result) {
       const persisted = await finishResearchFailure(service, row, userId, 'invalid_provider_response', Date.now() - startedAt, providerResponseId, providerRequestId)
       return errorResponse(persisted ? 'invalid_provider_response' : 'persistence_error', clientRequestId, cors)
