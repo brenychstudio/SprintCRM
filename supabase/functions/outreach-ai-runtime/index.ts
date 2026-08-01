@@ -27,6 +27,16 @@ import {
   validatePublicWebsite,
   validateResearchRequest,
 } from '../_shared/ai-research.ts'
+import {
+  buildDraftResponsesRequest,
+  draftPromptVersion,
+  draftSchemaVersion,
+  mapDraftProviderError,
+  normalizeDraftUsage,
+  parseDraftResultDetailed,
+  safeDraftErrorMessage,
+  validateDraftRequest,
+} from '../_shared/ai-draft.ts'
 
 type ProbeLedgerRow = {
   job_id: string
@@ -48,7 +58,8 @@ const jsonHeaders = { 'Content-Type': 'application/json' }
 function errorStatus(code: RuntimeErrorCode): number {
   if (code === 'invalid_request') return 400
   if (code === 'unauthorized') return 401
-  if (code === 'runtime_disabled' || code === 'configuration_missing') return 503
+  if (code === 'runtime_disabled' || code === 'draft_disabled' || code === 'configuration_missing') return 503
+  if (code === 'research_required' || code === 'stale_research' || code === 'invalid_member_state') return 409
   if (code === 'provider_rate_limited') return 429
   if (code === 'unavailable') return 409
   return 502
@@ -242,6 +253,129 @@ async function generateResearch(request: Request, body: unknown, requestId: stri
   }
 }
 
+type DraftLedgerRow = ResearchLedgerRow & { message_version?: number | null }
+
+function draftRow(data: unknown): DraftLedgerRow | null {
+  const row = researchRow(data)
+  return row ? row as DraftLedgerRow : null
+}
+
+function draftErrorResponse(code: RuntimeErrorCode, requestId: string, cors: HeadersInit, status = errorStatus(code)) {
+  return new Response(JSON.stringify({ ok: false, code, message: safeDraftErrorMessage(code), request_id: requestId, retryable: false }), {
+    status, headers: { ...cors, ...jsonHeaders },
+  })
+}
+
+function draftCompletedResponse(row: DraftLedgerRow, cors: HeadersInit) {
+  return new Response(JSON.stringify({
+    ok: true, job_id: row.job_id, request_id: row.request_id ?? '', status: 'completed', provider: 'openai', model: row.model_name ?? '',
+    schema_version: row.schema_version ?? draftSchemaVersion, message_version: row.message_version ?? 0, research_version: row.research_version ?? 0,
+    usage: usageFromLedger(row), cost: { estimated_usd: row.estimated_cost_usd, status: 'not_configured' }, duration_ms: row.duration_ms ?? 0,
+  }), { status: 200, headers: { ...cors, ...jsonHeaders } })
+}
+
+async function finishDraftFailure(
+  service: ReturnType<typeof createClient>, row: DraftLedgerRow, userId: string, code: RuntimeErrorCode, durationMs: number,
+  providerResponseId: string | null = null, providerRequestId: string | null = null, usage: NormalizedUsage | null = null,
+  errorMessage = safeDraftErrorMessage(code),
+) {
+  const { error } = await service.rpc('finish_ai_draft_job', {
+    p_job_id: row.job_id, p_actor_user_id: userId, p_status: 'failed', p_provider_response_id: providerResponseId,
+    p_provider_request_id: providerRequestId, p_output_payload: null, p_input_tokens: usage?.input_tokens ?? null,
+    p_cached_input_tokens: usage?.cached_input_tokens ?? null, p_output_tokens: usage?.output_tokens ?? null,
+    p_total_tokens: usage?.total_tokens ?? null, p_duration_ms: durationMs, p_error_code: code, p_error_message: errorMessage,
+  })
+  return !error
+}
+
+async function generateDraft(request: Request, body: unknown, requestId: string, cors: HeadersInit): Promise<Response> {
+  const validated = validateDraftRequest(body)
+  if (!validated.ok) return draftErrorResponse('invalid_request', requestId, cors)
+  const clientRequestId = validated.value.client_request_id ?? requestId
+  const supabaseUrl = Deno.env.get('SUPABASE_URL'); const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'); const authorization = request.headers.get('authorization')
+  if (!supabaseUrl || !anonKey || !serviceRoleKey || !authorization) return draftErrorResponse('unauthorized', clientRequestId, cors)
+  const userClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authorization } } })
+  const { data: authData, error: authError } = await userClient.auth.getUser()
+  if (authError || !authData.user) return draftErrorResponse('unauthorized', clientRequestId, cors)
+  const userId = authData.user.id
+  const { data: member, error: memberError } = await userClient.from('campaign_members').select('id,campaign_id,lead_id').eq('id', validated.value.campaign_member_id).maybeSingle()
+  if (memberError || !member) return draftErrorResponse('unauthorized', clientRequestId, cors, 404)
+  if (!enabled('AI_RUNTIME_ENABLED')) return draftErrorResponse('runtime_disabled', clientRequestId, cors)
+  if (!enabled('AI_DRAFT_GENERATION_ENABLED')) return draftErrorResponse('draft_disabled', clientRequestId, cors)
+  const apiKey = Deno.env.get('OPENAI_API_KEY'); const model = Deno.env.get('OPENAI_MODEL')?.trim()
+  if (!apiKey || !model) return draftErrorResponse('configuration_missing', clientRequestId, cors)
+  const service = createClient(supabaseUrl, serviceRoleKey)
+  const { data: started, error: startError } = await service.rpc('start_ai_draft_job', {
+    p_campaign_member_id: member.id, p_actor_user_id: userId, p_confirmed_research_snapshot_id: validated.value.confirmed_research_snapshot_id,
+    p_request_id: clientRequestId, p_model: model, p_prompt_version: draftPromptVersion,
+  })
+  const row = draftRow(started)
+  if (startError || !row) {
+    const message = startError?.message ?? ''
+    const code: RuntimeErrorCode = /stale|latest research/i.test(message) ? 'stale_research' : /research/i.test(message) ? 'research_required' : /state/i.test(message) ? 'invalid_member_state' : 'persistence_error'
+    return draftErrorResponse(code, clientRequestId, cors)
+  }
+  if (!row.was_created) {
+    if (row.generation_status !== 'completed') return draftErrorResponse(row.generation_status === 'failed' ? 'provider_error' : 'unavailable', clientRequestId, cors)
+    const { data: message, error: messageError } = await userClient.from('outbound_messages').select('version,research_snapshot_id').eq('ai_generation_id', row.job_id).maybeSingle()
+    if (messageError || !message) return draftErrorResponse('persistence_error', clientRequestId, cors)
+    row.message_version = message.version
+    const { data: snapshot } = await userClient.from('research_snapshots').select('version').eq('id', message.research_snapshot_id!).maybeSingle()
+    row.research_version = snapshot?.version ?? null
+    return draftCompletedResponse(row, cors)
+  }
+  const [campaignResponse, leadResponse, researchResponse] = await Promise.all([
+    userClient.from('campaigns').select('target_segment,offer_summary,default_language,tone,proof_context').eq('id', member.campaign_id).maybeSingle(),
+    userClient.from('leads').select('company_name,contact_name,language').eq('id', member.lead_id).maybeSingle(),
+    userClient.from('research_snapshots').select('id,version,observed_opportunity,recommended_offer,recommended_case,warnings').eq('id', validated.value.confirmed_research_snapshot_id).eq('campaign_member_id', member.id).maybeSingle(),
+  ])
+  if (campaignResponse.error || leadResponse.error || researchResponse.error || !campaignResponse.data || !leadResponse.data || !researchResponse.data) {
+    await finishDraftFailure(service, row, userId, 'research_required', 0)
+    return draftErrorResponse('research_required', clientRequestId, cors)
+  }
+  const startedAt = Date.now(); let providerResponseId: string | null = null; let providerRequestId: string | null = null
+  try {
+    const abort = new AbortController(); const timeout = setTimeout(() => abort.abort(), 25_000)
+    let provider: Response
+    try {
+      provider = await fetch('https://api.openai.com/v1/responses', { method: 'POST', signal: abort.signal,
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'X-Client-Request-Id': clientRequestId },
+        body: JSON.stringify(buildDraftResponsesRequest(model, { lead: leadResponse.data, campaign: campaignResponse.data, research: researchResponse.data })),
+      })
+    } finally { clearTimeout(timeout) }
+    providerRequestId = provider.headers.get('x-request-id')
+    if (!provider.ok) {
+      const code = mapDraftProviderError(provider.status)
+      const persisted = await finishDraftFailure(service, row, userId, code, Date.now() - startedAt, providerResponseId, providerRequestId)
+      return draftErrorResponse(persisted ? code : 'persistence_error', clientRequestId, cors)
+    }
+    const providerBody: unknown = await provider.json()
+    providerResponseId = providerBody && typeof providerBody === 'object' && typeof (providerBody as { id?: unknown }).id === 'string' ? (providerBody as { id: string }).id : null
+    const usage = normalizeDraftUsage(providerBody && typeof providerBody === 'object' ? (providerBody as { usage?: unknown }).usage : null)
+    const responseText = outputText(providerBody)
+    const refusal = providerBody && typeof providerBody === 'object' && ((providerBody as { status?: unknown }).status === 'incomplete' || (providerBody as { status?: unknown }).status === 'failed')
+    const parsed = refusal ? { ok: false as const, reason: 'provider_refusal' as const } : parseDraftResultDetailed(responseText, campaignResponse.data.proof_context, resolveResearchLanguage(leadResponse.data.language, campaignResponse.data.default_language), leadResponse.data.contact_name)
+    if (!parsed.ok) {
+      const persisted = await finishDraftFailure(service, row, userId, 'invalid_provider_response', Date.now() - startedAt, providerResponseId, providerRequestId, usage, `draft_validation:${parsed.reason}`)
+      return draftErrorResponse(persisted ? 'invalid_provider_response' : 'persistence_error', clientRequestId, cors)
+    }
+    const { data: finished, error: finishError } = await service.rpc('finish_ai_draft_job', {
+      p_job_id: row.job_id, p_actor_user_id: userId, p_status: 'completed', p_provider_response_id: providerResponseId, p_provider_request_id: providerRequestId,
+      p_output_payload: parsed.value, p_input_tokens: usage.input_tokens, p_cached_input_tokens: usage.cached_input_tokens, p_output_tokens: usage.output_tokens,
+      p_total_tokens: usage.total_tokens, p_duration_ms: Date.now() - startedAt, p_error_code: null, p_error_message: null,
+    })
+    const finishedRow = draftRow(finished)
+    if (finishError || !finishedRow) return draftErrorResponse('persistence_error', clientRequestId, cors)
+    if (finishedRow.generation_status !== 'completed') return draftErrorResponse('stale_research', clientRequestId, cors)
+    return draftCompletedResponse(finishedRow, cors)
+  } catch (error) {
+    const code = mapDraftProviderError(undefined, error instanceof DOMException && error.name === 'AbortError')
+    const persisted = await finishDraftFailure(service, row, userId, code, Date.now() - startedAt, providerResponseId, providerRequestId)
+    return draftErrorResponse(persisted ? code : 'persistence_error', clientRequestId, cors)
+  }
+}
+
 async function finishFailure(
   service: ReturnType<typeof createClient>, row: ProbeLedgerRow, userId: string, code: RuntimeErrorCode, durationMs: number,
   providerResponseId: string | null = null, providerRequestId: string | null = null,
@@ -273,6 +407,9 @@ Deno.serve(async (request) => {
   try { body = await request.json() } catch { return errorResponse('invalid_request', requestId, cors) }
   if (body && typeof body === 'object' && !Array.isArray(body) && (body as { operation?: unknown }).operation === 'generate_research') {
     return generateResearch(request, body, requestId, cors)
+  }
+  if (body && typeof body === 'object' && !Array.isArray(body) && (body as { operation?: unknown }).operation === 'generate_draft') {
+    return generateDraft(request, body, requestId, cors)
   }
   const validated = validateRuntimeProbeRequest(body)
   if (!validated.ok) return errorResponse('invalid_request', requestId, cors)

@@ -16,6 +16,7 @@ const expectedAiResearchJobMigration = '20260801000003_ai_research_job.sql'
 const expectedCampaignProofContextWrapperFix = '20260801000004_fix_campaign_proof_context_wrapper_assignment.sql'
 const expectedAiResearchActivityOwnerFix = '20260801000005_fix_ai_research_activity_owner.sql'
 const expectedAiResearchV2StartContractFix = '20260801000006_fix_ai_research_v2_start_contract.sql'
+const expectedAiDraftGenerationMigration = '20260801000007_supervised_ai_draft_generation.sql'
 const requiredCampaignTables = [
   'campaigns',
   'campaign_members',
@@ -87,6 +88,9 @@ if (files.indexOf(expectedAiResearchActivityOwnerFix) <= files.indexOf(expectedC
 }
 if (!files.includes(expectedAiResearchV2StartContractFix)) {
   throw new Error(`Missing required AI research V2 start-contract forward-fix: ${expectedAiResearchV2StartContractFix}`)
+}
+if (!files.includes(expectedAiDraftGenerationMigration)) {
+  throw new Error(`Missing required supervised AI draft migration: ${expectedAiDraftGenerationMigration}`)
 }
 if (files.indexOf(expectedAiResearchV2StartContractFix) <= files.indexOf(expectedAiResearchActivityOwnerFix)) {
   throw new Error('AI research V2 start-contract forward-fix must follow the AI research activity-owner forward-fix.')
@@ -338,6 +342,36 @@ if (/openai|gmail|approve|send|message/i.test(aiResearchV2StartContractFixSql.re
 }
 if (/grant\s+execute\s+on\s+function\s+public\.start_ai_research_job\([^;]*?\)\s+to\s+(?:public|anon|authenticated)/i.test(aiResearchV2StartContractFixSql)) {
   throw new Error('AI research V2 start-contract forward-fix grants browser execution.')
+}
+
+const aiDraftGenerationSql = await readFile(path.join(migrationsDirectory, expectedAiDraftGenerationMigration), 'utf8')
+for (const marker of [
+  'create or replace function public.start_ai_draft_job(',
+  'create or replace function public.finish_ai_draft_job(',
+  'create or replace function public.fail_stale_ai_draft_job(',
+  "'draft_v1'", "'outreach_draft_v1'", "'draft'", "'pending'",
+  "'ai.draft.requested'", "'ai.draft.completed'", "'ai.draft.failed'",
+  'p_confirmed_research_snapshot_id uuid',
+  "v_member.status not in ('research_ready', 'draft_ready')",
+  'order by snapshot.version desc limit 1',
+  "v_snapshot.id <> p_confirmed_research_snapshot_id",
+  "source, channel, language, subject, body, status, research_snapshot_id, ai_generation_id, created_by",
+  "'ai', v_campaign.default_channel, v_language", "'draft'",
+  "campaign_member.status in ('research_ready', 'draft_ready')",
+  "'outreach_draft_saved'", 'v_job.owner',
+  'security definer set search_path = public',
+  'revoke all on function public.start_ai_draft_job(uuid, uuid, uuid, uuid, text, text) from public, anon, authenticated;',
+  'grant execute on function public.start_ai_draft_job(uuid, uuid, uuid, uuid, text, text) to service_role;',
+  'grant execute on function public.finish_ai_draft_job(uuid, uuid, text, text, text, jsonb, integer, integer, integer, integer, integer, text, text) to service_role;',
+  'grant execute on function public.fail_stale_ai_draft_job(uuid, uuid, text) to service_role;',
+]) {
+  if (!aiDraftGenerationSql.includes(marker)) throw new Error(`AI draft migration is missing required guard: ${marker}`)
+}
+if (/grant\s+execute\s+on\s+function\s+public\.(?:start_ai_draft_job|finish_ai_draft_job|fail_stale_ai_draft_job)\([^;]*?\)\s+to\s+(?:public|anon|authenticated)/i.test(aiDraftGenerationSql)) {
+  throw new Error('AI draft lifecycle RPC grants browser execution.')
+}
+if (/insert\s+into\s+public\.outbound_messages[\s\S]*?status\s*,\s*'needs_review'/i.test(aiDraftGenerationSql) || /gmail|send/i.test(aiDraftGenerationSql)) {
+  throw new Error('AI draft migration crosses the supervised no-send or no-review boundary.')
 }
 
 const schemaSnapshot = await readFile(schemaSnapshotPath, 'utf8')

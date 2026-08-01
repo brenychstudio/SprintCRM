@@ -2,7 +2,7 @@ import { supabase } from '../../lib/supabase'
 import type { Json } from '../../lib/supabase/database.types'
 import { listLeads } from '../leads/leadsApi'
 import type { Lead } from '../leads/types'
-import type { ActiveSuppression, AiResearchJob, AiResearchResult, AiRuntimeProbe, AiRuntimeProbeResult, Campaign, CampaignInput, CampaignMember, CampaignMemberWithLead, EligibilityResult, MessageInput, OutboundMessage, ResearchInput, ResearchSnapshot } from './types'
+import type { ActiveSuppression, AiDraftJob, AiDraftResult, AiResearchJob, AiResearchResult, AiRuntimeProbe, AiRuntimeProbeResult, Campaign, CampaignInput, CampaignMember, CampaignMemberWithLead, EligibilityResult, MessageInput, OutboundMessage, ResearchInput, ResearchSnapshot } from './types'
 
 const asCampaign = (value: unknown) => value as Campaign
 const asMember = (value: unknown) => value as CampaignMember
@@ -19,6 +19,7 @@ export const campaignQueryKeys = {
   tasks: () => ['campaigns', 'tasks'] as const,
   aiRuntimeProbe: (memberId: string) => ['campaigns', 'member', memberId, 'ai-runtime-probe'] as const,
   aiResearch: (memberId: string) => ['campaigns', 'member', memberId, 'ai-research'] as const,
+  aiDraft: (memberId: string) => ['campaigns', 'member', memberId, 'ai-draft'] as const,
   suppressions: () => ['campaigns', 'suppressions'] as const,
 }
 export async function getLatestAiResearchJob(memberId: string): Promise<AiResearchJob | null> {
@@ -31,6 +32,17 @@ export async function generateAiResearch(memberId: string, clientRequestId: stri
   const { data, error } = await supabase.functions.invoke('outreach-ai-runtime', { body: { operation: 'generate_research', campaign_member_id: memberId, client_request_id: clientRequestId } })
   if (error || !data || data.ok !== true) throw new Error('AI research could not be generated.')
   return data as AiResearchResult
+}
+export async function getLatestAiDraftJob(memberId: string): Promise<AiDraftJob | null> {
+  const { data, error } = await supabase.from('ai_generations').select('id,generation_status,model_name,total_tokens,duration_ms,request_id,created_at,error_code')
+    .eq('campaign_member_id', memberId).eq('job_type', 'draft').order('created_at', { ascending: false }).limit(1).maybeSingle()
+  if (error) fail(error, 'Unable to load AI draft status.')
+  return data as AiDraftJob | null
+}
+export async function generateAiDraft(memberId: string, researchSnapshotId: string, clientRequestId: string): Promise<AiDraftResult> {
+  const { data, error } = await supabase.functions.invoke('outreach-ai-runtime', { body: { operation: 'generate_draft', campaign_member_id: memberId, confirmed_research_snapshot_id: researchSnapshotId, client_request_id: clientRequestId } })
+  if (error || !data || data.ok !== true) throw new Error('AI draft could not be generated.')
+  return data as AiDraftResult
 }
 export async function getLatestAiRuntimeProbe(memberId: string): Promise<AiRuntimeProbe | null> {
   const { data, error } = await supabase.from('ai_generations')

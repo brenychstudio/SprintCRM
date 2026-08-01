@@ -24,6 +24,10 @@ export type RuntimeErrorCode =
   | 'unavailable'
   | 'runtime_disabled'
   | 'research_disabled'
+  | 'draft_disabled'
+  | 'research_required'
+  | 'stale_research'
+  | 'invalid_member_state'
   | 'configuration_missing'
   | 'website_required'
   | 'invalid_website'
@@ -113,6 +117,10 @@ export function safeErrorMessage(code: RuntimeErrorCode): string {
     unavailable: 'The AI connection is currently unavailable.',
     runtime_disabled: 'AI runtime is disabled.',
     research_disabled: 'AI research is disabled.',
+    draft_disabled: 'AI draft generation is disabled.',
+    research_required: 'Research is required before generating a draft.',
+    stale_research: 'The confirmed research is no longer current.',
+    invalid_member_state: 'This workflow state does not allow AI draft generation.',
     configuration_missing: 'AI runtime configuration is incomplete.',
     website_required: 'A public company website is required for AI research.',
     invalid_website: 'The company website is not safe for AI research.',
