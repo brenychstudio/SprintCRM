@@ -1,4 +1,4 @@
-import { isUuid, type NormalizedUsage, type RuntimeErrorCode } from './ai-runtime.ts'
+import { isUuid, safeErrorMessage, type NormalizedUsage, type RuntimeErrorCode } from './ai-runtime.ts'
 
 export const researchSchemaVersion = 'research_v2'
 export const researchPromptVersion = 'outreach_research_v2'
@@ -8,6 +8,33 @@ export type ResearchLanguage = 'en' | 'es' | 'uk' | 'ru'
 export type ResearchRequest = { operation: 'generate_research'; campaign_member_id: string; client_request_id?: string }
 export type ResearchEvidence = { url: string; note: string }
 export type ResearchResult = { observed_opportunity: string; recommended_offer: string; recommended_case: string | null; evidence: ResearchEvidence[]; confidence: number; warnings: string[] }
+export type ResearchValidationReason =
+  | 'missing_output_text'
+  | 'invalid_json'
+  | 'invalid_shape'
+  | 'invalid_field_length'
+  | 'confidence_out_of_range'
+  | 'evidence_count'
+  | 'duplicate_evidence_url'
+  | 'invalid_evidence_url'
+  | 'invalid_evidence_note'
+  | 'missing_recommended_case'
+  | 'unexpected_recommended_case'
+  | 'proof_context_mismatch'
+  | 'contradictory_proof_warning'
+  | 'missing_no_proof_warning'
+export type ResearchParseResult = { ok: true; value: ResearchResult } | { ok: false; reason: ResearchValidationReason }
+export type RejectedResearchFailure = {
+  provider_response_id: string | null
+  provider_request_id: string | null
+  input_tokens: number
+  cached_input_tokens: number
+  output_tokens: number
+  total_tokens: number
+  output_payload: null
+  error_code: 'invalid_provider_response'
+  error_message: string
+}
 export type PublicResearchInput = {
   lead: { company_name: string | null; website: string; website_domain: string | null; niche: string | null; country_city: string | null; service_interest: string | null; offer_type: string | null; observed_issue: string | null; language: string | null }
   campaign: { name: string; description: string | null; target_segment: string | null; offer_summary: string | null; default_language: string; tone: string | null; proof_context: string | null }
@@ -36,6 +63,13 @@ export function resolveResearchLanguage(leadLanguage: unknown, campaignLanguage:
 }
 
 export function noProofContextWarning(language: ResearchLanguage): string { return noProofWarnings[language] }
+
+export function safeResearchErrorMessage(code: RuntimeErrorCode): string {
+  if (code === 'invalid_provider_response') return 'The AI provider returned a research result that did not pass validation.'
+  if (code === 'provider_error') return 'The AI provider could not complete the research.'
+  if (code === 'persistence_error') return 'The AI research result could not be recorded.'
+  return safeErrorMessage(code)
+}
 
 export function validateResearchRequest(value: unknown): { ok: true; value: ResearchRequest } | { ok: false } {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return { ok: false }
@@ -120,20 +154,30 @@ function normalizePhrase(value: string): string {
 export function extractProofContextIdentifiers(proofContext: string | null | undefined): string[] {
   const source = text(proofContext)
   if (!source) return []
-  const candidates = new Set<string>()
-  const add = (value: string) => {
-    const candidate = value.replace(/^\s*(?:[-*•]|#+)\s*/, '').trim()
-    if (normalizePhrase(candidate).split(' ').length >= 2 && candidate.length <= 140) candidates.add(candidate)
+  const normalizedCandidates = new Map<string, string>()
+  const addLineCandidate = (value: string) => {
+    const candidate = value.replace(/^[ \t]*(?:[-*•]|#+)[ \t]*/, '').trim()
+    const normalized = normalizePhrase(candidate)
+    const words = normalized.split(' ')
+    if (words.length >= 2 && words.length <= 7 && candidate.length <= 100) normalizedCandidates.set(normalized, candidate)
   }
-  for (const match of source.matchAll(/\[([^\]]+)\]\([^)]*\)/g)) add(match[1])
-  for (const line of source.split(/[\r\n]+/)) {
-    const heading = line.match(/^\s*#{1,6}\s+(.+)$/)
-    const labelled = line.match(/^\s*(?:[-*•]\s*)?([^—–:|]{3,100}?)(?:\s*[—–:|]|\s+-\s+)/)
-    if (heading) add(heading[1])
-    if (labelled) add(labelled[1])
+  const lines = source.split(/\r?\n/).filter((line) => line.trim())
+  const titleLikeLine = /^[ \t]*(?:#{1,6}[ \t]+)?((?:\p{Lu}[\p{L}'’-]*)(?:[ \t]+(?:\p{Lu}[\p{L}'’-]*|(?:de|del|la|las|los|y|of|the))){1,4})[ \t]*[.!?]?[ \t]*$/u
+  const firstLine = lines[0]
+  if (firstLine) {
+    const title = firstLine.match(titleLikeLine)
+    if (title) addLineCandidate(title[1])
   }
-  for (const match of source.matchAll(/\b(?:[A-ZÀ-ÖØ-ÞІЇЄҐ][\p{L}'’-]+\s+){1,4}[A-ZÀ-ÖØ-ÞІЇЄҐ][\p{L}'’-]+/gu)) add(match[0])
-  return [...candidates]
+  for (const line of lines) {
+    for (const match of line.matchAll(/\[([^\]]+)\]\([^)]*\)/g)) addLineCandidate(match[1])
+    const heading = line.match(/^[ \t]*#{1,6}[ \t]+(.+)$/)
+    const labelled = line.match(/^[ \t]*(?:[-*•][ \t]*)?([^—–:|]{3,100}?)(?:[ \t]*[—–:|]|[ \t]+-[ \t]+)/)
+    if (heading) addLineCandidate(heading[1])
+    if (labelled) addLineCandidate(labelled[1])
+    const title = line.match(titleLikeLine)
+    if (title) addLineCandidate(title[1])
+  }
+  return [...normalizedCandidates.values()]
 }
 
 export function recommendedCaseMatchesProofContext(recommendedCase: string, proofContext: string | null | undefined): boolean {
@@ -148,32 +192,66 @@ export function containsNoProofContextClaim(warning: string): boolean {
     && /\b(case|proof|context|caso|prueba|контекст|кейс)\b/.test(normalized)
 }
 
-export function parseResearchResult(value: unknown, proofContext: string | null | undefined, language: ResearchLanguage = 'en'): ResearchResult | null {
+export function parseResearchResultDetailed(value: unknown, proofContext: string | null | undefined, language: ResearchLanguage = 'en'): ResearchParseResult {
+  if (value === null || value === undefined || value === '') return { ok: false, reason: 'missing_output_text' }
   let parsed = value
-  if (typeof value === 'string') { try { parsed = JSON.parse(value) } catch { return null } }
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null
+  if (typeof value === 'string') { try { parsed = JSON.parse(value) } catch { return { ok: false, reason: 'invalid_json' } } }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return { ok: false, reason: 'invalid_shape' }
   const result = parsed as Record<string, unknown>
-  if (Object.keys(result).length !== 6 || !validText(result.observed_opportunity, 50, 900) || !validText(result.recommended_offer, 30, 700) || typeof result.confidence !== 'number' || result.confidence < 0 || result.confidence > 0.85 || !Array.isArray(result.evidence) || result.evidence.length < 2 || result.evidence.length > 3 || !Array.isArray(result.warnings) || result.warnings.length > 5) return null
+  if (Object.keys(result).length !== 6 || typeof result.observed_opportunity !== 'string' || typeof result.recommended_offer !== 'string' || typeof result.confidence !== 'number' || !Array.isArray(result.evidence) || !Array.isArray(result.warnings) || !('recommended_case' in result)) return { ok: false, reason: 'invalid_shape' }
+  if (!validText(result.observed_opportunity, 50, 900) || !validText(result.recommended_offer, 30, 700) || result.warnings.length > 5) return { ok: false, reason: 'invalid_field_length' }
+  if (!Number.isFinite(result.confidence) || result.confidence < 0 || result.confidence > 0.85) return { ok: false, reason: 'confidence_out_of_range' }
+  if (result.evidence.length < 2 || result.evidence.length > 3) return { ok: false, reason: 'evidence_count' }
   const hasProof = Boolean(text(proofContext))
-  if (result.recommended_case !== null && !validText(result.recommended_case, 1, 700)) return null
-  if (!hasProof && result.recommended_case !== null) return null
-  if (hasProof && result.recommended_case === null) return null
-  if (hasProof && !recommendedCaseMatchesProofContext(result.recommended_case as string, proofContext)) return null
+  if (result.recommended_case !== null && typeof result.recommended_case !== 'string') return { ok: false, reason: 'invalid_shape' }
+  if (result.recommended_case !== null && !validText(result.recommended_case, 1, 700)) return { ok: false, reason: 'invalid_field_length' }
+  if (!hasProof && result.recommended_case !== null) return { ok: false, reason: 'unexpected_recommended_case' }
+  if (hasProof && result.recommended_case === null) return { ok: false, reason: 'missing_recommended_case' }
+  if (hasProof && !recommendedCaseMatchesProofContext(result.recommended_case as string, proofContext)) return { ok: false, reason: 'proof_context_mismatch' }
   const warnings = result.warnings.map((warning) => text(warning))
-  if (warnings.some((warning) => !warning || warning.length > 300)) return null
-  if (hasProof && warnings.some(containsNoProofContextClaim)) return null
-  if (!hasProof && !warnings.includes(noProofContextWarning(language))) return null
+  if (warnings.some((warning) => !warning || warning.length > 300)) return { ok: false, reason: 'invalid_field_length' }
+  if (hasProof && warnings.some(containsNoProofContextClaim)) return { ok: false, reason: 'contradictory_proof_warning' }
+  if (!hasProof && !warnings.includes(noProofContextWarning(language))) return { ok: false, reason: 'missing_no_proof_warning' }
   const evidence: ResearchEvidence[] = []
   const normalizedUrls = new Set<string>()
   for (const item of result.evidence) {
-    if (!item || typeof item !== 'object' || !validText((item as Record<string, unknown>).url, 8, 2000) || !validText((item as Record<string, unknown>).note, 20, 350)) return null
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return { ok: false, reason: 'invalid_shape' }
+    if (!validText((item as Record<string, unknown>).url, 8, 2000)) return { ok: false, reason: 'invalid_evidence_url' }
+    if (!validText((item as Record<string, unknown>).note, 20, 350)) return { ok: false, reason: 'invalid_evidence_note' }
     const url = (item as { url: string }).url.trim()
     const normalized = normalizedSourceUrl(url)
-    if (!normalized || normalizedUrls.has(normalized)) return null
+    if (!normalized) return { ok: false, reason: 'invalid_evidence_url' }
+    if (normalizedUrls.has(normalized)) return { ok: false, reason: 'duplicate_evidence_url' }
     normalizedUrls.add(normalized)
     evidence.push({ url, note: (item as { note: string }).note.trim() })
   }
-  return { observed_opportunity: result.observed_opportunity.trim(), recommended_offer: result.recommended_offer.trim(), recommended_case: result.recommended_case === null ? null : result.recommended_case.trim(), evidence, confidence: result.confidence, warnings }
+  return { ok: true, value: { observed_opportunity: result.observed_opportunity.trim(), recommended_offer: result.recommended_offer.trim(), recommended_case: result.recommended_case === null ? null : result.recommended_case.trim(), evidence, confidence: result.confidence, warnings } }
+}
+
+/** Compatibility wrapper for existing callers that only need a nullable result. */
+export function parseResearchResult(value: unknown, proofContext: string | null | undefined, language: ResearchLanguage = 'en'): ResearchResult | null {
+  const parsed = parseResearchResultDetailed(value, proofContext, language)
+  return parsed.ok ? parsed.value : null
+}
+
+/** Builds the bounded terminal fields for a semantically rejected provider response. */
+export function buildRejectedResearchFailure(
+  reason: ResearchValidationReason,
+  usage: NormalizedUsage,
+  providerResponseId: string | null,
+  providerRequestId: string | null,
+): RejectedResearchFailure {
+  return {
+    provider_response_id: providerResponseId,
+    provider_request_id: providerRequestId,
+    input_tokens: usage.input_tokens,
+    cached_input_tokens: usage.cached_input_tokens,
+    output_tokens: usage.output_tokens,
+    total_tokens: usage.total_tokens,
+    output_payload: null,
+    error_code: 'invalid_provider_response',
+    error_message: `research_validation:${reason}`,
+  }
 }
 
 export function evidenceMatchesSources(evidence: ResearchEvidence[], sourceUrls: string[], hostname: string): boolean {
