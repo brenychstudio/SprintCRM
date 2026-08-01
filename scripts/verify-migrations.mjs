@@ -15,6 +15,7 @@ const expectedAiRuntimeProbeRequestIdFix = '20260801000002_fix_ai_runtime_probe_
 const expectedAiResearchJobMigration = '20260801000003_ai_research_job.sql'
 const expectedCampaignProofContextWrapperFix = '20260801000004_fix_campaign_proof_context_wrapper_assignment.sql'
 const expectedAiResearchActivityOwnerFix = '20260801000005_fix_ai_research_activity_owner.sql'
+const expectedAiResearchV2StartContractFix = '20260801000006_fix_ai_research_v2_start_contract.sql'
 const requiredCampaignTables = [
   'campaigns',
   'campaign_members',
@@ -83,6 +84,12 @@ if (!files.includes(expectedAiResearchActivityOwnerFix)) {
 }
 if (files.indexOf(expectedAiResearchActivityOwnerFix) <= files.indexOf(expectedCampaignProofContextWrapperFix)) {
   throw new Error('AI research activity-owner forward-fix must follow the campaign proof-context wrapper forward-fix.')
+}
+if (!files.includes(expectedAiResearchV2StartContractFix)) {
+  throw new Error(`Missing required AI research V2 start-contract forward-fix: ${expectedAiResearchV2StartContractFix}`)
+}
+if (files.indexOf(expectedAiResearchV2StartContractFix) <= files.indexOf(expectedAiResearchActivityOwnerFix)) {
+  throw new Error('AI research V2 start-contract forward-fix must follow the AI research activity-owner forward-fix.')
 }
 
 for (const file of files) {
@@ -284,6 +291,53 @@ for (const functionName of ['finish_ai_research_job', 'fail_stale_ai_research_jo
   if (browserExecuteGrant.test(aiResearchActivityOwnerFixSql)) {
     throw new Error(`AI research activity-owner forward-fix grants browser execution for ${functionName}.`)
   }
+}
+
+const aiResearchV2StartContractFixSql = await readFile(path.join(migrationsDirectory, expectedAiResearchV2StartContractFix), 'utf8')
+for (const marker of [
+  'create or replace function public.start_ai_research_job(',
+  'p_campaign_member_id uuid,',
+  'p_actor_user_id uuid,',
+  'p_request_id uuid,',
+  'p_model text,',
+  'p_prompt_version text',
+  'returns table (',
+  'language plpgsql',
+  'security definer',
+  'set search_path = public',
+  "coalesce(p_prompt_version, '') not in ('outreach_research_v1', 'outreach_research_v2')",
+  "raise exception 'Invalid research request' using errcode = '22023';",
+  "when 'outreach_research_v1' then 'research_v1'",
+  "when 'outreach_research_v2' then 'research_v2'",
+  'p_prompt_version, v_schema_version',
+  "'research'",
+  "'pending'",
+  "'ai.research.requested'",
+  'where membership.org_id = v_member.organization_id and membership.user_id = p_actor_user_id',
+  'where lead.id = v_member.lead_id and lead.org_id = v_member.organization_id',
+  'where existing_job.org_id = v_member.organization_id and existing_job.request_id = p_request_id;',
+  "v_job.job_type <> 'research'",
+  'revoke all on function public.start_ai_research_job(uuid, uuid, uuid, text, text) from public, anon, authenticated;',
+  'grant execute on function public.start_ai_research_job(uuid, uuid, uuid, text, text) to service_role;',
+]) {
+  if (!aiResearchV2StartContractFixSql.includes(marker)) {
+    throw new Error(`AI research V2 start-contract forward-fix is missing required guard: ${marker}`)
+  }
+}
+if (/['\"]research_v[12]['\"]\s*,\s*['\"]pending['\"]/.test(aiResearchV2StartContractFixSql)) {
+  throw new Error('AI research V2 start-contract forward-fix unconditionally hardcodes schema_version.')
+}
+if ((aiResearchV2StartContractFixSql.match(/create\s+or\s+replace\s+function/gi) ?? []).length !== 1 || /create\s+or\s+replace\s+function\s+public\.(?!start_ai_research_job\b)/i.test(aiResearchV2StartContractFixSql)) {
+  throw new Error('AI research V2 start-contract forward-fix recreates a function other than start_ai_research_job.')
+}
+if (/insert\s+into\s+public\.activities|update\s+public\.campaign_members/i.test(aiResearchV2StartContractFixSql)) {
+  throw new Error('AI research V2 start-contract forward-fix adds start-time CRM activity or campaign-member mutation.')
+}
+if (/openai|gmail|approve|send|message/i.test(aiResearchV2StartContractFixSql.replace(/'openai'/g, ''))) {
+  throw new Error('AI research V2 start-contract forward-fix adds provider or outbound behavior.')
+}
+if (/grant\s+execute\s+on\s+function\s+public\.start_ai_research_job\([^;]*?\)\s+to\s+(?:public|anon|authenticated)/i.test(aiResearchV2StartContractFixSql)) {
+  throw new Error('AI research V2 start-contract forward-fix grants browser execution.')
 }
 
 const schemaSnapshot = await readFile(schemaSnapshotPath, 'utf8')
