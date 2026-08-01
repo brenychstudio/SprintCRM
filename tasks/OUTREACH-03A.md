@@ -26,3 +26,10 @@ The migration is additive. If a production issue is discovered, keep the ledger 
 - Completed static verification: `npm run verify:migrations`, `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build`, and `git diff --check`.
 - `npx supabase migration list` and `npx supabase db push --dry-run` could not connect to the linked database because the local non-secret database credential is rejected (`28P01`). No migration was applied and no function was deployed. Docker/local reset remains known verification debt.
 - Final acceptance remains pending: reviewed production migration apply; user-configured Edge Function secrets (`OPENAI_API_KEY`, `OPENAI_MODEL`, `AI_RUNTIME_ENABLED`, `AI_ALLOWED_ORIGINS`); function deployment; authenticated production probe smoke; confirmation that no research/message/status data changed; OpenAI project usage; and ledger/audit inspection.
+
+## Production smoke forward fix
+
+- Confirmed production smoke error: `column reference "request_id" is ambiguous` inside `public.start_ai_runtime_probe`. The `RETURNS TABLE` output name conflicted with an unqualified retry lookup against `ai_generations`.
+- The failure occurred before an AI call, so it consumed no OpenAI tokens and recorded no provider usage.
+- `20260801000002_fix_ai_runtime_probe_request_id_ambiguity.sql` is an additive forward fix. It recreates only `start_ai_runtime_probe`, aliases all `ai_generations` references, uses targetless `ON CONFLICT DO NOTHING`, and retains the fully qualified idempotent retry lookup, service-role restriction, organization/membership validation, runtime-probe scope, audit event, and grants/revokes.
+- The migration has not been applied, and the Edge Function has not been redeployed. An authenticated smoke retest remains pending after the reviewed forward-fix migration is applied.
