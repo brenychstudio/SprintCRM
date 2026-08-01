@@ -19,6 +19,27 @@ export type CampaignInput = { name: string; description?: string; target_segment
 export type EligibilityOutcome = 'eligible' | 'needs_information' | 'suppressed' | 'already_added' | 'archived' | 'ineligible'
 export type EligibilityResult = { lead_id: string; outcome: EligibilityOutcome; reason: string | null; campaign_member_id: string | null }
 export type ActiveSuppression = { subject_type: 'lead' | 'email' | 'domain'; subject_value_normalized: string }
+export type AiRuntimeProbe = {
+  id: string
+  generation_status: 'pending' | 'completed' | 'failed'
+  model_name: string | null
+  total_tokens: number | null
+  duration_ms: number | null
+  estimated_cost_usd: number | null
+  request_id: string | null
+  created_at: string
+}
+export type AiRuntimeProbeResult = {
+  ok: true
+  job_id: string
+  status: 'completed'
+  provider: 'openai'
+  model: string
+  schema_version: 'runtime_probe_v1'
+  usage: { input_tokens: number; cached_input_tokens: number; output_tokens: number; total_tokens: number }
+  cost: { estimated_usd: number | null; status: 'not_configured' }
+  duration_ms: number
+}
 export type ResearchInput = { observed_opportunity: string; recommended_offer: string; recommended_case: string; evidence: ResearchEvidence[]; confidence: number | null; warnings: string[] }
 export type MessageInput = { subject: string; body: string; channel: OutreachChannel; language: OutreachLanguage; research_snapshot_id: string | null }
 export type CampaignProgress = Record<'toPrepare' | 'needsReview' | 'ready' | 'sent' | 'needsAttention', number>

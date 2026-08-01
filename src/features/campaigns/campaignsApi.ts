@@ -2,7 +2,7 @@ import { supabase } from '../../lib/supabase'
 import type { Json } from '../../lib/supabase/database.types'
 import { listLeads } from '../leads/leadsApi'
 import type { Lead } from '../leads/types'
-import type { ActiveSuppression, Campaign, CampaignInput, CampaignMember, CampaignMemberWithLead, EligibilityResult, MessageInput, OutboundMessage, ResearchInput, ResearchSnapshot } from './types'
+import type { ActiveSuppression, AiRuntimeProbe, AiRuntimeProbeResult, Campaign, CampaignInput, CampaignMember, CampaignMemberWithLead, EligibilityResult, MessageInput, OutboundMessage, ResearchInput, ResearchSnapshot } from './types'
 
 const asCampaign = (value: unknown) => value as Campaign
 const asMember = (value: unknown) => value as CampaignMember
@@ -17,7 +17,23 @@ export const campaignQueryKeys = {
   workspace: (campaignId: string, memberId: string) => ['campaigns', campaignId, 'member', memberId] as const,
   leadSummary: (leadId: string) => ['campaigns', 'lead', leadId] as const,
   tasks: () => ['campaigns', 'tasks'] as const,
+  aiRuntimeProbe: (memberId: string) => ['campaigns', 'member', memberId, 'ai-runtime-probe'] as const,
   suppressions: () => ['campaigns', 'suppressions'] as const,
+}
+export async function getLatestAiRuntimeProbe(memberId: string): Promise<AiRuntimeProbe | null> {
+  const { data, error } = await supabase.from('ai_generations')
+    .select('id,generation_status,model_name,total_tokens,duration_ms,estimated_cost_usd,request_id,created_at')
+    .eq('campaign_member_id', memberId).eq('job_type', 'runtime_probe')
+    .order('created_at', { ascending: false }).limit(1).maybeSingle()
+  if (error) fail(error, 'Unable to load AI runtime status.')
+  return data as AiRuntimeProbe | null
+}
+export async function testAiRuntimeConnection(memberId: string, clientRequestId: string): Promise<AiRuntimeProbeResult> {
+  const { data, error } = await supabase.functions.invoke('outreach-ai-runtime', {
+    body: { operation: 'runtime_probe', campaign_member_id: memberId, client_request_id: clientRequestId },
+  })
+  if (error || !data || data.ok !== true) throw new Error('AI runtime probe failed.')
+  return data as AiRuntimeProbeResult
 }
 function fail(error: { code?: string; message?: string } | null, fallback: string): never {
   if (error?.code === '23505') throw new Error('This lead is already in the campaign.')

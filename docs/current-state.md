@@ -1,5 +1,13 @@
 # Current state - OUTREACH-02R accepted manual workspace
 
+## OUTREACH-03A implementation pending deployed acceptance
+
+`20260801000001_outreach_ai_runtime_foundation.sql` additively extends `ai_generations` into the generic organization-scoped runtime ledger, preserving legacy rows as `legacy_draft`, preserving existing research/message foreign keys, and removing authenticated browser insert/update policies. Narrow service-role RPCs create and finalize only `runtime_probe` jobs with membership checks, idempotent request IDs, terminal-state guards, and append-only audit events. No CRM activities are created for the technical probe.
+
+`outreach-ai-runtime` is an authenticated Supabase Edge Function using a user-scoped client for authorization and a service-role client exclusively for the narrow RPCs. It calls OpenAI Responses only with fixed synthetic input, `store: false`, strict JSON Schema, allowlisted CORS, a bounded timeout, and no automatic retry. `OPENAI_API_KEY`, model configuration, the server kill switch, and origins are runtime secrets/configuration, never browser values.
+
+The existing Campaign Full Workspace contains an opt-in AI runtime probe card only when `outreach_ops_enabled` and `ai_runtime_enabled` are both enabled. It shows compact connection metadata and does not mutate research, message, or campaign-member workflow state. It is not accepted until the reviewed production migration, user-configured secrets, deployed function, authenticated probe smoke, non-mutation verification, OpenAI project usage check, and ledger/audit inspection have occurred.
+
 Baseline recorded on 2026-07-22 from `codex/outreach-00r-rebaseline` (created from `main` at `23754b0`). The working tree was clean before this task.
 
 ## Product surfaces
