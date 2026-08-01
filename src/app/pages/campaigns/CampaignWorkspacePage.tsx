@@ -5,6 +5,8 @@ import { approveMessage, campaignQueryKeys, getCampaignMemberContext, listCampai
 import { nextReviewMemberId } from '../../../features/campaigns/workflow'
 import type { ResearchEvidence } from '../../../features/campaigns/types'
 import { useI18n } from '../../../i18n/i18n'
+import { featureFlags } from '../../../features/featureFlags/featureFlags'
+import { AiRuntimeProbeCard } from '../../features/outreach/AiRuntimeProbeCard'
 
 export function CampaignWorkspacePage() {
   const { campaignId, memberId } = useParams()
@@ -88,6 +90,7 @@ export function CampaignWorkspacePage() {
         </div>
       </div>
       <div className="mt-5 flex justify-between gap-3"><button data-testid="member-skip" type="button" disabled={skipMutation.isPending} onClick={() => { const reason = window.prompt(t('campaigns.skipPrompt')); if (reason !== null) skipMutation.mutate(reason) }} className="rounded-xl border border-zinc-200 px-4 py-2.5 text-sm text-zinc-700">{t('campaigns.skip')}</button><button data-testid="workspace-next" type="button" onClick={() => moveNext()} className="rounded-xl border border-zinc-200 px-4 py-2.5 text-sm text-zinc-700">{t('campaigns.next')}</button></div>
+    {featureFlags.outreach_ops_enabled && featureFlags.ai_runtime_enabled ? <div className="mt-5"><AiRuntimeProbeCard memberId={member.id} /></div> : null}
     </section>
   )
 }

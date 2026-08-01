@@ -1,6 +1,7 @@
 export const featureFlagKeys = [
   'outreach_ops_enabled',
   'ai_draft_generation_enabled',
+  'ai_runtime_enabled',
   'gmail_connection_enabled',
   'controlled_send_enabled',
 ] as const

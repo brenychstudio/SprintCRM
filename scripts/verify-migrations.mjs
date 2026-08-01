@@ -11,6 +11,7 @@ const expectedCampaignActivityMigration = '20260725000001_campaign_activity_type
 const expectedCampaignWorkspaceRpcMigration = '20260725000002_manual_campaign_workspace_rpc.sql'
 const expectedCampaignMemberAmbiguityFix = '20260729000001_fix_add_campaign_members_ambiguous_lead_id.sql'
 const expectedManualMessageChannelFix = '20260729000002_fix_manual_message_channel_cast.sql'
+const expectedAiRuntimeProbeRequestIdFix = '20260801000002_fix_ai_runtime_probe_request_id_ambiguity.sql'
 const requiredCampaignTables = [
   'campaigns',
   'campaign_members',
@@ -60,6 +61,10 @@ if (!files.includes(expectedCampaignMemberAmbiguityFix)) {
 
 if (!files.includes(expectedManualMessageChannelFix)) {
   throw new Error(`Missing required manual message channel forward-fix: ${expectedManualMessageChannelFix}`)
+}
+
+if (!files.includes(expectedAiRuntimeProbeRequestIdFix)) {
+  throw new Error(`Missing required AI runtime probe request-id forward-fix: ${expectedAiRuntimeProbeRequestIdFix}`)
 }
 
 for (const file of files) {
@@ -139,6 +144,31 @@ for (const marker of [
 }
 if (/outreach_(draft_saved|approved)'\s*,\s*v_message\.channel/i.test(manualMessageChannelFixSql)) {
   throw new Error('Manual message channel forward-fix writes text directly into activities.channel.')
+}
+
+const aiRuntimeProbeRequestIdFixSql = await readFile(path.join(migrationsDirectory, expectedAiRuntimeProbeRequestIdFix), 'utf8')
+for (const marker of [
+  'create or replace function public.start_ai_runtime_probe(',
+  'returns table (',
+  'request_id uuid,',
+  "<> 'service_role'",
+  'insert into public.ai_generations as new_job',
+  ') on conflict do nothing',
+  'returning new_job.* into v_job',
+  'from public.ai_generations as existing_job',
+  'where existing_job.org_id = v_member.organization_id',
+  'and existing_job.request_id = p_request_id',
+  "'runtime_probe'",
+  "'ai.runtime_probe.requested'",
+  'revoke all on function public.start_ai_runtime_probe(uuid, uuid, uuid, text) from public, anon, authenticated;',
+  'grant execute on function public.start_ai_runtime_probe(uuid, uuid, uuid, text) to service_role;',
+]) {
+  if (!aiRuntimeProbeRequestIdFixSql.includes(marker)) {
+    throw new Error(`AI runtime probe request-id forward-fix is missing required guard: ${marker}`)
+  }
+}
+if (/from\s+public\.ai_generations\s*\n\s*where\s+org_id\s*=\s*v_member\.organization_id\s+and\s+request_id\s*=\s*p_request_id/i.test(aiRuntimeProbeRequestIdFixSql)) {
+  throw new Error('AI runtime probe request-id forward-fix reintroduces an ambiguous retry lookup.')
 }
 
 const schemaSnapshot = await readFile(schemaSnapshotPath, 'utf8')

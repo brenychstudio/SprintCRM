@@ -598,6 +598,20 @@ const en: Record<string, string> = {
   'today.outreach.summary': '{review} items need review · {research} contacts need research · {attention} need attention',
   'today.outreach.empty': 'No outreach tasks right now',
   'today.outreach.open': 'Open next task',
+  'campaigns.aiRuntime.title': 'AI runtime',
+  'campaigns.aiRuntime.status': 'Status',
+  'campaigns.aiRuntime.notTested': 'Not tested',
+  'campaigns.aiRuntime.testing': 'Testing',
+  'campaigns.aiRuntime.connected': 'Connected',
+  'campaigns.aiRuntime.failed': 'Failed',
+  'campaigns.aiRuntime.test': 'Test AI connection',
+  'campaigns.aiRuntime.model': 'Model',
+  'campaigns.aiRuntime.tokens': 'Total tokens',
+  'campaigns.aiRuntime.duration': 'Duration',
+  'campaigns.aiRuntime.cost': 'Cost',
+  'campaigns.aiRuntime.costNotConfigured': 'Not configured',
+  'campaigns.aiRuntime.identifier': 'Probe ID',
+  'campaigns.aiRuntime.failedHint': 'AI connection test failed.',
 }
 
 export default en

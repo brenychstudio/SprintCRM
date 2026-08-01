@@ -38,7 +38,7 @@ CRM studio's existing migration lineage was reconciled on 2026-07-22. The former
 | `suppression_entries` | Contact/sending prohibition foundation. | Exists: OUTREACH-01R |
 | `audit_events` | Actor, transition and human/AI audit records. | Exists: OUTREACH-01R |
 | `activities` | Canonical CRM timeline. | Exists; retain |
-| `ai_generations` | Historical early draft-generation record. | Exists locally; evaluate compatibility in OUTREACH-01R |
+| `ai_generations` | Organization-scoped AI runtime ledger: legacy draft history plus versioned job/provider/usage/audit metadata. | OUTREACH-03A foundation; browser writes removed |
 
 Campaign-member state belongs in `campaign_members`, not in `leads`. Use internal technical statuses as needed, but reduce UI language to: To prepare, Needs review, Ready, Sent, Needs attention.
 
@@ -48,8 +48,15 @@ Campaign-member state belongs in `campaign_members`, not in `leads`. Use interna
 2. `OUTREACH-02R`: accepted — manual campaign workspace, research/evidence, review shell, atomic human-controlled transitions, and a truthful empty Today state.
 3. `LEADS-EDIT-01`: accepted — focused manual contact create/edit and Campaign eligibility repair.
 4. `OUTREACH-PILOT-01`: one test campaign with 3 real contacts, then 3–7 more; manual workflow, ChatGPT Work browser assistance, and human approval only. Record actual cycle time, missing fields, confusing transitions, and version churn before automating.
-5. `OUTREACH-03A`: safe supervised AI runtime foundation — authenticated Edge Function, server-side key, organization validation, structured contracts, model/prompt/usage/cost metadata, audit, timeout/error handling, and feature flag. No research/draft generation, Gmail, or auto-send.
-6. `OUTREACH-03B` / `OUTREACH-03C` / `OUTREACH-03D`: supervised AI research, draft, and QA respectively, scoped from the proven pilot workflow.
-7. `OUTREACH-04R`: Gmail OAuth, Gmail draft-first and reconciliation.
-8. `OUTREACH-05R`: replies, follow-ups, Today and Pipeline routing.
-9. `AUTONOMY`: policy engine, queues, idempotency, kill switches and Shadow Mode only after validated supervised use.
+5. `OUTREACH-03A`: accepted — safe supervised AI runtime foundation. Production migrations `20260801000001` and forward fix `20260801000002` are applied, the authenticated `outreach-ai-runtime` Edge Function is ACTIVE, and the synthetic production probe completed on `gpt-5.4-mini` with 82 total tokens in 2164 ms. The probe created no research/message content or status mutation and made no Gmail/sending operation. The OpenAI boundary remains server-only; client and server kill switches remain available.
+6. `OUTREACH-03B` — AI Research Job: next engineering checkpoint. Scope a supervised, human-reviewed research job from the proven pilot workflow; do not add automatic sends.
+7. `OUTREACH-03C` / `OUTREACH-03D`: supervised AI draft and QA respectively, each scoped from the proven pilot workflow.
+8. `OUTREACH-04R`: Gmail OAuth, Gmail draft-first and reconciliation.
+9. `OUTREACH-05R`: replies, follow-ups, Today and Pipeline routing.
+10. `AUTONOMY`: policy engine, queues, idempotency, kill switches and Shadow Mode only after validated supervised use.
+
+## Runtime foundation constraints
+
+The OUTREACH-03A probe is a fixed synthetic request only. It uses the OpenAI Responses API with `store: false`, strict JSON Schema, an approximately 25-second timeout, no automatic provider retry, and exact provider usage where available. `OPENAI_API_KEY` exists only as an Edge Function secret. `AI_RUNTIME_ENABLED` defaults to false server-side; `VITE_AI_RUNTIME_ENABLED` only gates the existing workspace card and also defaults to false. `AI_ALLOWED_ORIGINS` is an explicit CORS allowlist for the authenticated endpoint.
+
+The production acceptance probe completed successfully after forward fix `20260801000002`; it did not generate research/message content, alter workflow status, or perform Gmail/sending work. Remaining pre-staging debt is Docker/local Supabase reset, behavioral RLS integration tests, and the Vite large-bundle warning.

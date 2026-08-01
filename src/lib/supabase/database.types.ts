@@ -67,22 +67,41 @@ export type Database = {
           applied_at: string | null
           applied_to_lead: boolean
           body: string | null
+          cached_input_tokens: number | null
+          campaign_id: string | null
+          campaign_member_id: string | null
           channel: string
+          completed_at: string | null
           created_at: string
           created_by: string
+          duration_ms: number | null
+          error_code: string | null
           error_message: string | null
+          estimated_cost_usd: number | null
           estimated_tokens: number | null
           generation_status: string
           id: string
+          input_tokens: number | null
           input_snapshot: Json
+          job_type: string
           language: string
-          lead_id: string
+          lead_id: string | null
           model_name: string | null
+          output_payload: Json | null
+          output_tokens: number | null
           org_id: string
           owner: string
           personalization_notes: string | null
+          pricing_snapshot: Json | null
           prompt_version: string
+          provider: string | null
+          provider_request_id: string | null
+          provider_response_id: string | null
+          request_id: string | null
+          schema_version: string | null
+          started_at: string | null
           subject: string | null
+          total_tokens: number | null
           type: string
           variant: string
         }
@@ -90,22 +109,41 @@ export type Database = {
           applied_at?: string | null
           applied_to_lead?: boolean
           body?: string | null
+          cached_input_tokens?: number | null
+          campaign_id?: string | null
+          campaign_member_id?: string | null
           channel?: string
+          completed_at?: string | null
           created_at?: string
           created_by?: string
+          duration_ms?: number | null
+          error_code?: string | null
           error_message?: string | null
+          estimated_cost_usd?: number | null
           estimated_tokens?: number | null
           generation_status?: string
           id?: string
+          input_tokens?: number | null
           input_snapshot?: Json
+          job_type?: string
           language?: string
-          lead_id: string
+          lead_id?: string | null
           model_name?: string | null
+          output_payload?: Json | null
+          output_tokens?: number | null
           org_id?: string
           owner?: string
           personalization_notes?: string | null
+          pricing_snapshot?: Json | null
           prompt_version?: string
+          provider?: string | null
+          provider_request_id?: string | null
+          provider_response_id?: string | null
+          request_id?: string | null
+          schema_version?: string | null
+          started_at?: string | null
           subject?: string | null
+          total_tokens?: number | null
           type?: string
           variant?: string
         }
@@ -113,26 +151,59 @@ export type Database = {
           applied_at?: string | null
           applied_to_lead?: boolean
           body?: string | null
+          cached_input_tokens?: number | null
+          campaign_id?: string | null
+          campaign_member_id?: string | null
           channel?: string
+          completed_at?: string | null
           created_at?: string
           created_by?: string
+          duration_ms?: number | null
+          error_code?: string | null
           error_message?: string | null
+          estimated_cost_usd?: number | null
           estimated_tokens?: number | null
           generation_status?: string
           id?: string
+          input_tokens?: number | null
           input_snapshot?: Json
+          job_type?: string
           language?: string
-          lead_id?: string
+          lead_id?: string | null
           model_name?: string | null
+          output_payload?: Json | null
+          output_tokens?: number | null
           org_id?: string
           owner?: string
           personalization_notes?: string | null
+          pricing_snapshot?: Json | null
           prompt_version?: string
+          provider?: string | null
+          provider_request_id?: string | null
+          provider_response_id?: string | null
+          request_id?: string | null
+          schema_version?: string | null
+          started_at?: string | null
           subject?: string | null
+          total_tokens?: number | null
           type?: string
           variant?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ai_generations_campaign_member_organization_fkey"
+            columns: ["campaign_member_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "ai_generations_campaign_organization_fkey"
+            columns: ["campaign_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id", "organization_id"]
+          },
           {
             foreignKeyName: "ai_generations_lead_id_fkey"
             columns: ["lead_id"]
@@ -878,6 +949,42 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      finish_ai_runtime_probe: {
+        Args: {
+          p_actor_user_id: string
+          p_cached_input_tokens: number | null
+          p_duration_ms: number | null
+          p_error_code: string | null
+          p_error_message: string | null
+          p_input_tokens: number | null
+          p_job_id: string
+          p_output_payload: Json | null
+          p_output_tokens: number | null
+          p_provider_request_id: string | null
+          p_provider_response_id: string | null
+          p_status: string
+          p_total_tokens: number | null
+        }
+        Returns: Database["public"]["Tables"]["ai_generations"]["Row"]
+        SetofOptions: { from: "*"; to: "ai_generations"; isOneToOne: true; isSetofReturn: false }
+      }
+      start_ai_runtime_probe: {
+        Args: { p_actor_user_id: string; p_campaign_member_id: string; p_model: string; p_request_id: string }
+        Returns: {
+          cached_input_tokens: number | null
+          duration_ms: number | null
+          estimated_cost_usd: number | null
+          generation_status: string
+          input_tokens: number | null
+          job_id: string
+          model_name: string | null
+          output_tokens: number | null
+          request_id: string | null
+          schema_version: string | null
+          total_tokens: number | null
+          was_created: boolean
+        }[]
+      }
       add_campaign_members: {
         Args: { p_campaign_id: string; p_lead_ids: string[] }
         Returns: {

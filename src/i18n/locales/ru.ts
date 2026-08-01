@@ -583,6 +583,20 @@ const ru: Record<string, string> = {
   'today.outreach.summary': '{review} items need review · {research} contacts need research · {attention} need attention',
   'today.outreach.empty': 'Сейчас нет задач для outreach',
   'today.outreach.open': 'Open next task',
+  'campaigns.aiRuntime.title': 'Среда выполнения ИИ',
+  'campaigns.aiRuntime.status': 'Статус',
+  'campaigns.aiRuntime.notTested': 'Не проверено',
+  'campaigns.aiRuntime.testing': 'Проверка',
+  'campaigns.aiRuntime.connected': 'Подключено',
+  'campaigns.aiRuntime.failed': 'Ошибка',
+  'campaigns.aiRuntime.test': 'Проверить подключение ИИ',
+  'campaigns.aiRuntime.model': 'Модель',
+  'campaigns.aiRuntime.tokens': 'Всего токенов',
+  'campaigns.aiRuntime.duration': 'Длительность',
+  'campaigns.aiRuntime.cost': 'Стоимость',
+  'campaigns.aiRuntime.costNotConfigured': 'Не настроено',
+  'campaigns.aiRuntime.identifier': 'ID проверки',
+  'campaigns.aiRuntime.failedHint': 'Проверка подключения ИИ не удалась.',
 }
 
 export default ru

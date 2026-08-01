@@ -590,6 +590,20 @@ const uk: Record<string, string> = {
   'today.outreach.summary': '{review} потребують перевірки · {research} контактів потребують дослідження · {attention} потребують уваги',
   'today.outreach.empty': 'Зараз немає завдань для аутрічу',
   'today.outreach.open': 'Відкрити наступне завдання',
+  'campaigns.aiRuntime.title': 'Середовище виконання ШІ',
+  'campaigns.aiRuntime.status': 'Статус',
+  'campaigns.aiRuntime.notTested': 'Не тестовано',
+  'campaigns.aiRuntime.testing': 'Тестування',
+  'campaigns.aiRuntime.connected': 'Підключено',
+  'campaigns.aiRuntime.failed': 'Помилка',
+  'campaigns.aiRuntime.test': 'Перевірити AI-з’єднання',
+  'campaigns.aiRuntime.model': 'Модель',
+  'campaigns.aiRuntime.tokens': 'Усього токенів',
+  'campaigns.aiRuntime.duration': 'Тривалість',
+  'campaigns.aiRuntime.cost': 'Вартість',
+  'campaigns.aiRuntime.costNotConfigured': 'Не налаштовано',
+  'campaigns.aiRuntime.identifier': 'ID перевірки',
+  'campaigns.aiRuntime.failedHint': 'Перевірка AI-з’єднання не вдалася.',
 }
 
 export default uk
