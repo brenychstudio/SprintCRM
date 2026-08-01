@@ -93,3 +93,23 @@ feat(outreach): add manual campaign workspace
 - `docs/architecture/outreach-target.md`
 - `docs/decisions/0005-manual-campaign-workspace.md`
 - `docs/accepted-checkpoints/OUTREACH-02R.md`
+
+## Final acceptance result
+
+Accepted on 2026-07-29 through PR #17 after authenticated production-linked smoke.
+
+```text
+Create/Edit lead
+→ Add to campaign
+→ Research v1/v2
+→ Message versions
+→ Submit for review
+→ Today queue
+→ Approve
+→ Drawer summary
+→ Full Workspace
+```
+
+The smoke passed in light and dark modes, `en`/`uk`/`es`/`ru`, and responsive layouts. `20260729000001` (FIX-03) and `20260729000002` (FIX-04) were applied through the Supabase CLI; remote migration history is synchronized and the dry run is up to date. P0 is `0` and workflow-blocking P1 is `0`.
+
+Remaining non-blocking debt before staging/private beta: Docker Desktop/local `supabase db reset`, behavioral RLS integration tests, and the Vite large-bundle warning. AI, Gmail, and auto-send remain out of scope.

@@ -47,8 +47,9 @@ Campaign-member state belongs in `campaign_members`, not in `leads`. Use interna
 1. `OUTREACH-01R`: completed — additive campaign domain, RLS, audit and generated types; no AI API.
 2. `OUTREACH-02R`: accepted — manual campaign workspace, research/evidence, review shell, atomic human-controlled transitions, and a truthful empty Today state.
 3. `LEADS-EDIT-01`: accepted — focused manual contact create/edit and Campaign eligibility repair.
-4. Operational pilot: one test campaign with 5–10 real contacts, manual workflow, ChatGPT Work browser assistance, and human approval only. Record actual cycle time, missing fields, confusing transitions, and version churn before automating.
-5. `OUTREACH-03R`: supervised Edge Function jobs with strict schemas and human approval, scoped from the proven pilot workflow.
-6. `OUTREACH-04R`: Gmail OAuth, Gmail draft-first and reconciliation.
-7. `OUTREACH-05R`: replies, follow-ups, Today and Pipeline routing.
-8. `AUTONOMY`: policy engine, queues, idempotency, kill switches and Shadow Mode only after validated supervised use.
+4. `OUTREACH-PILOT-01`: one test campaign with 3 real contacts, then 3–7 more; manual workflow, ChatGPT Work browser assistance, and human approval only. Record actual cycle time, missing fields, confusing transitions, and version churn before automating.
+5. `OUTREACH-03A`: safe supervised AI runtime foundation — authenticated Edge Function, server-side key, organization validation, structured contracts, model/prompt/usage/cost metadata, audit, timeout/error handling, and feature flag. No research/draft generation, Gmail, or auto-send.
+6. `OUTREACH-03B` / `OUTREACH-03C` / `OUTREACH-03D`: supervised AI research, draft, and QA respectively, scoped from the proven pilot workflow.
+7. `OUTREACH-04R`: Gmail OAuth, Gmail draft-first and reconciliation.
+8. `OUTREACH-05R`: replies, follow-ups, Today and Pipeline routing.
+9. `AUTONOMY`: policy engine, queues, idempotency, kill switches and Shadow Mode only after validated supervised use.
