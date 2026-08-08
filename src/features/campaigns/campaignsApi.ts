@@ -1,13 +1,56 @@
+import { FunctionsHttpError } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabase'
 import type { Json } from '../../lib/supabase/database.types'
 import { listLeads } from '../leads/leadsApi'
 import type { Lead } from '../leads/types'
-import type { ActiveSuppression, AiDraftJob, AiDraftResult, AiResearchJob, AiResearchResult, AiRuntimeProbe, AiRuntimeProbeResult, Campaign, CampaignInput, CampaignMember, CampaignMemberWithLead, EligibilityResult, MessageInput, OutboundMessage, ResearchInput, ResearchSnapshot } from './types'
+import type { ActiveSuppression, AiDraftGenerationErrorCode, AiDraftJob, AiDraftResult, AiResearchJob, AiResearchResult, AiRuntimeProbe, AiRuntimeProbeResult, Campaign, CampaignInput, CampaignMember, CampaignMemberWithLead, EligibilityResult, MessageInput, OutboundMessage, ResearchInput, ResearchSnapshot } from './types'
 
 const asCampaign = (value: unknown) => value as Campaign
 const asMember = (value: unknown) => value as CampaignMember
 const asMessage = (value: unknown) => value as OutboundMessage
 const asResearch = (value: unknown) => value as ResearchSnapshot
+
+const aiDraftGenerationErrorCodes = new Set<AiDraftGenerationErrorCode>([
+  'invalid_request', 'unauthorized', 'unavailable', 'runtime_disabled', 'draft_disabled', 'research_required', 'stale_research', 'invalid_member_state', 'configuration_missing', 'provider_rate_limited', 'provider_timeout', 'provider_error', 'invalid_provider_response', 'persistence_error', 'request_failed',
+])
+
+type AiDraftFailureEnvelope = { ok: false; code: AiDraftGenerationErrorCode; message: string; request_id: string | null; retryable: boolean }
+
+export class AiDraftGenerationError extends Error {
+  readonly code: AiDraftGenerationErrorCode
+  readonly requestId: string | null
+  readonly retryable: boolean
+
+  constructor({ code, message, requestId, retryable }: { code: AiDraftGenerationErrorCode; message: string; requestId: string | null; retryable: boolean }) {
+    super(message)
+    this.name = 'AiDraftGenerationError'
+    this.code = code
+    this.requestId = requestId
+    this.retryable = retryable
+  }
+}
+
+function asAiDraftFailureEnvelope(value: unknown): AiDraftFailureEnvelope | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const envelope = value as Record<string, unknown>
+  if (envelope.ok !== false || typeof envelope.code !== 'string' || !aiDraftGenerationErrorCodes.has(envelope.code as AiDraftGenerationErrorCode) || typeof envelope.message !== 'string' || (envelope.request_id !== null && typeof envelope.request_id !== 'string') || typeof envelope.retryable !== 'boolean') return null
+  return { ok: false, code: envelope.code as AiDraftGenerationErrorCode, message: envelope.message, request_id: envelope.request_id as string | null, retryable: envelope.retryable }
+}
+
+async function readAiDraftFailureEnvelope(error: unknown): Promise<AiDraftFailureEnvelope | null> {
+  if (!(error instanceof FunctionsHttpError) || !(error.context instanceof Response)) return null
+  try {
+    return asAiDraftFailureEnvelope(await error.context.clone().json())
+  } catch {
+    return null
+  }
+}
+
+function aiDraftGenerationError(envelope: AiDraftFailureEnvelope | null, clientRequestId: string): AiDraftGenerationError {
+  return new AiDraftGenerationError(envelope
+    ? { code: envelope.code, message: envelope.message, requestId: envelope.request_id ?? clientRequestId, retryable: envelope.retryable }
+    : { code: 'request_failed', message: 'AI draft could not be generated.', requestId: clientRequestId, retryable: false })
+}
 
 export const campaignQueryKeys = {
   all: ['campaigns'] as const,
@@ -41,7 +84,8 @@ export async function getLatestAiDraftJob(memberId: string): Promise<AiDraftJob 
 }
 export async function generateAiDraft(memberId: string, researchSnapshotId: string, clientRequestId: string): Promise<AiDraftResult> {
   const { data, error } = await supabase.functions.invoke('outreach-ai-runtime', { body: { operation: 'generate_draft', campaign_member_id: memberId, confirmed_research_snapshot_id: researchSnapshotId, client_request_id: clientRequestId } })
-  if (error || !data || data.ok !== true) throw new Error('AI draft could not be generated.')
+  const envelope = asAiDraftFailureEnvelope(data) ?? await readAiDraftFailureEnvelope(error)
+  if (error || !data || data.ok !== true) throw aiDraftGenerationError(envelope, clientRequestId)
   return data as AiDraftResult
 }
 export async function getLatestAiRuntimeProbe(memberId: string): Promise<AiRuntimeProbe | null> {
