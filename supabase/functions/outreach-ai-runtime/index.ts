@@ -34,7 +34,7 @@ import {
   draftSchemaVersion,
   mapDraftProviderError,
   normalizeDraftUsage,
-  parseDraftResultDetailed,
+  parseDraftResultWithDeterministicCtaCompletion,
   safeDraftErrorMessage,
   validateDraftRequest,
 } from '../_shared/ai-draft.ts'
@@ -356,7 +356,10 @@ async function generateDraft(request: Request, body: unknown, requestId: string,
     const usage = normalizeDraftUsage(providerBody && typeof providerBody === 'object' ? (providerBody as { usage?: unknown }).usage : null)
     const responseText = outputText(providerBody)
     const refusal = providerBody && typeof providerBody === 'object' && ((providerBody as { status?: unknown }).status === 'incomplete' || (providerBody as { status?: unknown }).status === 'failed')
-    const parsed = refusal ? { ok: false as const, reason: 'provider_refusal' as const } : parseDraftResultDetailed(responseText, campaignResponse.data.proof_context, resolveResearchLanguage(leadResponse.data.language, campaignResponse.data.default_language), leadResponse.data.contact_name)
+    const validation = refusal
+      ? { result: { ok: false as const, reason: 'provider_refusal' as const }, ctaCompletion: null }
+      : parseDraftResultWithDeterministicCtaCompletion(responseText, campaignResponse.data.proof_context, resolveResearchLanguage(leadResponse.data.language, campaignResponse.data.default_language), leadResponse.data.contact_name)
+    const parsed = validation.result
     if (!parsed.ok) {
       const rejected = buildRejectedDraftFailure(parsed.reason, usage, providerResponseId, providerRequestId)
       const persisted = await finishDraftFailure(service, row, userId, rejected.error_code, Date.now() - startedAt, rejected.provider_response_id, rejected.provider_request_id, {
@@ -366,7 +369,7 @@ async function generateDraft(request: Request, body: unknown, requestId: string,
     }
     const { data: finished, error: finishError } = await service.rpc('finish_ai_draft_job', {
       p_job_id: row.job_id, p_actor_user_id: userId, p_status: 'completed', p_provider_response_id: providerResponseId, p_provider_request_id: providerRequestId,
-      p_output_payload: parsed.value, p_input_tokens: usage.input_tokens, p_cached_input_tokens: usage.cached_input_tokens, p_output_tokens: usage.output_tokens,
+      p_output_payload: { ...parsed.value, ...(validation.ctaCompletion ? { cta_completion: validation.ctaCompletion } : {}) }, p_input_tokens: usage.input_tokens, p_cached_input_tokens: usage.cached_input_tokens, p_output_tokens: usage.output_tokens,
       p_total_tokens: usage.total_tokens, p_duration_ms: Date.now() - startedAt, p_error_code: null, p_error_message: null,
     })
     const finishedRow = draftRow(finished)
