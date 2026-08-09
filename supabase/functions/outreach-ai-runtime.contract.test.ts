@@ -6,6 +6,7 @@ const runtimeSource = readFileSync(resolve('supabase/functions/outreach-ai-runti
 const lifecycleSql = readFileSync(resolve('supabase/migrations/20260801000007_supervised_ai_draft_generation.sql'), 'utf8')
 const promptV2Sql = readFileSync(resolve('supabase/migrations/20260801000008_accept_ai_draft_prompt_v2.sql'), 'utf8')
 const promptV3Sql = readFileSync(resolve('supabase/migrations/20260801000009_accept_ai_draft_prompt_v3.sql'), 'utf8')
+const promptV4Sql = readFileSync(resolve('supabase/migrations/20260801000010_accept_ai_draft_prompt_v4.sql'), 'utf8')
 const draftRuntime = runtimeSource.slice(runtimeSource.indexOf('async function generateDraft('), runtimeSource.indexOf('async function finishFailure('))
 const finishLifecycle = lifecycleSql.slice(lifecycleSql.indexOf('create or replace function public.finish_ai_draft_job('), lifecycleSql.indexOf('create or replace function public.fail_stale_ai_draft_job('))
 
@@ -40,7 +41,8 @@ describe('supervised AI draft runtime contract', () => {
   it('accepts historical and current prompt versions while keeping draft_v1 and rejecting unknown versions', () => {
     expect(promptV2Sql).toContain("p_prompt_version not in ('outreach_draft_v1', 'outreach_draft_v2')")
     expect(promptV3Sql).toContain("p_prompt_version not in ('outreach_draft_v1', 'outreach_draft_v2', 'outreach_draft_v3')")
-    expect(promptV3Sql).toContain("'draft_v1', 'pending'")
-    expect(promptV3Sql).not.toMatch(/alter\s+table|update\s+public\.ai_generations|delete\s+from/i)
+    expect(promptV4Sql).toContain("p_prompt_version not in ('outreach_draft_v1', 'outreach_draft_v2', 'outreach_draft_v3', 'outreach_draft_v4')")
+    expect(promptV4Sql).toContain("'draft_v1', 'pending'")
+    expect(promptV4Sql).not.toMatch(/alter\s+table|update\s+public\.ai_generations|delete\s+from/i)
   })
 })

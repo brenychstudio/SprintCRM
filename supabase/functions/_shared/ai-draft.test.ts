@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildDraftInstructions, buildDraftPrompt, buildDraftResponsesRequest, buildRejectedDraftFailure, draftJsonSchema, draftPromptVersion, draftSchemaVersion, normalizeDraftUsage, parseDraftResultDetailed, parseDraftResultWithDeterministicCtaCompletion, safeDraftErrorMessage, validateDraftRequest } from './ai-draft'
+import { buildDraftInstructions, buildDraftPrompt, buildDraftResponsesRequest, buildRejectedDraftFailure, draftJsonSchema, draftPromptVersion, draftSchemaVersion, normalizeDraftUsage, parseDraftResultDetailed, parseDraftResultWithDeterministicCtaCompletion, resolveProofStatusCategories, resolveRequiredProof, safeDraftErrorMessage, validateDraftRequest } from './ai-draft'
 
 const input = {
   lead: { company_name: 'Hotel Marina Badalona', contact_name: null, language: 'es' },
@@ -16,6 +16,7 @@ const neutralSpanishOpening = 'Hola, equipo de Hotel Marina Badalona:\n\nAl revi
 const vosotrosSpanishOpening = 'Hola, equipo de Hotel Marina Badalona:\n\nAl revisar vuestra presencia p\u00fablica, vimos una oportunidad para presentar con m\u00e1s claridad las habitaciones, el spa y la propuesta gastron\u00f3mica. Nuestro enfoque de dise\u00f1o web puede ordenar esos puntos y hacer m\u00e1s directa vuestra ruta hacia la reserva, respetando la identidad actual del hotel.'
 const conceptProofContext = 'Oria House Barcelona is a boutique hotel concept and reference project developed internally.'
 const requiredConceptProofContext = `Oria House Barcelona\n\n${conceptProofContext}`
+const productionProofContext = 'Oria House Barcelona\n\nOria House Barcelona is a boutique hotel concept website shaped around a quieter, more intimate stay in the city.'
 
 describe('AI draft request and privacy boundary', () => {
   it('requires valid member and confirmed research UUIDs', () => {
@@ -45,11 +46,19 @@ describe('AI draft request and privacy boundary', () => {
     expect(buildDraftInstructions('es', false)).toContain('Do not add a sender signature')
     expect(buildDraftResponsesRequest('test-model', input).instructions).toContain('public context clearly indicates Spain')
     const requiredRequest = buildDraftResponsesRequest('test-model', { ...input, campaign: { ...input.campaign, proof_context: requiredConceptProofContext } })
-    expect(JSON.parse(requiredRequest.input).reviewed_research.required_proof_reference).toBe('Oria House Barcelona')
-    expect(requiredRequest.instructions).toContain('Mention that exact reference once in the body')
-    expect(draftPromptVersion).toBe('outreach_draft_v3')
+    expect(JSON.parse(requiredRequest.input).reviewed_research.required_proof).toEqual({ reference: 'Oria House Barcelona', allowed_statuses: ['concept', 'reference'] })
+    expect(requiredRequest.instructions).toContain('Mention required_proof.reference exactly once in the body')
+    expect(requiredRequest.instructions).toContain('at least one machine status listed in required_proof.allowed_statuses')
+    expect(draftPromptVersion).toBe('outreach_draft_v4')
     expect(draftSchemaVersion).toBe('draft_v1')
     expect(request).not.toHaveProperty('retry')
+  })
+
+  it('derives one structured proof requirement without inventing status categories', () => {
+    expect(resolveRequiredProof('Oria House Barcelona — concepto boutique', productionProofContext)).toEqual({ reference: 'Oria House Barcelona', allowed_statuses: ['concept'] })
+    expect(resolveProofStatusCategories('Oria House Barcelona\n\nA prototype and internal study.')).toEqual(['prototype', 'internal_study'])
+    expect(resolveRequiredProof(null, productionProofContext)).toBeNull()
+    expect(resolveRequiredProof('Caso no relacionado', productionProofContext)).toBeNull()
   })
 
   it('uses lead language, then campaign language, then English without interface locale input', () => {
@@ -124,9 +133,11 @@ describe('AI draft structured output validation', () => {
   it('requires a verified recommended proof reference and preserves its concept status', () => {
     const concept = `${neutralSpanishOpening}\n\nComo referencia de enfoque, Oria House Barcelona es un concepto que desarrollamos para explorar una presentaci\u00f3n hotelera clara y humana.\n\n\u00bfLes interesar\u00eda que les comparta una idea breve?`
     const omitted = `${neutralSpanishOpening}\n\n\u00bfLes interesar\u00eda que les comparta una idea breve?`
+    const missingStatus = `${neutralSpanishOpening}\n\nOria House Barcelona muestra un enfoque hotelero claro y humano.\n\n\u00bfLes interesar\u00eda que les comparta una idea breve?`
     const impliedClient = `${neutralSpanishOpening}\n\nTrabajamos con Oria House Barcelona como cliente en su presencia digital.\n\n\u00bfLes interesar\u00eda que les comparta una idea breve?`
     expect(parseDraftResultDetailed(withBody(concept), requiredConceptProofContext, 'es', null, 'Oria House Barcelona')).toMatchObject({ ok: true })
     expect(parseDraftResultDetailed(withBody(omitted), requiredConceptProofContext, 'es', null, 'Oria House Barcelona')).toEqual({ ok: false, reason: 'body_missing_required_proof_reference' })
+    expect(parseDraftResultDetailed(withBody(missingStatus), requiredConceptProofContext, 'es', null, 'Oria House Barcelona')).toEqual({ ok: false, reason: 'proof_context_status_mismatch' })
     expect(parseDraftResultDetailed(withBody(impliedClient), requiredConceptProofContext, 'es', null, 'Oria House Barcelona')).toEqual({ ok: false, reason: 'proof_context_status_mismatch' })
   })
 
@@ -134,6 +145,7 @@ describe('AI draft structured output validation', () => {
     const omitted = `${neutralSpanishOpening}\n\n\u00bfLes interesar\u00eda que les comparta una idea breve?`
     expect(parseDraftResultDetailed(withBody(omitted), requiredConceptProofContext, 'es', null, null)).toMatchObject({ ok: true })
     expect(parseDraftResultDetailed(withBody(omitted), requiredConceptProofContext, 'es', null, 'Caso no relacionado')).toMatchObject({ ok: true })
+    expect(JSON.parse(buildDraftPrompt({ ...input, research: { ...input.research, recommended_case: null }, campaign: { ...input.campaign, proof_context: requiredConceptProofContext } })).reviewed_research.required_proof).toBeNull()
   })
 
   it('does not deterministically repair an omitted required proof reference', () => {

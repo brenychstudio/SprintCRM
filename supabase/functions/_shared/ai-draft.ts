@@ -2,7 +2,7 @@ import { isUuid, safeErrorMessage, type NormalizedUsage, type RuntimeErrorCode }
 import { extractProofContextIdentifiers, resolveResearchLanguage, resolveVerifiedProofReference, type ResearchLanguage } from './ai-research.ts'
 
 export const draftSchemaVersion = 'draft_v1'
-export const draftPromptVersion = 'outreach_draft_v3'
+export const draftPromptVersion = 'outreach_draft_v4'
 
 export type DraftRequest = { operation: 'generate_draft'; campaign_member_id: string; confirmed_research_snapshot_id: string; client_request_id?: string }
 export type DraftResult = { subject: string; body: string; warnings: string[] }
@@ -52,6 +52,8 @@ export type PublicDraftInput = {
   campaign: { target_segment: string | null; offer_summary: string | null; default_language: string; tone: string | null; proof_context: string | null }
   research: { version: number; observed_opportunity: string | null; recommended_offer: string | null; recommended_case: string | null; warnings: unknown }
 }
+export type ProofStatusCategory = 'concept' | 'reference' | 'prototype' | 'demo' | 'speculative' | 'internal_study'
+export type RequiredProof = { reference: string; allowed_statuses: ProofStatusCategory[] }
 
 const clean = (value: unknown) => typeof value === 'string' ? value.trim() : ''
 const hasHtml = (value: string) => /<\/?[a-z][^>]*>/i.test(value)
@@ -65,17 +67,16 @@ const likelySpanish = /\b(?:hola|buenos\s+d[i\u00ed]as|equipo|su|sus|para|con|po
 const signatureWithIdentity = /(?:^|\n)\s*(?:best(?:\s+regards)?|kind regards|sincerely|regards|thanks|saludos(?:\s+cordiales)?|un saludo|atentamente|gracias|\u0437\s+\u043f\u043e\u0432\u0430\u0433\u043e\u044e|\u0434\u044f\u043a\u0443\u044e|\u0441\s+\u0443\u0432\u0430\u0436\u0435\u043d\u0438\u0435\u043c|\u0441\u043f\u0430\u0441\u0438\u0431\u043e)\s*,?\s*\n+\s*[^\n]{2,}/iu
 const spanishVosotrosRegister = /\b(?:vosotr[oa]s|os|vuestr[oa]s?|estar[ií]ais|quer[eé]is|pod[eé]is|ten[eé]is)\b/iu
 const spanishFormalPluralRegister = /\b(?:ustedes|estar[ií]an\s+abiert[oa]s?|les\s+(?:encajar[ií]a|interesar[ií]a|resultar[ií]a|parecer[ií]a|gustar[ií]a)|que\s+les\s+(?:comparta|env[iíe]))\b/iu
-const proofStatus = /\b(?:concept(?:o)?|reference|referencia|prototype|prototipo|demo|speculative|especulativ[oa]|internal\s+study|estudio\s+interno|case\s+concept|concept\s+case|concepto\s+de\s+caso)\b/iu
 const proofClientRelationship = /\b(?:our\s+client|client\s+work|worked\s+(?:with|for)|project\s+(?:we\s+)?delivered\s+for|collaboration\s+with|results?\s+achieved\s+for|nuestro\s+cliente|como\s+cliente|trabajamos\s+(?:con|para)|proyecto\s+(?:entregado|desarrollado)\s+para|colaboraci[oó]n\s+con|resultados?\s+(?:logrados?|conseguidos?)\s+para)\b/iu
 const spainContext = /\b(?:spain|espa[nñ]a|barcelona|badalona|madrid|valencia|sevilla|seville|bilbao|m[aá]laga|zaragoza|alicante)\b/iu
-const proofStatusCategories = [
-  /\b(?:concept|concepto|case\s+concept|concept\s+case|concepto\s+de\s+caso)\b/iu,
-  /\b(?:reference|referencia)\b/iu,
-  /\b(?:prototype|prototipo)\b/iu,
-  /\bdemo\b/iu,
-  /\b(?:speculative|especulativ[oa])\b/iu,
-  /\b(?:internal\s+study|estudio\s+interno)\b/iu,
-]
+const proofStatusMatchers: Record<ProofStatusCategory, RegExp> = {
+  concept: /\b(?:concept|concepto|case\s+concept|concept\s+case|concepto\s+de\s+caso)\b/iu,
+  reference: /\b(?:reference|referencia)\b/iu,
+  prototype: /\b(?:prototype|prototipo)\b/iu,
+  demo: /\bdemo\b/iu,
+  speculative: /\b(?:speculative|especulativ[oa])\b/iu,
+  internal_study: /\b(?:internal\s+study|estudio\s+interno)\b/iu,
+}
 const hasInvalidPlainTextFormat = (value: string) => value.includes('```') || [...value].some((character) => {
   const code = character.charCodeAt(0)
   return code < 32 && code !== 9 && code !== 10 && code !== 13
@@ -97,11 +98,24 @@ export function draftJsonSchema() {
   }, required: ['subject', 'body', 'warnings'] }
 }
 
-export function buildDraftPrompt(input: PublicDraftInput, requiredProofReference = resolveVerifiedProofReference(input.research.recommended_case, input.campaign.proof_context)): string {
+export function resolveProofStatusCategories(proofContext: string | null | undefined): ProofStatusCategory[] {
+  const proof = clean(proofContext)
+  if (!proof) return []
+  return (Object.entries(proofStatusMatchers) as [ProofStatusCategory, RegExp][])
+    .filter(([, matcher]) => matcher.test(proof))
+    .map(([status]) => status)
+}
+
+export function resolveRequiredProof(recommendedCase: string | null | undefined, proofContext: string | null | undefined): RequiredProof | null {
+  const reference = resolveVerifiedProofReference(recommendedCase, proofContext)
+  return reference ? { reference, allowed_statuses: resolveProofStatusCategories(proofContext) } : null
+}
+
+export function buildDraftPrompt(input: PublicDraftInput, requiredProof = resolveRequiredProof(input.research.recommended_case, input.campaign.proof_context)): string {
   return JSON.stringify({
     lead: { company_name: clean(input.lead.company_name) || null, contact_name: clean(input.lead.contact_name) || null },
     campaign: { target_segment: clean(input.campaign.target_segment) || null, offer_summary: clean(input.campaign.offer_summary) || null, tone: clean(input.campaign.tone) || null, proof_context: clean(input.campaign.proof_context) || null },
-    reviewed_research: { version: input.research.version, observed_opportunity: clean(input.research.observed_opportunity) || null, recommended_offer: clean(input.research.recommended_offer) || null, recommended_case: clean(input.research.recommended_case) || null, required_proof_reference: requiredProofReference, warnings: Array.isArray(input.research.warnings) ? input.research.warnings.filter((item) => typeof item === 'string').map((item) => item.trim()).slice(0, 5) : [] },
+    reviewed_research: { version: input.research.version, observed_opportunity: clean(input.research.observed_opportunity) || null, recommended_offer: clean(input.research.recommended_offer) || null, recommended_case: clean(input.research.recommended_case) || null, required_proof: requiredProof, warnings: Array.isArray(input.research.warnings) ? input.research.warnings.filter((item) => typeof item === 'string').map((item) => item.trim()).slice(0, 5) : [] },
   })
 }
 
@@ -116,7 +130,7 @@ function publicContextIndicatesSpain(input: PublicDraftInput): boolean {
   return spainContext.test(JSON.stringify(input))
 }
 
-export function buildDraftInstructions(language: ResearchLanguage, hasContact: boolean, preferSpainSpanish = false, hasRequiredProofReference = false): string {
+export function buildDraftInstructions(language: ResearchLanguage, hasContact: boolean, preferSpainSpanish = false, requiredProof: RequiredProof | null = null): string {
   const greeting = hasContact
     ? 'Use the supplied contact name only if it is non-empty; never alter, infer, or invent it.'
     : 'No verified contact name exists. Use a natural company/team greeting in the requested language; never invent a person and never use placeholders or Dear Sir/Madam.'
@@ -133,13 +147,13 @@ Write subject, body, and every warning in ${languageNames[language]}. The subjec
 
 ${register}
 
-${greeting} If verified proof_context is empty, do not mention a case study. ${hasRequiredProofReference ? 'The reviewed research contains a non-null required_proof_reference verified against proof_context. Mention that exact reference once in the body while keeping the email concise.' : 'No verified required proof reference is supplied. Proof is optional; mention at most one reference and only one identifiable in proof_context, and never invent one.'} Preserve any mentioned proof's stated commercial status exactly: a concept, reference, prototype, demo, speculative project, internal study, or case concept must remain explicitly described as such. Never turn a concept/reference into client work or claim a client relationship, delivery, collaboration, result, metric, testimonial, or award not expressly supported by proof_context. Warnings may mention missing contact name or limited proof context, but never secrets or raw input. Do not add a sender signature unless a later product requirement supplies a verified sender identity.`
+${greeting} If verified proof_context is empty, do not mention a case study. ${requiredProof ? `The reviewed research contains a non-null required_proof object verified against proof_context. Mention required_proof.reference exactly once in the body and keep the proof mention short. ${requiredProof.allowed_statuses.length ? 'Explicitly describe it using at least one machine status listed in required_proof.allowed_statuses, translated naturally into the output language; the status must remain unmistakable.' : 'No verified machine status is available in required_proof.allowed_statuses; do not invent one.'}` : 'No verified required proof is supplied. Proof is optional; mention at most one reference and only one identifiable in proof_context, and never invent one.'} Preserve any mentioned proof's stated commercial status exactly: a concept, reference, prototype, demo, speculative project, internal study, or case concept must remain explicitly described as such. Never turn a concept/reference into client work or claim a client relationship, delivery, collaboration, result, metric, testimonial, or award not expressly supported by proof_context. Warnings may mention missing contact name or limited proof context, but never secrets or raw input. Do not add a sender signature unless a later product requirement supplies a verified sender identity.`
 }
 
 export function buildDraftResponsesRequest(model: string, input: PublicDraftInput) {
   const language = resolveResearchLanguage(input.lead.language, input.campaign.default_language)
-  const requiredProofReference = resolveVerifiedProofReference(input.research.recommended_case, input.campaign.proof_context)
-  return { model, store: false, max_output_tokens: 850, instructions: buildDraftInstructions(language, Boolean(clean(input.lead.contact_name)), language === 'es' && publicContextIndicatesSpain(input), Boolean(requiredProofReference)), input: buildDraftPrompt(input, requiredProofReference), text: { format: { type: 'json_schema', name: 'outreach_draft', strict: true, schema: draftJsonSchema() } } }
+  const requiredProof = resolveRequiredProof(input.research.recommended_case, input.campaign.proof_context)
+  return { model, store: false, max_output_tokens: 850, instructions: buildDraftInstructions(language, Boolean(clean(input.lead.contact_name)), language === 'es' && publicContextIndicatesSpain(input), requiredProof), input: buildDraftPrompt(input, requiredProof), text: { format: { type: 'json_schema', name: 'outreach_draft', strict: true, schema: draftJsonSchema() } } }
 }
 
 function languageLooksWrong(body: string, language: ResearchLanguage): boolean {
@@ -190,15 +204,15 @@ function proofIdentifiers(proofContext: string | null | undefined): string[] {
   return [...new Set([...identifiers, ...(leadingTitle ? [leadingTitle] : [])])]
 }
 
-function proofStatusMismatch(body: string, proofContext: string | null | undefined): boolean {
+function proofStatusMismatch(body: string, proofContext: string | null | undefined, requiredProof: RequiredProof | null): boolean {
   const proof = clean(proofContext)
-  if (!proof || !proofStatus.test(proof)) return false
+  const verifiedStatuses = requiredProof?.allowed_statuses.length ? requiredProof.allowed_statuses : resolveProofStatusCategories(proof)
+  if (!proof || !verifiedStatuses.length) return false
   const normalizedBody = normalizeProofText(body)
   const identifiers = proofIdentifiers(proof)
   const mentionedIdentifiers = identifiers.map(normalizeProofText).filter((identifier) => identifier && normalizedBody.includes(identifier))
   if (!mentionedIdentifiers.length) return false
-  const statedStatuses = proofStatusCategories.filter((status) => status.test(proof))
-  if (!statedStatuses.some((status) => status.test(body))) return true
+  if (!verifiedStatuses.some((status) => proofStatusMatchers[status].test(body))) return true
   if (proofClientRelationship.test(body) && !proofClientRelationship.test(proof)) return true
   if (!proofClientRelationship.test(proof) && mentionedIdentifiers.some((identifier) => new RegExp(`(?:trabajamos\\s+(?:con|para)\\s+${identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}|en\\s+${identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+trabajamos)`, 'u').test(normalizedBody))) return true
   return false
@@ -213,7 +227,7 @@ function hasInventedRecipient(body: string, contactName: string): boolean {
   return !contactName.toLocaleLowerCase().split(/\s+/).includes(recipient)
 }
 
-function validateDraftBody(body: string, language: ResearchLanguage, contactName: string, requiredProofReference: string | null): DraftValidationReason | null {
+function validateDraftBody(body: string, language: ResearchLanguage, contactName: string, requiredProof: RequiredProof | null): DraftValidationReason | null {
   if (!body) return 'body_missing'
   if (body.length < 120) return 'body_too_short'
   if (body.length > 2400) return 'body_too_long'
@@ -228,7 +242,7 @@ function validateDraftBody(body: string, language: ResearchLanguage, contactName
   if (hasInventedRecipient(body, contactName)) return 'body_invented_recipient'
   if (languageLooksWrong(body, language)) return 'body_wrong_language'
   if (language === 'es' && spanishRegister(body) === 'mixed') return 'body_mixed_spanish_register'
-  if (requiredProofReference && !normalizeProofText(body).includes(normalizeProofText(requiredProofReference))) return 'body_missing_required_proof_reference'
+  if (requiredProof && !normalizeProofText(body).includes(normalizeProofText(requiredProof.reference))) return 'body_missing_required_proof_reference'
   if (aggressiveCta.test(body)) return 'body_multiple_or_aggressive_cta'
   const ctas = ctaQuestions(body, language)
   if (ctas.requests.length > 1 || (ctas.requests.length === 1 && ctas.lowPressure.length === 0)) return 'body_multiple_or_aggressive_cta'
@@ -246,8 +260,8 @@ export function parseDraftResultDetailed(value: unknown, proofContext: string | 
   if (Object.keys(result).length !== 3 || typeof result.subject !== 'string' || typeof result.body !== 'string' || !Array.isArray(result.warnings)) return { ok: false, reason: 'invalid_shape' }
   const subject = result.subject.trim(); const body = result.body.trim()
   if (subject.length < 5 || subject.length > 120 || /[\r\n]/.test(subject) || hasHtml(subject)) return { ok: false, reason: 'invalid_subject' }
-  const requiredProofReference = resolveVerifiedProofReference(recommendedCase, proofContext)
-  const bodyReason = validateDraftBody(body, language, clean(contactName), requiredProofReference)
+  const requiredProof = resolveRequiredProof(recommendedCase, proofContext)
+  const bodyReason = validateDraftBody(body, language, clean(contactName), requiredProof)
   if (bodyReason) return { ok: false, reason: bodyReason }
   const warnings = result.warnings.map(clean)
   if (warnings.length > 3 || warnings.some((warning) => !warning || warning.length > 240 || hasHtml(warning))) return { ok: false, reason: 'invalid_warnings' }
@@ -257,7 +271,7 @@ export function parseDraftResultDetailed(value: unknown, proofContext: string | 
   const identifiers = proofIdentifiers(proofContext)
   const mentionsCase = /\b(?:case study|case|caso|\u043a\u0435\u0439\u0441)\b/iu.test(body)
   if ((!clean(proofContext) && mentionsCase) || (clean(proofContext) && mentionsCase && !identifiers.some((identifier) => body.toLocaleLowerCase().includes(identifier.toLocaleLowerCase())))) return { ok: false, reason: 'proof_context_mismatch' }
-  if (proofStatusMismatch(body, proofContext)) return { ok: false, reason: 'proof_context_status_mismatch' }
+  if (proofStatusMismatch(body, proofContext, requiredProof)) return { ok: false, reason: 'proof_context_status_mismatch' }
   return { ok: true, value: { subject, body, warnings } }
 }
 
