@@ -1,6 +1,6 @@
-# Current state - OUTREACH-03B supervised AI research accepted
+# Current state - OUTREACH-03C supervised AI draft generation accepted
 
-## OUTREACH-03C implementation pending review
+## OUTREACH-03C supervised AI draft generation accepted
 
 `20260801000007_supervised_ai_draft_generation.sql` is applied and the authenticated supervised draft path is operational. It adds service-role-only draft lifecycle RPCs over the existing `ai_generations` ledger. The associated Edge Function `generate_draft` is gated by both `AI_RUNTIME_ENABLED` and `AI_DRAFT_GENERATION_ENABLED`, derives allowlisted context server-side, uses strict `draft_v1` Responses output without tools or retries, preserves safe usage on rejected results, and records immutable AI `outbound_messages` versions only after the exact latest research snapshot remains current. The workspace card requires a version-specific research confirmation and is hidden unless `outreach_ops_enabled`, `ai_runtime_enabled`, and `ai_draft_generation_enabled` are all enabled.
 
@@ -52,7 +52,9 @@ Migration `00009` and Edge Function Version 12 deployed the V3 contract successf
 
 QUALITY-06 versions new jobs as `outreach_draft_v4` over unchanged `draft_v1`. One deterministic resolver now combines the already-verified proof reference with only supported status categories recognized in `proof_context`, serializing `required_proof: { reference, allowed_statuses }`. Trusted instructions require the provider to mention the exact reference once and express at least one supplied status naturally and unmistakably. The same resolved status categories feed the existing proof-fidelity validator; missing/ambiguous status and unsupported client implications still reject, with no deterministic proof insertion and no automatic provider retry.
 
-Forward-only `20260801000010_accept_ai_draft_prompt_v4.sql` preserves V1/V2/V3 prompt history, accepts V4, maps all four to `draft_v1`, and changes only the service-role start RPC. It is not applied and V4 is not deployed in this implementation task. No further browser generation is appropriate until reviewed migration 00010 apply and V4 Edge deployment.
+Forward-only `20260801000010_accept_ai_draft_prompt_v4.sql` preserves V1/V2/V3 prompt history, accepts V4, maps all four to `draft_v1`, and changes only the service-role start RPC. Migration `00010` is applied in production and the V4 runtime is deployed.
+
+The single supervised V4 production smoke completed as job `2b0f96cc-9d18-45fe-ba95-e3846aa4153b` (`outreach_draft_v4` / `draft_v1`, `gpt-5.4-mini`, 1,248 total tokens, 3,009 ms) and appended immutable AI Message Version 3 from Research Version 2. Its 110-word Spanish body uses consistent vosotros, one low-pressure CTA, Hotel Marina-specific research, and the explicit faithful wording `Como referencia, Oria House Barcelona aparece como concepto`; it contains no unsupported client relationship, metrics, urgency, placeholder, or sender invention. The AI card displayed Message Version 3 metadata rather than stale V1/V2 data. Messages V1/V2 remained unchanged, the member remained `draft_ready`, requested/completed audits and an owner-populated `outreach_draft_saved` activity were present, and no review, approval, Gmail, send, or later campaign progression occurred. OUTREACH-03C is **ACCEPTED**; no further draft generation or review submission is part of this closeout.
 
 ## OUTREACH-03B supervised AI research job
 
@@ -66,7 +68,7 @@ The Campaign Full Workspace shows its explicit AI Research card only when the th
 
 The acceptance language diagnostic is reporting-only debt, not a runtime defect. `research_v2` and `research_snapshots` intentionally have no language field; the completed `output_payload` has only the six validated research fields. The server resolves the output language from lead language, then campaign default, before provider invocation. The prior `en` diagnostic therefore inferred a fallback from an absent output field (or inspected that absent field), rather than reading persisted language metadata. No runtime code or production row was changed.
 
-The next implementation milestone is **OUTREACH-03C — Supervised AI Draft Generation**: an explicit single-click draft based only on campaign context, the reviewed latest research snapshot, verified proof context, resolved lead/campaign language, campaign tone, and offer. It must create immutable message versions for human review and must not send to Gmail, auto-approve, or progress campaign status automatically.
+The next implementation milestone is **CRM-CANON-00 — Domain + Bridge Contract**. It is not started as part of the OUTREACH-03C closeout.
 
 ## OUTREACH-03A accepted production runtime foundation
 
