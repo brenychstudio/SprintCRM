@@ -22,6 +22,10 @@ export function resolveFeatureFlags(source: FeatureFlagSource = {}): FeatureFlag
   return Object.fromEntries(featureFlagKeys.map((key) => [key, readFeatureFlag(source[key])])) as FeatureFlags
 }
 
+export function isAiDraftGenerationVisible(flags: FeatureFlags): boolean {
+  return flags.outreach_ops_enabled && flags.ai_runtime_enabled && flags.ai_draft_generation_enabled
+}
+
 function readViteFeatureFlag(key: FeatureFlagKey): string | boolean | undefined {
   const environmentKey = `VITE_${key.toUpperCase()}`
   return import.meta.env[environmentKey]

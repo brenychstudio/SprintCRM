@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { readFeatureFlag, resolveFeatureFlags } from './featureFlags'
+import { isAiDraftGenerationVisible, readFeatureFlag, resolveFeatureFlags } from './featureFlags'
 
 describe('feature flags', () => {
   it('defaults every flag to disabled', () => {
@@ -26,6 +26,12 @@ describe('feature flags', () => {
       ai_runtime_enabled: true,
       ai_draft_generation_enabled: false,
     })
+  })
+
+  it('keeps the draft card hidden unless all required client flags are enabled', () => {
+    expect(isAiDraftGenerationVisible(resolveFeatureFlags({ outreach_ops_enabled: 'true', ai_runtime_enabled: 'true' }))).toBe(false)
+    expect(isAiDraftGenerationVisible(resolveFeatureFlags({ outreach_ops_enabled: 'true', ai_draft_generation_enabled: 'true' }))).toBe(false)
+    expect(isAiDraftGenerationVisible(resolveFeatureFlags({ outreach_ops_enabled: 'true', ai_runtime_enabled: 'true', ai_draft_generation_enabled: 'true' }))).toBe(true)
   })
 
   it('keeps AI research separately default-off from the runtime boundary', () => {

@@ -180,9 +180,14 @@ export function extractProofContextIdentifiers(proofContext: string | null | und
   return [...normalizedCandidates.values()]
 }
 
+export function resolveVerifiedProofReference(recommendedCase: string | null | undefined, proofContext: string | null | undefined): string | null {
+  const recommendation = normalizePhrase(text(recommendedCase))
+  if (!recommendation) return null
+  return extractProofContextIdentifiers(proofContext).find((candidate) => recommendation.includes(normalizePhrase(candidate))) ?? null
+}
+
 export function recommendedCaseMatchesProofContext(recommendedCase: string, proofContext: string | null | undefined): boolean {
-  const recommendation = normalizePhrase(recommendedCase)
-  return extractProofContextIdentifiers(proofContext).some((candidate) => recommendation.includes(normalizePhrase(candidate)))
+  return Boolean(resolveVerifiedProofReference(recommendedCase, proofContext))
 }
 
 export function containsNoProofContextClaim(warning: string): boolean {
