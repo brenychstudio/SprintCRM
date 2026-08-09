@@ -15,6 +15,7 @@ const spanishBodyMissingCta = spanishBody.replace(/Si les parece \u00fatil, \u00
 const neutralSpanishOpening = 'Hola, equipo de Hotel Marina Badalona:\n\nAl revisar la presencia p\u00fablica del hotel, vimos una oportunidad para presentar con m\u00e1s claridad las habitaciones, el spa y la propuesta gastron\u00f3mica. Nuestro enfoque de dise\u00f1o web puede ordenar esos puntos y hacer m\u00e1s directa la ruta hacia la reserva, respetando la identidad actual del hotel.'
 const vosotrosSpanishOpening = 'Hola, equipo de Hotel Marina Badalona:\n\nAl revisar vuestra presencia p\u00fablica, vimos una oportunidad para presentar con m\u00e1s claridad las habitaciones, el spa y la propuesta gastron\u00f3mica. Nuestro enfoque de dise\u00f1o web puede ordenar esos puntos y hacer m\u00e1s directa vuestra ruta hacia la reserva, respetando la identidad actual del hotel.'
 const conceptProofContext = 'Oria House Barcelona is a boutique hotel concept and reference project developed internally.'
+const requiredConceptProofContext = `Oria House Barcelona\n\n${conceptProofContext}`
 
 describe('AI draft request and privacy boundary', () => {
   it('requires valid member and confirmed research UUIDs', () => {
@@ -40,10 +41,13 @@ describe('AI draft request and privacy boundary', () => {
     expect(buildDraftInstructions('es', false)).toContain('Target 100\u2013150 words')
     expect(buildDraftInstructions('es', false)).toContain('never exceed 180 words')
     expect(buildDraftInstructions('es', false)).toContain('two to four strongest specific reviewed details')
-    expect(buildDraftInstructions('es', false)).toContain('Preserve its stated commercial status exactly')
+    expect(buildDraftInstructions('es', false)).toContain("Preserve any mentioned proof's stated commercial status exactly")
     expect(buildDraftInstructions('es', false)).toContain('Do not add a sender signature')
     expect(buildDraftResponsesRequest('test-model', input).instructions).toContain('public context clearly indicates Spain')
-    expect(draftPromptVersion).toBe('outreach_draft_v2')
+    const requiredRequest = buildDraftResponsesRequest('test-model', { ...input, campaign: { ...input.campaign, proof_context: requiredConceptProofContext } })
+    expect(JSON.parse(requiredRequest.input).reviewed_research.required_proof_reference).toBe('Oria House Barcelona')
+    expect(requiredRequest.instructions).toContain('Mention that exact reference once in the body')
+    expect(draftPromptVersion).toBe('outreach_draft_v3')
     expect(draftSchemaVersion).toBe('draft_v1')
     expect(request).not.toHaveProperty('retry')
   })
@@ -115,6 +119,26 @@ describe('AI draft structured output validation', () => {
     expect(parseDraftResultDetailed(withBody(impliedClient), conceptProofContext, 'es', null)).toEqual({ ok: false, reason: 'proof_context_status_mismatch' })
     expect(parseDraftResultDetailed(withBody(removedStatus), conceptProofContext, 'es', null)).toEqual({ ok: false, reason: 'proof_context_status_mismatch' })
     expect(parseDraftResultDetailed(withBody(changedStatus), 'Oria House Barcelona is a boutique hotel concept.', 'es', null)).toEqual({ ok: false, reason: 'proof_context_status_mismatch' })
+  })
+
+  it('requires a verified recommended proof reference and preserves its concept status', () => {
+    const concept = `${neutralSpanishOpening}\n\nComo referencia de enfoque, Oria House Barcelona es un concepto que desarrollamos para explorar una presentaci\u00f3n hotelera clara y humana.\n\n\u00bfLes interesar\u00eda que les comparta una idea breve?`
+    const omitted = `${neutralSpanishOpening}\n\n\u00bfLes interesar\u00eda que les comparta una idea breve?`
+    const impliedClient = `${neutralSpanishOpening}\n\nTrabajamos con Oria House Barcelona como cliente en su presencia digital.\n\n\u00bfLes interesar\u00eda que les comparta una idea breve?`
+    expect(parseDraftResultDetailed(withBody(concept), requiredConceptProofContext, 'es', null, 'Oria House Barcelona')).toMatchObject({ ok: true })
+    expect(parseDraftResultDetailed(withBody(omitted), requiredConceptProofContext, 'es', null, 'Oria House Barcelona')).toEqual({ ok: false, reason: 'body_missing_required_proof_reference' })
+    expect(parseDraftResultDetailed(withBody(impliedClient), requiredConceptProofContext, 'es', null, 'Oria House Barcelona')).toEqual({ ok: false, reason: 'proof_context_status_mismatch' })
+  })
+
+  it('keeps proof optional when the recommended case is empty or cannot be verified', () => {
+    const omitted = `${neutralSpanishOpening}\n\n\u00bfLes interesar\u00eda que les comparta una idea breve?`
+    expect(parseDraftResultDetailed(withBody(omitted), requiredConceptProofContext, 'es', null, null)).toMatchObject({ ok: true })
+    expect(parseDraftResultDetailed(withBody(omitted), requiredConceptProofContext, 'es', null, 'Caso no relacionado')).toMatchObject({ ok: true })
+  })
+
+  it('does not deterministically repair an omitted required proof reference', () => {
+    const omitted = `${neutralSpanishOpening}\n\n\u00bfLes interesar\u00eda que les comparta una idea breve?`
+    expect(parseDraftResultWithDeterministicCtaCompletion(withBody(omitted), requiredConceptProofContext, 'es', null, 'Oria House Barcelona')).toEqual({ result: { ok: false, reason: 'body_missing_required_proof_reference' }, ctaCompletion: null })
   })
 
   it('accepts a focused 100\u2013150-word Spanish first outreach', () => {

@@ -358,7 +358,7 @@ async function generateDraft(request: Request, body: unknown, requestId: string,
     const refusal = providerBody && typeof providerBody === 'object' && ((providerBody as { status?: unknown }).status === 'incomplete' || (providerBody as { status?: unknown }).status === 'failed')
     const validation = refusal
       ? { result: { ok: false as const, reason: 'provider_refusal' as const }, ctaCompletion: null }
-      : parseDraftResultWithDeterministicCtaCompletion(responseText, campaignResponse.data.proof_context, resolveResearchLanguage(leadResponse.data.language, campaignResponse.data.default_language), leadResponse.data.contact_name)
+      : parseDraftResultWithDeterministicCtaCompletion(responseText, campaignResponse.data.proof_context, resolveResearchLanguage(leadResponse.data.language, campaignResponse.data.default_language), leadResponse.data.contact_name, researchResponse.data.recommended_case)
     const parsed = validation.result
     if (!parsed.ok) {
       const rejected = buildRejectedDraftFailure(parsed.reason, usage, providerResponseId, providerRequestId)

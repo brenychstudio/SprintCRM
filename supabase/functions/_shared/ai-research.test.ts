@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildRejectedResearchFailure, buildResearchInstructions, buildResearchPrompt, buildResearchResponsesRequest, evidenceMatchesSources, extractProofContextIdentifiers, extractWebSearchSourceUrls, noProofContextWarning, parseResearchResult, parseResearchResultDetailed, researchJsonSchema, resolveResearchLanguage, safeResearchErrorMessage, validatePublicWebsite, validateResearchRequest } from './ai-research'
+import { buildRejectedResearchFailure, buildResearchInstructions, buildResearchPrompt, buildResearchResponsesRequest, evidenceMatchesSources, extractProofContextIdentifiers, extractWebSearchSourceUrls, noProofContextWarning, parseResearchResult, parseResearchResultDetailed, researchJsonSchema, resolveResearchLanguage, resolveVerifiedProofReference, safeResearchErrorMessage, validatePublicWebsite, validateResearchRequest } from './ai-research'
 import { safeErrorMessage } from './ai-runtime'
 
 const publicInput = {
@@ -92,6 +92,8 @@ describe('AI research diagnostics and proof-title grounding', () => {
   })
 
   it('grounds a Spanish recommended case in the Oria House proof context', () => {
+    expect(resolveVerifiedProofReference(spanishProofResult.recommended_case, oriaProofContext)).toBe('Oria House Barcelona')
+    expect(resolveVerifiedProofReference('Caso no relacionado', oriaProofContext)).toBeNull()
     expect(parseResearchResultDetailed(spanishProofResult, oriaProofContext, 'es')).toMatchObject({ ok: true })
     expect(parseResearchResultDetailed({ ...spanishProofResult, recommended_case: 'Caso no relacionado' }, oriaProofContext, 'es')).toEqual({ ok: false, reason: 'proof_context_mismatch' })
   })

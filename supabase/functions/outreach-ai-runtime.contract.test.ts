@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 const runtimeSource = readFileSync(resolve('supabase/functions/outreach-ai-runtime/index.ts'), 'utf8')
 const lifecycleSql = readFileSync(resolve('supabase/migrations/20260801000007_supervised_ai_draft_generation.sql'), 'utf8')
 const promptV2Sql = readFileSync(resolve('supabase/migrations/20260801000008_accept_ai_draft_prompt_v2.sql'), 'utf8')
+const promptV3Sql = readFileSync(resolve('supabase/migrations/20260801000009_accept_ai_draft_prompt_v3.sql'), 'utf8')
 const draftRuntime = runtimeSource.slice(runtimeSource.indexOf('async function generateDraft('), runtimeSource.indexOf('async function finishFailure('))
 const finishLifecycle = lifecycleSql.slice(lifecycleSql.indexOf('create or replace function public.finish_ai_draft_job('), lifecycleSql.indexOf('create or replace function public.fail_stale_ai_draft_job('))
 
@@ -31,14 +32,15 @@ describe('supervised AI draft runtime contract', () => {
     expect(finishLifecycle).not.toMatch(/(?:update|delete\s+from)\s+public\.outbound_messages/i)
   })
 
-  it('would append Version 2 after immutable production Version 1', () => {
+  it('would append Version 3 after immutable production Versions 1 and 2', () => {
     expect(finishLifecycle).toContain('coalesce(max(message.version), 0) + 1')
-    expect(Math.max(...[1]) + 1).toBe(2)
+    expect(Math.max(...[1, 2]) + 1).toBe(3)
   })
 
   it('accepts historical and current prompt versions while keeping draft_v1 and rejecting unknown versions', () => {
     expect(promptV2Sql).toContain("p_prompt_version not in ('outreach_draft_v1', 'outreach_draft_v2')")
-    expect(promptV2Sql).toContain("'draft_v1', 'pending'")
-    expect(promptV2Sql).not.toMatch(/alter\s+table|update\s+public\.ai_generations|delete\s+from/i)
+    expect(promptV3Sql).toContain("p_prompt_version not in ('outreach_draft_v1', 'outreach_draft_v2', 'outreach_draft_v3')")
+    expect(promptV3Sql).toContain("'draft_v1', 'pending'")
+    expect(promptV3Sql).not.toMatch(/alter\s+table|update\s+public\.ai_generations|delete\s+from/i)
   })
 })

@@ -19,11 +19,17 @@ const research = { id: '22222222-2222-4222-8222-222222222222', campaign_member_i
 const historicalFailure = { id: 'job-historical', generation_status: 'failed' as const, model_name: 'test-model', total_tokens: 994, duration_ms: 10, request_id: 'e1eb420a-241c-46a4-a471-0730a05e8abc', created_at: new Date().toISOString(), error_code: 'draft_validation:body_missing_low_pressure_cta' }
 const completedJob = { ...historicalFailure, id: 'job-completed', generation_status: 'completed' as const, request_id: 'completed-request' }
 const success = { ok: true as const, job_id: 'job-completed', request_id: 'server-request', status: 'completed' as const, provider: 'openai' as const, model: 'test', schema_version: 'draft_v1' as const, message_version: 1, research_version: 2, usage: { input_tokens: 1, cached_input_tokens: 0, output_tokens: 2, total_tokens: 3 }, cost: { estimated_usd: null, status: 'not_configured' as const }, duration_ms: 10 }
+type LatestMessage = { id: string; campaign_member_id: string; version: number; source: 'ai'; ai_generation_id: string; channel: 'email'; language: 'en'; subject: string; body: string; status: 'draft'; research_snapshot_id: string; approved_by: null; approved_at: null; created_at: string; updated_at: string }
 
-function renderCard({ memberStatus = 'research_ready' as const, latestMessage = null }: { memberStatus?: 'research_ready' | 'needs_review'; latestMessage?: { id: string; campaign_member_id: string; version: number; source: 'ai'; ai_generation_id: string; channel: 'email'; language: 'en'; subject: string; body: string; status: 'draft'; research_snapshot_id: string; approved_by: null; approved_at: null; created_at: string; updated_at: string } | null } = {}) {
+function messageFor(jobId: string, version: number): LatestMessage {
+  return { id: `message-${version}`, campaign_member_id: memberId, version, source: 'ai', ai_generation_id: jobId, channel: 'email', language: 'en', subject: 'Subject', body: 'Body', status: 'draft', research_snapshot_id: research.id, approved_by: null, approved_at: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+}
+
+function renderCard({ memberStatus = 'research_ready' as const, latestMessage = null }: { memberStatus?: 'research_ready' | 'needs_review'; latestMessage?: LatestMessage | null } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  const view = render(<QueryClientProvider client={client}><I18nProvider><AiDraftCard memberId={memberId} campaignId="campaign" leadId="lead" memberStatus={memberStatus} latestResearch={research} latestMessage={latestMessage} /></I18nProvider></QueryClientProvider>)
-  return { client, ...view }
+  const card = (nextMessage: LatestMessage | null, nextStatus = memberStatus) => <QueryClientProvider client={client}><I18nProvider><AiDraftCard memberId={memberId} campaignId="campaign" leadId="lead" memberStatus={nextStatus} latestResearch={research} latestMessage={nextMessage} /></I18nProvider></QueryClientProvider>
+  const view = render(card(latestMessage))
+  return { client, rerenderCard: (nextMessage: LatestMessage | null, nextStatus = memberStatus) => view.rerender(card(nextMessage, nextStatus)), ...view }
 }
 
 function confirmResearch() { fireEvent.click(screen.getByTestId('ai-draft-confirmation')) }
@@ -96,8 +102,7 @@ describe('AI draft card', () => {
 
   it('restores Completed from a matching persisted job after refresh', async () => {
     api.getLatestAiDraftJob.mockResolvedValue(completedJob)
-    const latestMessage = { id: 'message', campaign_member_id: memberId, version: 1, source: 'ai' as const, ai_generation_id: completedJob.id, channel: 'email' as const, language: 'en' as const, subject: 'Subject', body: 'Body', status: 'draft' as const, research_snapshot_id: research.id, approved_by: null, approved_at: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
-    renderCard({ latestMessage })
+    renderCard({ latestMessage: messageFor(completedJob.id, 1) })
     expect(await screen.findByText('Status: Completed')).toBeTruthy()
   })
 
@@ -110,6 +115,28 @@ describe('AI draft card', () => {
     confirmResearch()
     fireEvent.click(screen.getByTestId('ai-draft-button'))
     expect(await screen.findByText('Status: Completed')).toBeTruthy()
+  })
+
+  it('shows the latest persisted Job B metadata when Message V2 advances on the same Research V2', async () => {
+    useRequestIds('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')
+    const jobA = { ...completedJob, id: 'job-a', request_id: '32b236b5-fa11-47d8-88b5-f582f541dcd6', total_tokens: 1011, duration_ms: 3788 }
+    const jobB = { ...completedJob, id: 'job-b', request_id: 'c642cfbf-bb58-489e-9c06-aeeb5ce6bc16', total_tokens: 1184, duration_ms: 3261 }
+    const attemptA = { ...success, job_id: jobA.id, request_id: jobA.request_id, message_version: 1, usage: { ...success.usage, total_tokens: 1011 }, duration_ms: 3788 }
+    api.getLatestAiDraftJob.mockResolvedValue(jobA)
+    api.generateAiDraft.mockResolvedValue(attemptA)
+    const { client, rerenderCard } = renderCard({ latestMessage: messageFor(jobA.id, 1) })
+    await screen.findByText('Status: Completed')
+    confirmResearch()
+    fireEvent.click(screen.getByTestId('ai-draft-button'))
+    await waitFor(() => expect(screen.getByTestId('ai-draft-metadata-id').textContent).toBe('32b236b5'))
+
+    client.setQueryData(['draft', memberId], jobB)
+    rerenderCard(messageFor(jobB.id, 2))
+
+    expect(screen.getByTestId('ai-draft-message-version').textContent).toBe('2')
+    expect(screen.getByTestId('ai-draft-total-tokens').textContent).toBe('1184')
+    expect(screen.getByTestId('ai-draft-duration').textContent).toBe('3261 ms')
+    expect(screen.getByTestId('ai-draft-metadata-id').textContent).toBe('c642cfbf')
   })
 
   it('does not let a refetched historical failure replace the current generating attempt', async () => {
