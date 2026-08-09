@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildDraftInstructions, buildDraftPrompt, buildDraftResponsesRequest, buildRejectedDraftFailure, draftJsonSchema, normalizeDraftUsage, parseDraftResultDetailed, parseDraftResultWithDeterministicCtaCompletion, safeDraftErrorMessage, validateDraftRequest } from './ai-draft'
+import { buildDraftInstructions, buildDraftPrompt, buildDraftResponsesRequest, buildRejectedDraftFailure, draftJsonSchema, draftPromptVersion, draftSchemaVersion, normalizeDraftUsage, parseDraftResultDetailed, parseDraftResultWithDeterministicCtaCompletion, safeDraftErrorMessage, validateDraftRequest } from './ai-draft'
 
 const input = {
   lead: { company_name: 'Hotel Marina Badalona', contact_name: null, language: 'es' },
@@ -12,6 +12,9 @@ const valid = { subject: 'Una idea para Hotel Marina Badalona', body: spanishBod
 const withBody = (body: string) => ({ ...valid, body })
 const longSpanishBody = `${spanishBody}\n\n${'informaci\u00f3n relevante '.repeat(140)}`
 const spanishBodyMissingCta = spanishBody.replace(/Si les parece \u00fatil, \u00bfestar\u00edan abiertos a una breve conversaci\u00f3n para compartir una idea inicial\?/, 'Quedo atento a sus comentarios.')
+const neutralSpanishOpening = 'Hola, equipo de Hotel Marina Badalona:\n\nAl revisar la presencia p\u00fablica del hotel, vimos una oportunidad para presentar con m\u00e1s claridad las habitaciones, el spa y la propuesta gastron\u00f3mica. Nuestro enfoque de dise\u00f1o web puede ordenar esos puntos y hacer m\u00e1s directa la ruta hacia la reserva, respetando la identidad actual del hotel.'
+const vosotrosSpanishOpening = 'Hola, equipo de Hotel Marina Badalona:\n\nAl revisar vuestra presencia p\u00fablica, vimos una oportunidad para presentar con m\u00e1s claridad las habitaciones, el spa y la propuesta gastron\u00f3mica. Nuestro enfoque de dise\u00f1o web puede ordenar esos puntos y hacer m\u00e1s directa vuestra ruta hacia la reserva, respetando la identidad actual del hotel.'
+const conceptProofContext = 'Oria House Barcelona is a boutique hotel concept and reference project developed internally.'
 
 describe('AI draft request and privacy boundary', () => {
   it('requires valid member and confirmed research UUIDs', () => {
@@ -34,6 +37,14 @@ describe('AI draft request and privacy boundary', () => {
     expect(buildDraftInstructions('es', false)).toContain('never invent a person')
     expect(buildDraftInstructions('es', false)).toContain('must end with exactly one concise, warm, low-pressure question')
     expect(buildDraftInstructions('es', false)).toContain('Do not include any other CTA or additional request.')
+    expect(buildDraftInstructions('es', false)).toContain('Target 100\u2013150 words')
+    expect(buildDraftInstructions('es', false)).toContain('never exceed 180 words')
+    expect(buildDraftInstructions('es', false)).toContain('two to four strongest specific reviewed details')
+    expect(buildDraftInstructions('es', false)).toContain('Preserve its stated commercial status exactly')
+    expect(buildDraftInstructions('es', false)).toContain('Do not add a sender signature')
+    expect(buildDraftResponsesRequest('test-model', input).instructions).toContain('public context clearly indicates Spain')
+    expect(draftPromptVersion).toBe('outreach_draft_v2')
+    expect(draftSchemaVersion).toBe('draft_v1')
     expect(request).not.toHaveProperty('retry')
   })
 
@@ -65,6 +76,62 @@ describe('AI draft structured output validation', () => {
   })
 
   it.each([
+    ['production vosotros CTA', vosotrosSpanishOpening, '\u00bfOs encajar\u00eda que os comparta una idea breve adaptada a vuestro hotel?'],
+    ['vosotros interesar\u00eda', vosotrosSpanishOpening, '\u00bfOs interesar\u00eda que os comparta una idea breve?'],
+    ['vosotros resultar\u00eda \u00fatil', vosotrosSpanishOpening, '\u00bfOs resultar\u00eda \u00fatil que os comparta una propuesta?'],
+    ['vosotros parecer\u00eda \u00fatil', vosotrosSpanishOpening, '\u00bfOs parecer\u00eda \u00fatil que os env\u00ede una idea?'],
+    ['vosotros quer\u00e9is', vosotrosSpanishOpening, '\u00bfQuer\u00e9is que os comparta una idea breve?'],
+    ['formal interesar\u00eda', neutralSpanishOpening, '\u00bfLes interesar\u00eda que les comparta una idea?'],
+    ['canonical formal', neutralSpanishOpening, '\u00bfEstar\u00edan abiertos a una breve conversaci\u00f3n?'],
+  ] as const)('recognizes one semantic Spanish low-pressure CTA: %s', (_name, opening, cta) => {
+    const body = `${opening}\n\n${cta}`
+    expect(parseDraftResultDetailed(withBody(body), input.campaign.proof_context, 'es', null)).toMatchObject({ ok: true })
+  })
+
+  it('does not append a deterministic CTA when the production semantic CTA is already present', () => {
+    const body = `${vosotrosSpanishOpening}\n\n\u00bfOs encajar\u00eda que os comparta una idea breve adaptada a vuestro hotel?`
+    const completed = parseDraftResultWithDeterministicCtaCompletion(withBody(body), input.campaign.proof_context, 'es', null)
+    expect(completed).toEqual({ result: { ok: true, value: { ...valid, body } }, ctaCompletion: null })
+  })
+
+  it('accepts consistent Spain Spanish and rejects explicit vosotros/formal-plural mixing', () => {
+    const consistent = `${vosotrosSpanishOpening}\n\n\u00bfEstar\u00edais abiertos a que os comparta una idea breve?`
+    const mixed = `${vosotrosSpanishOpening}\n\n\u00bfEstar\u00edan abiertos a una breve conversaci\u00f3n?`
+    expect(parseDraftResultDetailed(withBody(consistent), input.campaign.proof_context, 'es', null)).toMatchObject({ ok: true })
+    expect(parseDraftResultDetailed(withBody(mixed), input.campaign.proof_context, 'es', null)).toEqual({ ok: false, reason: 'body_mixed_spanish_register' })
+  })
+
+  it('does not treat neutral Spanish su as formal-plural register evidence', () => {
+    const body = `${neutralSpanishOpening}\n\n\u00bfEstar\u00edais abiertos a que os comparta una idea breve?`.replace('la presencia', 'su presencia')
+    expect(parseDraftResultDetailed(withBody(body), input.campaign.proof_context, 'es', null)).toMatchObject({ ok: true })
+  })
+
+  it('preserves verified concept/reference status and rejects implied unsupported client work', () => {
+    const concept = `${neutralSpanishOpening}\n\nComo referencia de enfoque, Oria House Barcelona es un concepto que desarrollamos para explorar una presentaci\u00f3n hotelera clara y humana.\n\n\u00bfLes interesar\u00eda que les comparta una idea breve?`
+    const impliedClient = `${neutralSpanishOpening}\n\nTrabajamos con Oria House Barcelona como cliente en su presencia digital.\n\n\u00bfLes interesar\u00eda que les comparta una idea breve?`
+    const removedStatus = `${neutralSpanishOpening}\n\nOria House Barcelona muestra un enfoque hotelero claro y humano.\n\n\u00bfLes interesar\u00eda que les comparta una idea breve?`
+    const changedStatus = `${neutralSpanishOpening}\n\nComo referencia de enfoque, Oria House Barcelona muestra una presentaci\u00f3n hotelera clara y humana.\n\n\u00bfLes interesar\u00eda que les comparta una idea breve?`
+    expect(parseDraftResultDetailed(withBody(concept), conceptProofContext, 'es', null)).toMatchObject({ ok: true })
+    expect(parseDraftResultDetailed(withBody(impliedClient), conceptProofContext, 'es', null)).toEqual({ ok: false, reason: 'proof_context_status_mismatch' })
+    expect(parseDraftResultDetailed(withBody(removedStatus), conceptProofContext, 'es', null)).toEqual({ ok: false, reason: 'proof_context_status_mismatch' })
+    expect(parseDraftResultDetailed(withBody(changedStatus), 'Oria House Barcelona is a boutique hotel concept.', 'es', null)).toEqual({ ok: false, reason: 'proof_context_status_mismatch' })
+  })
+
+  it('accepts a focused 100\u2013150-word Spanish first outreach', () => {
+    const body = 'Hola, equipo de Hotel Marina Badalona:\n\nHe visto c\u00f3mo present\u00e1is vuestra ubicaci\u00f3n junto al mar y la combin\u00e1is con habitaciones, spa y gastronom\u00eda. La propuesta es atractiva, aunque esos elementos compiten por atenci\u00f3n antes de que el visitante llegue a la reserva directa.\n\nPodemos ayudaros a ordenar ese recorrido digital alrededor de una idea principal, manteniendo el car\u00e1cter del hotel y dando a cada experiencia el espacio justo. Como referencia de enfoque, Oria House Barcelona es un concepto que desarrollamos para explorar una narrativa hotelera clara, visual y coherente, sin atribuirle resultados comerciales.\n\n\u00bfOs encajar\u00eda que os comparta una idea breve adaptada a vuestro hotel?'
+    expect(body.match(/[\p{L}\p{N}]+(?:['\u2019-][\p{L}\p{N}]+)*/gu)?.length).toBeGreaterThanOrEqual(100)
+    expect(body.match(/[\p{L}\p{N}]+(?:['\u2019-][\p{L}\p{N}]+)*/gu)?.length).toBeLessThanOrEqual(150)
+    expect(parseDraftResultDetailed(withBody(body), conceptProofContext, 'es', null)).toMatchObject({ ok: true })
+  })
+
+  it('rejects more than 180 body words without truncating provider output', () => {
+    const original = `${neutralSpanishOpening}\n\n${'detalle '.repeat(130)}\n\n\u00bfLes interesar\u00eda que les comparta una idea?`
+    const result = parseDraftResultDetailed(withBody(original), input.campaign.proof_context, 'es', null)
+    expect(result).toEqual({ ok: false, reason: 'body_too_verbose' })
+    expect(original.endsWith('\u00bfLes interesar\u00eda que les comparta una idea?')).toBe(true)
+  })
+
+  it.each([
     ['Spanish', 'es', spanishBodyMissingCta, '\u00bfEstar\u00edan abiertos a una breve conversaci\u00f3n?'],
     ['English', 'en', 'Hello Hotel Marina team, we noticed the public rooms page could make the guest journey easier to understand. Our hotel web design approach can clarify that information without changing your established brand. Please let us know what you think.', 'Would you be open to a brief conversation?'],
     ['Ukrainian', 'uk', '\u0412\u0456\u0442\u0430\u044e, \u043a\u043e\u043c\u0430\u043d\u0434\u043e \u0433\u043e\u0442\u0435\u043b\u044e. \u041c\u0438 \u043f\u043e\u043c\u0456\u0442\u0438\u043b\u0438 \u043c\u043e\u0436\u043b\u0438\u0432\u0456\u0441\u0442\u044c \u0447\u0456\u0442\u043a\u0456\u0448\u0435 \u043f\u043e\u044f\u0441\u043d\u0438\u0442\u0438 \u0433\u043e\u0441\u0442\u044f\u043c \u0432\u0430\u0440\u0456\u0430\u043d\u0442\u0438 \u0431\u0440\u043e\u043d\u044e\u0432\u0430\u043d\u043d\u044f. \u041d\u0430\u0448 \u043f\u0456\u0434\u0445\u0456\u0434 \u043c\u043e\u0436\u0435 \u0437\u0440\u043e\u0431\u0438\u0442\u0438 \u0446\u044e \u0456\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0456\u044e \u0437\u0440\u043e\u0437\u0443\u043c\u0456\u043b\u0456\u0448\u043e\u044e \u0434\u043b\u044f \u0433\u043e\u0441\u0442\u0435\u0439.', '\u0427\u0438 \u0431\u0443\u043b\u0438 \u0431 \u0432\u0438 \u0432\u0456\u0434\u043a\u0440\u0438\u0442\u0456 \u0434\u043e \u043a\u043e\u0440\u043e\u0442\u043a\u043e\u0457 \u0440\u043e\u0437\u043c\u043e\u0432\u0438?'],
@@ -80,6 +147,13 @@ describe('AI draft structured output validation', () => {
   it('leaves an existing valid CTA unchanged without duplicating it', () => {
     const completed = parseDraftResultWithDeterministicCtaCompletion(valid, input.campaign.proof_context, 'es', null)
     expect(completed).toEqual({ result: { ok: true, value: valid }, ctaCompletion: null })
+  })
+
+  it('uses a vosotros-compatible deterministic CTA when the body clearly uses Spain register', () => {
+    const completed = parseDraftResultWithDeterministicCtaCompletion(withBody(vosotrosSpanishOpening), input.campaign.proof_context, 'es', null)
+    expect(completed.ctaCompletion).toBe('deterministic')
+    if (!completed.result.ok) throw new Error('expected completed draft')
+    expect(completed.result.value.body).toBe(`${vosotrosSpanishOpening}\n\n\u00bfEstar\u00edais abiertos a una breve conversaci\u00f3n?`)
   })
 
   it.each([

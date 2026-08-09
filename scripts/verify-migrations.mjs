@@ -17,6 +17,7 @@ const expectedCampaignProofContextWrapperFix = '20260801000004_fix_campaign_proo
 const expectedAiResearchActivityOwnerFix = '20260801000005_fix_ai_research_activity_owner.sql'
 const expectedAiResearchV2StartContractFix = '20260801000006_fix_ai_research_v2_start_contract.sql'
 const expectedAiDraftGenerationMigration = '20260801000007_supervised_ai_draft_generation.sql'
+const expectedAiDraftPromptV2Migration = '20260801000008_accept_ai_draft_prompt_v2.sql'
 const requiredCampaignTables = [
   'campaigns',
   'campaign_members',
@@ -372,6 +373,35 @@ if (/grant\s+execute\s+on\s+function\s+public\.(?:start_ai_draft_job|finish_ai_d
 }
 if (/insert\s+into\s+public\.outbound_messages[\s\S]*?status\s*,\s*'needs_review'/i.test(aiDraftGenerationSql) || /gmail|send/i.test(aiDraftGenerationSql)) {
   throw new Error('AI draft migration crosses the supervised no-send or no-review boundary.')
+}
+
+const aiDraftPromptV2Sql = await readFile(path.join(migrationsDirectory, expectedAiDraftPromptV2Migration), 'utf8')
+for (const marker of [
+  'create or replace function public.start_ai_draft_job(',
+  "p_prompt_version not in ('outreach_draft_v1', 'outreach_draft_v2')",
+  "'draft_v1', 'pending'",
+  "'ai.draft.requested'",
+  'p_confirmed_research_snapshot_id uuid',
+  "v_member.status not in ('research_ready', 'draft_ready')",
+  'order by snapshot.version desc limit 1',
+  'where membership.org_id = v_member.organization_id and membership.user_id = p_actor_user_id',
+  'security definer set search_path = public',
+  'revoke all on function public.start_ai_draft_job(uuid, uuid, uuid, uuid, text, text) from public, anon, authenticated;',
+  'grant execute on function public.start_ai_draft_job(uuid, uuid, uuid, uuid, text, text) to service_role;',
+]) {
+  if (!aiDraftPromptV2Sql.includes(marker)) throw new Error(`AI draft prompt V2 forward-fix is missing required guard: ${marker}`)
+}
+if ((aiDraftPromptV2Sql.match(/create\s+or\s+replace\s+function/gi) ?? []).length !== 1 || /create\s+or\s+replace\s+function\s+public\.(?!start_ai_draft_job\b)/i.test(aiDraftPromptV2Sql)) {
+  throw new Error('AI draft prompt V2 forward-fix recreates a function other than start_ai_draft_job.')
+}
+if (/insert\s+into\s+public\.(?:outbound_messages|activities)|update\s+public\.campaign_members|alter\s+table|delete\s+from|update\s+public\.ai_generations/i.test(aiDraftPromptV2Sql)) {
+  throw new Error('AI draft prompt V2 forward-fix mutates CRM history or changes the draft lifecycle.')
+}
+if (/grant\s+execute\s+on\s+function\s+public\.start_ai_draft_job\([^;]*?\)\s+to\s+(?:public|anon|authenticated)/i.test(aiDraftPromptV2Sql)) {
+  throw new Error('AI draft prompt V2 forward-fix grants browser execution.')
+}
+if (!/p_prompt_version\s+not\s+in\s*\(\s*'outreach_draft_v1'\s*,\s*'outreach_draft_v2'\s*\)/i.test(aiDraftPromptV2Sql)) {
+  throw new Error('AI draft prompt V2 forward-fix does not reject unknown prompt versions.')
 }
 
 const schemaSnapshot = await readFile(schemaSnapshotPath, 'utf8')
