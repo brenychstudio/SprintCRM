@@ -2,9 +2,31 @@
 
 ## Status
 
-`READY_FOR_CRM_PBG_01_HUMAN_READ_PILOT`
+`CRM-PBG-01 ACCEPTED`
 
-This status means that the bounded read adapter and the local supervised runtime are ready for an operator-controlled real-data check. It does **not** mean that the human pilot has run or passed. CRM-PBG-02, staged writes, privileged actions, and productionized token acquisition remain out of scope.
+`CRM-PBG-01 HUMAN READ PILOT — PASS`
+
+- Human acceptance recorded: `2026-08-10`.
+- Accepted SprintCRM implementation baseline: `4ba0847ee8977a59843fb71aa18ed2aaa4799514`.
+- Frozen Shared baseline: `563b6c8f0b6452ccc5f18f3aac5e058633b7cdb0`.
+
+The supervised real-data READ pilot passed through the intended authenticated, organization-scoped path. SprintCRM ↔ Shared Bridge READ integration is complete. Normal CRM development may continue, and the next Bridge checkpoint may proceed to CRM-PBG-02 controlled staged-write **design**. CRM-PBG-02 implementation, all writes, and privileged actions remain outside this checkpoint.
+
+The accepted human path was:
+
+```text
+ChatGPT
+  -> Sprint CRM — Read Pilot custom MCP app
+  -> OpenAI Secure MCP Tunnel
+  -> Shared AI Product Bridge
+  -> SprintCRM Product Adapter
+  -> product-owned bounded CRM read models
+  -> authenticated Supabase user authority
+  -> organization-scoped RLS
+  -> authoritative production SprintCRM Postgres
+```
+
+No write or other product side effect occurred during the pilot.
 
 ## Purpose and authority boundary
 
@@ -66,6 +88,68 @@ There are no convenience, campaign, outreach, write, approval, send, delete, or 
 - `crm.activities.listRecent` requires a lead UUID and accepts bounded `types` and `limit`. It returns only explicit activity columns plus type-specific allowlisted metadata. Arbitrary activity `meta` JSON and audit payloads never pass through.
 - `crm.pipeline.getSummary` accepts `status`, `niche`, and `serviceInterest`. It uses bounded server-side count queries and reports the actual stages `new`, `contacted`, `replied`, `proposal`, `won`, and `lost`. It does not invent opportunities, configurable stages, or scores.
 
+## Accepted human-pilot evidence
+
+The accepted pilot exposed exactly the seven READ capabilities and returned completed READ receipts for every invocation:
+
+```text
+operationClass: READ
+status: completed
+metadataSafe.readOnly: true
+```
+
+### Workspace
+
+- Organization name: `brenychinfo@gmail.com`.
+- Membership role: `owner`.
+- The organization UUID was correctly selected through trusted runtime configuration and matched the authenticated membership. The UUID is intentionally not repeated here.
+- The email-formatted organization name is the existing value of `organizations.name`; it is not lead contact-data leakage and is not a redaction failure.
+
+### Action queue and lead search
+
+- The bounded action queue returned two active overdue items:
+  - `Smoke Test Studio` — stage `new`, next action `follow_up`.
+  - `Hotel Marina Badalona` — stage `new`, next action `follow_up`.
+- The bounded active-lead search returned two active leads.
+- `Hotel Marina Badalona` was selected for the detailed supervised read. Its safe exposed facts were:
+  - website domain `hotelmarinabadalona.com`;
+  - niche `Hotels`;
+  - location `Badalona / Barcelona`;
+  - stage `new`;
+  - status `active`;
+  - next action `follow_up`;
+  - language `es`;
+  - reply status `not_sent`.
+- The detailed lead result explicitly reported `contactDataIncluded: false`.
+
+### Activities and follow-ups
+
+- Five bounded historical activity entries were returned for the selected lead.
+- Observed activity types included `outreach_draft_saved` and `research_saved`.
+- Only safe activity fields and type-specific allowlisted metadata were exposed: channel/timestamp facts and metadata such as version/status. No research text, draft body, message body, or arbitrary free-form metadata was exposed.
+- Two lead-backed due follow-ups were returned and matched the action queue. No separate Task entity was implied.
+- Historical activity rows mentioning research or drafts were existing CRM facts read by the pilot; they were not created by it.
+
+### Pipeline
+
+The bounded active pipeline summary matched the observed lead set:
+
+| Stage | Count |
+| --- | ---: |
+| `new` | 2 |
+| `contacted` | 0 |
+| `replied` | 0 |
+| `proposal` | 0 |
+| `won` | 0 |
+| `lost` | 0 |
+| **Total active** | **2** |
+
+### Security and redaction acceptance
+
+`SECURITY REDACTION — PASS`
+
+The pilot intentionally omitted `crm.contactData.read`. The real lead result exposed no lead email, phone, free-form notes, outreach/message body, JWT, Supabase publishable-key value, provider secret, or OpenAI key. The workspace organization name noted above remains a safe workspace field under the accepted contract.
+
 ## Scopes and default pilot authority
 
 The adapter defines these scopes:
@@ -77,7 +161,7 @@ The adapter defines these scopes:
 - `crm.activities.read`
 - `crm.pipeline.read`
 
-The initial pilot grants every read scope above **except** `crm.contactData.read`. Contact-data authority is an explicit trusted runtime decision, never a normal operation input and never self-granted through `_bridge` metadata.
+The accepted initial pilot granted every read scope above **except** `crm.contactData.read`. Contact-data authority is an explicit trusted runtime decision, never a normal operation input and never self-granted through `_bridge` metadata.
 
 Without `crm.contactData.read`, `crm.leads.get` omits `email` and `phone`. Search, action queue, follow-up, activity, pipeline, and workspace results never expose them regardless of scope. With the additional scope, only `crm.leads.get` may expose allowlisted email and phone values. Free-form notes, current outreach bodies, message bodies, prompts, AI outputs, audit payloads, credentials, and unrestricted JSON remain excluded in every case.
 
@@ -114,6 +198,20 @@ Startup performs these checks before opening the MCP service:
 The expected organization comes only from trusted runtime configuration. Semantic inputs cannot change it. Queries retain RLS enforcement and are additionally constrained to the bound organization where applicable. The runtime does not silently use the existing oldest-membership behavior of `current_org_id()` when a user has multiple memberships.
 
 The runtime validates both credential classes before constructing a client. Only a current `sb_publishable_...` key or a legacy JWT whose decoded role is exactly `anon` is accepted as the project identity. The user-token slot requires a structurally valid, non-expired JWT with role `authenticated` and a UUID subject; Supabase `auth.getUser(token)` then performs the authoritative remote verification. Secret/elevated `sb_secret_...`, legacy `service_role`, credentials in the wrong slot, expired tokens, and arbitrary non-empty strings fail closed. The runtime never requests, accepts, or uses an elevated credential, user password, refresh token, browser `localStorage`, or automatically extracted browser session. It never persists or logs the access token and never includes it in errors, receipts, provenance, tool results, startup status, or health output.
+
+### Accepted authenticated-RLS proof
+
+The supervised operator confirmed all of the following on the real pilot path:
+
+- A publishable/legacy-anon project identity and a short-lived authenticated user access token were used together.
+- The token role was `authenticated`, and its issuer matched the SprintCRM Supabase project.
+- An expired token caused startup to fail closed.
+- A fresh token passed Supabase `/auth/v1/user` verification.
+- The authenticated user UID matched the expected membership.
+- The membership organization matched the trusted expected-organization binding.
+- No service-role or equivalent elevated credential was used.
+
+Short-lived tokens can expire during operator setup. If startup fails safely, obtain a fresh user access token from the already-authenticated SprintCRM session through the approved operator workflow, replace only `SPRINTCRM_BRIDGE_USER_ACCESS_TOKEN`, verify `role=authenticated` and `expired=false`, verify `/auth/v1/user`, and restart the READ runtime. Never automate token scraping from browser `localStorage`.
 
 ## Runtime configuration
 
@@ -173,43 +271,79 @@ The CRM startup line is the separate safe readiness profile. It may additionally
 
 Neither status surface may contain JWTs, keys, user IDs/emails, contact data, membership details, organization names, organization secrets, or database records. The HTTP service binds only to loopback and uses Shared's stateless Streamable HTTP transport.
 
-## Supervised real-data pilot checklist
+### Accepted pilot environment
 
-Do not automate this checklist and do not run it from a coding agent. The operator performs it later with one known internal record.
+| Item | Accepted value |
+| --- | --- |
+| Local MCP | `http://127.0.0.1:47841/mcp` |
+| Local health | `http://127.0.0.1:47841/health` |
+| Operation profile | `READ=7`, `STAGED_WRITE=0`, `PRIVILEGED_ACTION=0` |
+| `sourceMode` | `authenticated-rls-readonly` |
+| `contactDataGranted` | `false` |
+| `canonicalRemoteUntouched` | `true` |
+| Secure MCP Tunnel | `Sprint CRM — Read Pilot` |
+| ChatGPT custom MCP app | `Sprint CRM — Read Pilot` |
+
+The separate ChatGPT app name is a pilot surface, not necessarily the final long-term product/app name. The Secure MCP Tunnel runtime key may be reused across product tunnels only when it belongs to the correct OpenAI Platform organization/project and is restricted to `Tunnels Read + Use`. The tunnel client requires no model/API permissions. Never document or place the actual OpenAI API key in this repository, tool arguments, status output, or pilot evidence.
+
+## Supervised READ operator runbook
+
+Use this lifecycle for a later supervised rerun. Do not automate credential extraction, expose secret values, or turn the accepted READ surface into an unattended production service.
 
 ### Prepare
 
-1. Confirm SprintCRM validations and Shared read-adapter conformance pass with the exact `7/0/0` profile.
-2. Confirm the Shared repository is clean at `563b6c8f0b6452ccc5f18f3aac5e058633b7cdb0`.
-3. Select one internal SprintCRM user and one expected organization in which that user is already a member.
-4. Obtain a fresh short-lived user access token through the approved operator workflow. Do not paste it into chat, source, logs, tunnel configuration, or a committed file.
-5. Supply the six runtime configuration names above in an ephemeral process environment. Grant the safe read scopes and intentionally omit `crm.contactData.read`.
-6. Record one known lead's visible Today, Lead Drawer, activity, and Pipeline facts for comparison. Do not modify the lead for the pilot.
+1. Verify the intended SprintCRM baseline and a clean frozen Shared checkout at `563b6c8f0b6452ccc5f18f3aac5e058633b7cdb0`.
+2. Obtain the existing SprintCRM Supabase project URL.
+3. Use only the project's publishable key or legacy `anon` identity; never use `sb_secret_...`, `service_role`, or an equivalent elevated credential.
+4. Select one expected SprintCRM organization UUID through trusted operator configuration. Do not pass it through semantic tool input.
+5. Select an internal SprintCRM user and verify that user's membership in the expected organization.
+6. Obtain a fresh short-lived authenticated user access token through the approved operator workflow. Do not paste it into chat, source, logs, tunnel configuration, or a committed file, and do not scrape it automatically from browser storage.
+7. Set the runtime environment variables ephemerally in the PowerShell process.
+8. Grant exactly these safe default scopes:
+
+   ```text
+   crm.context.read
+   crm.leads.read
+   crm.followups.read
+   crm.activities.read
+   crm.pipeline.read
+   ```
+
+   Do **not** include `crm.contactData.read` in the safe default pilot.
 
 ### Connect
 
-1. Run `npm run product-bridge:read-pilot` and confirm the safe startup profile reports `READ=7`, `STAGED_WRITE=0`, and `PRIVILEGED_ACTION=0`.
-2. Open `/health` locally and verify ready/stateless/Streamable HTTP/tool-count-only output with `toolCount: 7` and no sensitive data.
-3. Start Secure MCP Tunnel for the local `/mcp` endpoint. Do not put the Supabase token or anon key in tunnel or client metadata.
-4. Connect a separate ChatGPT app named `Sprint CRM — Read Pilot` to the tunnel endpoint.
-5. Run MCP discovery and verify the exact seven aliases listed in this document. Stop if any write, privileged, campaign, Gmail, or unexpected tool appears.
+9. Start the local runtime from SprintCRM:
+
+    ```powershell
+    npm run product-bridge:read-pilot
+    ```
+
+10. Verify `http://127.0.0.1:47841/health` reports ready/stateless/Streamable HTTP with `toolCount: 7` and no sensitive data.
+11. Start Secure MCP Tunnel for `http://127.0.0.1:47841/mcp`. Do not put the Supabase token or project key in tunnel/client metadata.
+12. Connect the separate ChatGPT custom MCP app `Sprint CRM — Read Pilot`.
+13. Run MCP discovery and verify exactly the seven accepted READ aliases. Stop if any write, privileged, campaign, Gmail, or unexpected tool appears.
 
 ### Compare and verify
 
-1. Call `crm_workspace__getContext` and confirm it describes only the expected organization and safe membership/capability context.
-2. Find the known lead with `crm_leads__search`; compare its safe summary with SprintCRM.
-3. Call `crm_leads__get`; compare stage/status, next action, service and timestamp facts with Lead Drawer. Confirm `email`, `phone`, notes, and message bodies are absent.
-4. Compare `crm_leads__listActionQueue` and `crm_followups__listDue` with the lead's Today/next-action state. Confirm there is no fabricated score or separate task identity.
-5. Compare `crm_activities__listRecent` with the lead timeline. Confirm metadata is narrowly projected and no arbitrary JSON or audit payload appears.
-6. Compare `crm_pipeline__getSummary` stage counts with Pipeline for the same filters.
-7. Re-check the known lead and relevant timeline in SprintCRM. Verify zero CRM mutations, zero new activities, zero campaign/message/research changes, zero AI generations, zero Gmail actions, and zero provider calls.
+14. Run supervised real-data reads: workspace context, lead search/get, action queue, due follow-ups, recent activities, and pipeline summary. Compare them with one known CRM record and verify contact redaction, bounded output, exact `7/0/0` authority, and zero side effects. Do not modify the record.
 
 ### Shut down
 
-1. Disconnect and stop Secure MCP Tunnel.
-2. Stop the local MCP runtime.
-3. Remove the process-local runtime configuration and let the short-lived token expire according to operator policy.
-4. Record the pilot evidence and outcome separately. Only a reviewed successful run may change the status from ready to pilot PASS.
+15. Disconnect and stop Secure MCP Tunnel.
+16. Stop the local MCP runtime.
+17. Clear the process environment explicitly:
+
+    ```powershell
+    Remove-Item Env:SPRINTCRM_BRIDGE_USER_ACCESS_TOKEN -ErrorAction SilentlyContinue
+    Remove-Item Env:SPRINTCRM_BRIDGE_SUPABASE_ANON_KEY -ErrorAction SilentlyContinue
+    Remove-Item Env:SPRINTCRM_BRIDGE_SUPABASE_URL -ErrorAction SilentlyContinue
+    Remove-Item Env:SPRINTCRM_BRIDGE_EXPECTED_ORGANIZATION_ID -ErrorAction SilentlyContinue
+    Remove-Item Env:SPRINTCRM_BRIDGE_SCOPES -ErrorAction SilentlyContinue
+    Remove-Item Env:SPRINTCRM_BRIDGE_MCP_PORT -ErrorAction SilentlyContinue
+    ```
+
+After cleanup, let the short-lived token expire under operator policy and retain only reviewed, non-secret pilot evidence.
 
 ## Non-interference guarantees
 
@@ -218,6 +352,8 @@ CRM-PBG-01 does not call or modify `supabase/functions/outreach-ai-runtime`, Ope
 It also has no Gmail OAuth, token, inbox, draft, send, reply, or polling behavior. No customer communication is possible through this adapter.
 
 The runtime exposes no insert, update, delete, RPC mutation, raw SQL, migration, bulk action, stage move, approval, or send capability. `activities` remains the canonical CRM timeline and this checkpoint reads it only. No database migration is required or included.
+
+The human pilot confirmed zero side effects: no `STAGED_WRITE`, `PRIVILEGED_ACTION`, lead or follow-up modification, pipeline movement, AI/research/draft generation, message approval, Gmail/provider operation, email send, import, export, delete, or bulk mutation. Existing historical research/draft activities were observed through READ operations only.
 
 ## Known limitations
 
@@ -231,7 +367,7 @@ The runtime exposes no insert, update, delete, RPC mutation, raw SQL, migration,
 8. Pipeline stages are the six existing SprintCRM stages, not configurable stages or Opportunity entities.
 9. Search and list tools never expose contact data. Even with extra contact authority, only single-lead get may return email and phone; notes and message bodies remain unavailable.
 10. Campaign/outreach reads, company and opportunity models, writes, approvals, Gmail, AI actions, and autonomous workers are not part of this surface.
-11. Normal automated tests are credential-free and use injected fakes; the real-data pilot remains a separate human checkpoint and has not been run.
+11. Normal automated tests remain credential-free and use injected fakes. The separate supervised real-data pilot has now passed; it is not part of the repeatable automated test suite.
 12. Pipeline counts use six bounded HEAD/count requests plus a watermark read, not one shared MVCC transaction; the result is operational read evidence rather than a transactional financial snapshot.
 13. Existing indexes support the due queue, but substring search and pipeline stage counts may need additive indexes at larger scale. No migration was needed or authorized for this supervised pilot.
 14. Local `file:` dependencies require the frozen Shared checkout at the documented relative path. Hosted CI or another workstation needs the same checkout topology until Shared has a reviewed package distribution strategy.
@@ -241,6 +377,15 @@ The runtime exposes no insert, update, delete, RPC mutation, raw SQL, migration,
 
 ## Checkpoint
 
-The next authorized action is the supervised checklist above. Do not begin CRM-PBG-02 or grant write/privileged authority from this status.
+SprintCRM ↔ Shared Bridge READ integration is complete. Normal CRM development may continue.
 
-`READY_FOR_CRM_PBG_01_HUMAN_READ_PILOT`
+The recommended next Bridge checkpoint is CRM-PBG-02 controlled staged-write design, prioritizing the revenue-relevant candidates that already align with immutable, versioned SprintCRM domain behavior:
+
+1. `crm.email.stageDraft`
+2. `crm.research.stageSnapshot`
+
+Do not treat generic lead, contact, or follow-up changes as honest staged writes yet. Those paths currently mutate authoritative lead state directly and require separate product-side domain seams and design before they can enter a `STAGED_WRITE` surface.
+
+CRM-PBG-02 was intentionally not implemented or started by this acceptance task.
+
+`CRM-PBG-01 ACCEPTED`
