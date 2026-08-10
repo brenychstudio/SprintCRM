@@ -7,14 +7,20 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "product-bridge:read-pilot": "tsx scripts/qa/crm-pbg-01-read-pilot.ts",
     "typecheck": "tsc -b --pretty false",
     "test": "npm run test:unit",
+    "test:product-bridge": "vitest run product-bridge",
     "test:unit": "vitest run",
     "test:watch": "vitest",
     "verify:migrations": "node scripts/verify-migrations.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@brenych/product-bridge-contracts": "file:../../../PROJECTS/shared-ai-product-bridge/packages/contracts",
+    "@brenych/product-bridge-core": "file:../../../PROJECTS/shared-ai-product-bridge/packages/core",
+    "@brenych/product-bridge-product-sdk": "file:../../../PROJECTS/shared-ai-product-bridge/packages/product-sdk",
+    "@brenych/product-bridge-transport-mcp": "file:../../../PROJECTS/shared-ai-product-bridge/packages/transport-mcp",
     "@supabase/supabase-js": "^2.97.0",
     "@tailwindcss/vite": "^4.2.0",
     "@tanstack/react-query": "^5.90.21",
@@ -24,10 +30,13 @@
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.13.0",
     "tailwindcss": "^4.2.0",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
+    "@brenych/product-bridge-testing": "file:../../../PROJECTS/shared-ai-product-bridge/packages/testing",
+    "@brenych/product-bridge-tunnel-core": "file:../../../PROJECTS/shared-ai-product-bridge/packages/tunnel-core",
     "@eslint/js": "^9.39.1",
+    "@modelcontextprotocol/sdk": "1.30.0",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^24.10.1",
@@ -39,6 +48,7 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "jsdom": "^29.1.1",
+    "tsx": "^4.20.6",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",
     "vite": "^7.3.1",
