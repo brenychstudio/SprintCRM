@@ -781,6 +781,74 @@ export type Database = {
           },
         ]
       }
+      product_bridge_write_requests: {
+        Row: {
+          actor_user_id: string
+          claim_token: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          idempotency_key: string
+          lease_expires_at: string
+          operation_id: string
+          organization_id: string
+          product_id: string
+          provenance: Json
+          receipt: Json | null
+          semantic_fingerprint: string
+          staged_entity_id: string | null
+          staged_entity_type: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          actor_user_id: string
+          claim_token: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          lease_expires_at: string
+          operation_id: string
+          organization_id: string
+          product_id: string
+          provenance?: Json
+          receipt?: Json | null
+          semantic_fingerprint: string
+          staged_entity_id?: string | null
+          staged_entity_type?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          actor_user_id?: string
+          claim_token?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          lease_expires_at?: string
+          operation_id?: string
+          organization_id?: string
+          product_id?: string
+          provenance?: Json
+          receipt?: Json | null
+          semantic_fingerprint?: string
+          staged_entity_id?: string | null
+          staged_entity_type?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_bridge_write_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       research_snapshots: {
         Row: {
           ai_generation_id: string | null
@@ -952,6 +1020,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_product_bridge_write: {
+        Args: {
+          p_claim_token: string
+          p_expected_organization_id: string
+          p_idempotency_key: string
+          p_lease_seconds: number
+          p_operation_id: string
+          p_provenance: Json
+          p_semantic_fingerprint: string
+        }
+        Returns: Json
+      }
       finish_ai_runtime_probe: {
         Args: {
           p_actor_user_id: string
@@ -1102,6 +1182,64 @@ export type Database = {
         }[]
       }
       is_org_member: { Args: { p_org_id: string }; Returns: boolean }
+      get_product_bridge_staging_context: {
+        Args: { p_campaign_member_id: string; p_expected_organization_id: string }
+        Returns: Json
+      }
+      product_bridge_json_has_forbidden_key: {
+        Args: { p_value: Json }
+        Returns: boolean
+      }
+      product_bridge_json_object_has_only_keys: {
+        Args: { p_allowed_keys: string[]; p_value: Json }
+        Returns: boolean
+      }
+      product_bridge_require_actor: {
+        Args: { p_organization_id: string }
+        Returns: string
+      }
+      product_bridge_staging_context_version: {
+        Args: { p_campaign_member_id: string; p_organization_id: string }
+        Returns: string
+      }
+      product_bridge_valid_provenance: {
+        Args: {
+          p_actor_user_id: string
+          p_campaign_member_id: string
+          p_operation_id: string
+          p_organization_id: string
+          p_source_snapshot_id: string
+          p_staged_entity_id: string
+          p_value: Json
+        }
+        Returns: boolean
+      }
+      product_bridge_valid_receipt: {
+        Args: { p_source_snapshot_id: string; p_staged_entity_id: string; p_value: Json }
+        Returns: boolean
+      }
+      product_bridge_valid_research_evidence: {
+        Args: { p_value: Json }
+        Returns: boolean
+      }
+      product_bridge_valid_safe_diagnostics: {
+        Args: { p_value: Json }
+        Returns: boolean
+      }
+      product_bridge_valid_warnings: {
+        Args: { p_value: Json }
+        Returns: boolean
+      }
+      release_product_bridge_write: {
+        Args: {
+          p_claim_token: string
+          p_expected_organization_id: string
+          p_idempotency_key: string
+          p_operation_id: string
+          p_semantic_fingerprint: string
+        }
+        Returns: boolean
+      }
       save_manual_outbound_message: {
         Args: {
           p_body: string
@@ -1175,6 +1313,46 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      stage_product_bridge_email_draft: {
+        Args: {
+          p_body: string
+          p_campaign_member_id: string
+          p_claim_token: string
+          p_expected_organization_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_language: string
+          p_provenance: Json
+          p_receipt: Json
+          p_research_snapshot_id: string
+          p_semantic_fingerprint: string
+          p_source_snapshot_id: string
+          p_staged_entity_id: string
+          p_subject: string
+        }
+        Returns: Json
+      }
+      stage_product_bridge_research_snapshot: {
+        Args: {
+          p_campaign_member_id: string
+          p_claim_token: string
+          p_confidence: number | null
+          p_evidence: Json
+          p_expected_organization_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_observed_opportunity: string
+          p_provenance: Json
+          p_receipt: Json
+          p_recommended_case: string | null
+          p_recommended_offer: string
+          p_semantic_fingerprint: string
+          p_source_snapshot_id: string
+          p_staged_entity_id: string
+          p_warnings: Json
+        }
+        Returns: Json
       }
       skip_manual_campaign_member: {
         Args: { p_campaign_member_id: string; p_reason?: string }

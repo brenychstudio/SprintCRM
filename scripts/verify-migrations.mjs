@@ -20,6 +20,7 @@ const expectedAiDraftGenerationMigration = '20260801000007_supervised_ai_draft_g
 const expectedAiDraftPromptV2Migration = '20260801000008_accept_ai_draft_prompt_v2.sql'
 const expectedAiDraftPromptV3Migration = '20260801000009_accept_ai_draft_prompt_v3.sql'
 const expectedAiDraftPromptV4Migration = '20260801000010_accept_ai_draft_prompt_v4.sql'
+const expectedProductBridgeStagingMigration = '20260810000001_product_bridge_transactional_staging.sql'
 const requiredCampaignTables = [
   'campaigns',
   'campaign_members',
@@ -69,6 +70,10 @@ if (!files.includes(expectedCampaignMemberAmbiguityFix)) {
 
 if (!files.includes(expectedManualMessageChannelFix)) {
   throw new Error(`Missing required manual message channel forward-fix: ${expectedManualMessageChannelFix}`)
+}
+
+if (!files.includes(expectedProductBridgeStagingMigration)) {
+  throw new Error(`Missing required Product Bridge staging migration: ${expectedProductBridgeStagingMigration}`)
 }
 
 if (!files.includes(expectedAiRuntimeProbeRequestIdFix)) {
@@ -464,6 +469,55 @@ if (!/p_prompt_version\s+not\s+in\s*\(\s*'outreach_draft_v1'\s*,\s*'outreach_dra
   throw new Error('AI draft prompt V4 forward-fix does not reject unknown prompt versions.')
 }
 
+const productBridgeStagingSql = await readFile(
+  path.join(migrationsDirectory, expectedProductBridgeStagingMigration),
+  'utf8',
+)
+for (const marker of [
+  'create table public.product_bridge_write_requests',
+  'constraint product_bridge_write_requests_address_key',
+  "status in ('pending', 'completed')",
+  "operation_id in (\n    'crm.research.stageSnapshot',\n    'crm.email.stageDraft'",
+  'alter table public.product_bridge_write_requests enable row level security;',
+  'revoke all on table public.product_bridge_write_requests from public, anon, authenticated;',
+  'create or replace function public.get_product_bridge_staging_context(',
+  'create or replace function public.claim_product_bridge_write(',
+  'create or replace function public.release_product_bridge_write(',
+  'create or replace function public.stage_product_bridge_research_snapshot(',
+  'create or replace function public.stage_product_bridge_email_draft(',
+  'security definer',
+  'set search_path = pg_catalog, public',
+  "auth.role() <> 'authenticated'",
+  "source in ('manual', 'ai', 'imported', 'bridge')",
+  "source in ('manual', 'template', 'ai', 'bridge')",
+  "'outcome', 'REPLAY', 'receipt', v_request.receipt",
+  "'outcome', 'CONFLICT'",
+  "'outcome', 'IN_PROGRESS'",
+  "'outcome', 'STALE'",
+  "'product_bridge.research.staged'",
+  "'product_bridge.email_draft.staged'",
+  "'research_saved'",
+  "'outreach_draft_saved'",
+  "'bridge', 'email'",
+  "p_language not in ('en', 'es', 'uk', 'ru')",
+  "v_member.status not in ('queued', 'researching', 'research_ready')",
+  "v_member.status not in ('research_ready', 'draft_ready')",
+  'grant execute on function public.get_product_bridge_staging_context(uuid, uuid) to authenticated;',
+]) {
+  if (!productBridgeStagingSql.includes(marker)) {
+    throw new Error(`Product Bridge staging migration is missing required guard: ${marker}`)
+  }
+}
+for (const forbidden of [
+  /grant\s+execute[\s\S]*?to\s+(?:public|anon|service_role)\s*;/i,
+  /insert\s+into\s+public\.ai_generations/i,
+  /outreach-ai-runtime|openai|gmail|provider_draft|'sent'/i,
+]) {
+  if (forbidden.test(productBridgeStagingSql)) {
+    throw new Error(`Product Bridge staging migration crosses a forbidden boundary: ${forbidden}`)
+  }
+}
+
 const schemaSnapshot = await readFile(schemaSnapshotPath, 'utf8')
 for (const marker of [
   'uidx_leads_org_email_norm on public.leads(org_id, email_norm)',
@@ -471,6 +525,17 @@ for (const marker of [
   'uidx_leads_org_phone_norm on public.leads(org_id, phone_norm)',
 ]) {
   if (!schemaSnapshot.includes(marker)) throw new Error(`Schema snapshot is missing organization-scoped dedup guard: ${marker}`)
+}
+for (const marker of [
+  'create table public.product_bridge_write_requests',
+  'create or replace function public.get_product_bridge_staging_context(',
+  'create or replace function public.claim_product_bridge_write(',
+  'create or replace function public.stage_product_bridge_research_snapshot(',
+  'create or replace function public.stage_product_bridge_email_draft(',
+]) {
+  if (!schemaSnapshot.includes(marker)) {
+    throw new Error(`Schema snapshot is missing Product Bridge staging seam: ${marker}`)
+  }
 }
 if (/uidx_leads_(email|domain|phone)_norm on public\.leads\(/.test(schemaSnapshot)) {
   throw new Error('Schema snapshot still contains superseded global lead dedup indexes.')
