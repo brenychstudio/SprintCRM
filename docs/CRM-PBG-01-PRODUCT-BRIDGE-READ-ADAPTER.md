@@ -10,6 +10,8 @@
 - Accepted SprintCRM implementation baseline: `4ba0847ee8977a59843fb71aa18ed2aaa4799514`.
 - Frozen Shared baseline: `563b6c8f0b6452ccc5f18f3aac5e058633b7cdb0`.
 
+> Historical checkpoint: the `7/0/0` discovery and operator steps below document the accepted CRM-PBG-01 human pilot. The current runtime is expanded by CRM-PBG-02B to `8 READ / 2 STAGED_WRITE / 0 PRIVILEGED_ACTION`; use `CRM-PBG-02B-BRIDGE-STAGED-WRITE-INTEGRATION.md` for current surface, scopes, and safety instructions. The six credential environment variable names and authenticated-user token procedure remain applicable.
+
 The supervised real-data READ pilot passed through the intended authenticated, organization-scoped path. SprintCRM ↔ Shared Bridge READ integration is complete. Normal CRM development may continue, and the next Bridge checkpoint may proceed to CRM-PBG-02 controlled staged-write **design**. CRM-PBG-02 implementation, all writes, and privileged actions remain outside this checkpoint.
 
 The accepted human path was:

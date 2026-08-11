@@ -641,6 +641,9 @@ export class ProductOwnedSprintCrmReadModel implements SprintCrmSemanticReadMode
       'crm.followups.listDue',
       'crm.activities.listRecent',
       'crm.pipeline.getSummary',
+      'crm.outreach.getStagingContext',
+      'crm.research.stageSnapshot',
+      'crm.email.stageDraft',
     ])
     return {
       workspace: safeWorkspace,

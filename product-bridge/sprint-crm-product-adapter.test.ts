@@ -2,9 +2,14 @@ import {
   BRIDGE_ERROR_CODES,
   OPERATION_CLASSES,
   type ActionRequest,
+  type SafeValue,
 } from '@brenych/product-bridge-contracts'
 import { BridgeCore } from '@brenych/product-bridge-core'
-import { ProductRegistry, validateProductOperations } from '@brenych/product-bridge-product-sdk'
+import {
+  ProductRegistry,
+  validateProductOperations,
+  type ProductInvocationResult,
+} from '@brenych/product-bridge-product-sdk'
 import { runProductAdapterConformanceSuite } from '@brenych/product-bridge-testing'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -30,6 +35,8 @@ import {
   type WorkspaceContextResult,
 } from './crm-read-model.js'
 import { createSprintCrmConformanceFixtures } from './sprint-crm-conformance.js'
+import type { SprintCrmStagingBoundary } from './crm-staged-write-coordinator.js'
+import type { CrmStagingContext } from './crm-staging-context.js'
 import {
   SPRINT_CRM_ADAPTER_VERSION,
   SPRINT_CRM_NAMESPACES,
@@ -46,6 +53,9 @@ import {
 const ORGANIZATION_ID = '11111111-1111-4111-8111-111111111111'
 const LEAD_ID = '22222222-2222-4222-8222-222222222222'
 const ACTIVITY_ID = '33333333-3333-4333-8333-333333333333'
+const CAMPAIGN_MEMBER_ID = '44444444-4444-4444-8444-444444444444'
+const RESEARCH_ID = '55555555-5555-4555-8555-555555555555'
+const MESSAGE_ID = '66666666-6666-4666-8666-666666666666'
 const GENERATED_AT = '2026-08-10T12:00:00.000Z'
 const SNAPSHOT_ID = `sha256:${'a'.repeat(64)}`
 
@@ -207,6 +217,59 @@ function createReadModel(
   return Object.assign(readModel, overrides)
 }
 
+function stagingContext(): CrmStagingContext {
+  return {
+    organizationId: ORGANIZATION_ID,
+    actorSubject: 'user:77777777-7777-4777-8777-777777777777',
+    campaignMember: { id: CAMPAIGN_MEMBER_ID, status: 'research_ready', updatedAt: GENERATED_AT },
+    campaign: { id: '88888888-8888-4888-8888-888888888888', channel: 'email', defaultLanguage: 'en', updatedAt: GENERATED_AT },
+    lead: { language: 'en', updatedAt: GENERATED_AT },
+    latestResearch: { id: RESEARCH_ID, version: 2, createdAt: GENERATED_AT },
+    latestOutboundMessage: null,
+    freshness: {
+      subjectType: 'campaign_member_staging_context',
+      subjectId: CAMPAIGN_MEMBER_ID,
+      version: SNAPSHOT_ID as `sha256:${string}`,
+      generatedAt: GENERATED_AT,
+    },
+  }
+}
+
+function stagingBoundary(
+  overrides: Partial<SprintCrmStagingBoundary> = {},
+): SprintCrmStagingBoundary {
+  const boundary: SprintCrmStagingBoundary = {
+    getStagingContext: vi.fn(async () => stagingContext()),
+    evaluateFreshness: vi.fn(async () => ({
+      state: 'CURRENT' as const,
+      current: { snapshotId: SNAPSHOT_ID, generatedAt: GENERATED_AT },
+    })),
+    prepare: vi.fn(async (_request, operation): Promise<ProductInvocationResult<SafeValue>> => (
+      operation.operationId === 'stage_snapshot'
+      ? {
+          status: 'staged' as const,
+          stagedEntityId: RESEARCH_ID,
+          result: {
+            entityType: 'research_snapshot', entityId: RESEARCH_ID, version: 3,
+            status: 'research_ready', campaignMemberId: CAMPAIGN_MEMBER_ID,
+          },
+          validation: { state: 'pending' as const }, approval: { state: 'pending' as const },
+        }
+      : {
+          status: 'staged' as const,
+          stagedEntityId: MESSAGE_ID,
+          result: {
+            entityType: 'outbound_message', entityId: MESSAGE_ID, version: 1,
+            status: 'draft', campaignMemberId: CAMPAIGN_MEMBER_ID,
+            researchSnapshotId: RESEARCH_ID, researchVersion: 2,
+          },
+          validation: { state: 'pending' as const }, approval: { state: 'pending' as const },
+        }
+    )),
+  }
+  return Object.assign(boundary, overrides)
+}
+
 let requestSequence = 0
 
 async function route(
@@ -217,6 +280,8 @@ async function route(
   options: {
     readonly scopes?: readonly string[]
     readonly metadataSafe?: ActionRequest['metadataSafe']
+    readonly idempotencyKey?: string
+    readonly sourceSnapshotId?: string
   } = {},
 ) {
   const registry = new ProductRegistry()
@@ -231,7 +296,7 @@ async function route(
     productId: SPRINT_CRM_PRODUCT_ID,
     namespace,
     operationId,
-    operationClass: OPERATION_CLASSES.READ,
+    operationClass: operation.operationClass,
     subject: { type: 'organization', id: ORGANIZATION_ID },
     identity: {
       identityId: 'crm-adapter-test-identity',
@@ -242,6 +307,10 @@ async function route(
       issuedAt: GENERATED_AT,
     },
     input,
+    ...(options.idempotencyKey === undefined ? {} : { idempotencyKey: options.idempotencyKey }),
+    ...(options.sourceSnapshotId === undefined ? {} : {
+      sourceSnapshot: { snapshotId: options.sourceSnapshotId, generatedAt: GENERATED_AT },
+    }),
     ...(options.metadataSafe === undefined ? {} : { metadataSafe: options.metadataSafe }),
   }
   const core = new BridgeCore({
@@ -252,8 +321,8 @@ async function route(
   return core.route(request)
 }
 
-describe('SprintCrmReadOnlyProductAdapter', () => {
-  it('publishes the exact SprintCRM descriptor and a bounded 7/0/0 READ profile', () => {
+describe('SprintCrmProductAdapter', () => {
+  it('publishes the exact SprintCRM descriptor and bounded 8/2/0 profile', () => {
     const adapter = new SprintCrmReadOnlyProductAdapter(createReadModel())
     expect(adapter.describe()).toEqual(SPRINT_CRM_PRODUCT_DESCRIPTOR)
     expect(adapter.describe()).toMatchObject({
@@ -269,15 +338,18 @@ describe('SprintCrmReadOnlyProductAdapter', () => {
       'crm.followups',
       'crm.activities',
       'crm.pipeline',
+      'crm.outreach',
+      'crm.research',
+      'crm.email',
     ])
     expect(adapter.describe().namespaces).toEqual(SPRINT_CRM_NAMESPACES)
 
     const operations = adapter.listOperations()
     const validation = validateProductOperations(adapter.describe(), operations)
     expect(validation.valid, JSON.stringify(validation.issuesSafe)).toBe(true)
-    expect(operations).toHaveLength(7)
-    expect(operations.filter(({ operationClass }) => operationClass === OPERATION_CLASSES.READ)).toHaveLength(7)
-    expect(operations.filter(({ operationClass }) => operationClass === OPERATION_CLASSES.STAGED_WRITE)).toHaveLength(0)
+    expect(operations).toHaveLength(10)
+    expect(operations.filter(({ operationClass }) => operationClass === OPERATION_CLASSES.READ)).toHaveLength(8)
+    expect(operations.filter(({ operationClass }) => operationClass === OPERATION_CLASSES.STAGED_WRITE)).toHaveLength(2)
     expect(operations.filter(({ operationClass }) => operationClass === OPERATION_CLASSES.PRIVILEGED_ACTION)).toHaveLength(0)
     expect(operations.map(({ namespace, operationId }) => `${namespace}:${operationId}`)).toEqual([
       'crm.workspace:get_context',
@@ -287,6 +359,9 @@ describe('SprintCrmReadOnlyProductAdapter', () => {
       'crm.followups:list_due',
       'crm.activities:list_recent',
       'crm.pipeline:get_summary',
+      'crm.outreach:get_staging_context',
+      'crm.research:stage_snapshot',
+      'crm.email:stage_draft',
     ])
     expect(SPRINT_CRM_SEMANTIC_OPERATIONS).toEqual({
       WORKSPACE_GET_CONTEXT: 'crm.workspace.getContext',
@@ -296,6 +371,9 @@ describe('SprintCrmReadOnlyProductAdapter', () => {
       FOLLOWUPS_LIST_DUE: 'crm.followups.listDue',
       ACTIVITIES_LIST_RECENT: 'crm.activities.listRecent',
       PIPELINE_GET_SUMMARY: 'crm.pipeline.getSummary',
+      OUTREACH_GET_STAGING_CONTEXT: 'crm.outreach.getStagingContext',
+      RESEARCH_STAGE_SNAPSHOT: 'crm.research.stageSnapshot',
+      EMAIL_STAGE_DRAFT: 'crm.email.stageDraft',
     })
 
     const expectedScopes = [
@@ -306,15 +384,21 @@ describe('SprintCrmReadOnlyProductAdapter', () => {
       SPRINT_CRM_SCOPES.FOLLOWUPS_READ,
       SPRINT_CRM_SCOPES.ACTIVITIES_READ,
       SPRINT_CRM_SCOPES.PIPELINE_READ,
+      SPRINT_CRM_SCOPES.OUTREACH_READ,
+      SPRINT_CRM_SCOPES.RESEARCH_STAGE,
+      SPRINT_CRM_SCOPES.EMAIL_STAGE,
     ]
     expect(operations.map(({ requiredScopes }) => requiredScopes)).toEqual(
       expectedScopes.map((scope) => [scope]),
     )
-    expect(operations.every(({ freshnessRequirement }) => freshnessRequirement === 'NOT_REQUIRED')).toBe(true)
-    expect(operations.every(({ idempotencyRequirement }) => idempotencyRequirement === 'NOT_SUPPORTED')).toBe(true)
-    expect(operations.every(({ boundedOutput }) => (
+    expect(operations.slice(0, 8).every(({ freshnessRequirement }) => freshnessRequirement === 'NOT_REQUIRED')).toBe(true)
+    expect(operations.slice(0, 8).every(({ idempotencyRequirement }) => idempotencyRequirement === 'NOT_SUPPORTED')).toBe(true)
+    expect(operations.slice(8).every(({ freshnessRequirement }) => freshnessRequirement === 'REQUIRED')).toBe(true)
+    expect(operations.slice(8).every(({ idempotencyRequirement }) => idempotencyRequirement === 'REQUIRED')).toBe(true)
+    expect(operations.slice(0, 8).every(({ boundedOutput }) => (
       boundedOutput?.maxBytes === CRM_READ_LIMITS.outputMaximumBytes
     ))).toBe(true)
+    expect(operations.slice(8).every(({ boundedOutput }) => boundedOutput?.maxBytes === 16_384)).toBe(true)
     expect(operations.map(({ boundedOutput }) => boundedOutput?.maxItems ?? null)).toEqual([
       null,
       CRM_READ_LIMITS.listMaximum,
@@ -322,6 +406,9 @@ describe('SprintCrmReadOnlyProductAdapter', () => {
       CRM_READ_LIMITS.listMaximum,
       CRM_READ_LIMITS.listMaximum,
       CRM_READ_LIMITS.activitiesMaximum,
+      null,
+      null,
+      null,
       null,
     ])
   })
@@ -361,6 +448,129 @@ describe('SprintCrmReadOnlyProductAdapter', () => {
     expect(readModel.listDueFollowups).toHaveBeenCalledExactlyOnceWith(followupInput)
     expect(readModel.listRecentActivities).toHaveBeenCalledExactlyOnceWith(activitiesInput)
     expect(readModel.getPipelineSummary).toHaveBeenCalledExactlyOnceWith(pipelineInput)
+  })
+
+  it('returns only the bounded content-free staging context for one explicit campaign member', async () => {
+    const boundary = stagingBoundary()
+    const adapter = new SprintCrmReadOnlyProductAdapter(createReadModel(), boundary)
+    const result = await route(
+      adapter,
+      'crm.outreach',
+      'get_staging_context',
+      { campaignMemberId: CAMPAIGN_MEMBER_ID },
+      { scopes: [SPRINT_CRM_SCOPES.OUTREACH_READ] },
+    )
+
+    expect(result).toMatchObject({
+      ok: true,
+      receipt: {
+        operationClass: 'READ', status: 'completed',
+        result: {
+          campaignMember: { id: CAMPAIGN_MEMBER_ID, status: 'research_ready' },
+          latestResearch: { id: RESEARCH_ID, version: 2 },
+          latestOutboundMessage: null,
+          freshness: { version: SNAPSHOT_ID, subjectId: CAMPAIGN_MEMBER_ID },
+        },
+      },
+    })
+    const serialized = JSON.stringify(result)
+    expect(serialized).not.toContain(ORGANIZATION_ID)
+    expect(serialized).not.toContain('user:77777777-7777-4777-8777-777777777777')
+    expect(serialized).not.toMatch(/"(?:observedOpportunity|recommendedOffer|subject|body|token|secret)"/iu)
+    expect(boundary.getStagingContext).toHaveBeenCalledExactlyOnceWith(CAMPAIGN_MEMBER_ID)
+  })
+
+  it('enforces strict staged-write schemas and explicit staged scopes', async () => {
+    const boundary = stagingBoundary()
+    const adapter = new SprintCrmReadOnlyProductAdapter(createReadModel(), boundary)
+    const validResearch = {
+      campaignMemberId: CAMPAIGN_MEMBER_ID,
+      observedOpportunity: 'A concrete current commercial opportunity supported by bounded public evidence.',
+      recommendedOffer: 'A focused implementation engagement with one measurable next step.',
+      evidence: [{
+        url: 'https://example.test/evidence',
+        note: 'A bounded factual note supporting the proposed commercial opportunity.',
+      }],
+      recommendedCase: null,
+      confidence: 0.8,
+      warnings: [],
+    }
+    const validEmail = {
+      campaignMemberId: CAMPAIGN_MEMBER_ID,
+      researchSnapshotId: RESEARCH_ID,
+      subject: 'A focused improvement for your inquiry flow',
+      body: 'Hello, I reviewed the public inquiry path and found a concrete way to reduce friction for qualified visitors. This draft is staged for human review and no communication is sent.',
+      language: 'en',
+    }
+    const invalidCases: ReadonlyArray<readonly [string, string, Record<string, unknown>, string]> = [
+      ['crm.research', 'stage_snapshot', { ...validResearch, organizationId: ORGANIZATION_ID }, SPRINT_CRM_SCOPES.RESEARCH_STAGE],
+      ['crm.research', 'stage_snapshot', { ...validResearch, actorSubject: 'user:forged' }, SPRINT_CRM_SCOPES.RESEARCH_STAGE],
+      ['crm.research', 'stage_snapshot', { ...validResearch, evidence: [{ url: 'http://unsafe.test', note: 'This note is long enough but its URL is not HTTPS.' }] }, SPRINT_CRM_SCOPES.RESEARCH_STAGE],
+      ['crm.research', 'stage_snapshot', { ...validResearch, confidence: 0.99 }, SPRINT_CRM_SCOPES.RESEARCH_STAGE],
+      ['crm.email', 'stage_draft', { ...validEmail, channel: 'email' }, SPRINT_CRM_SCOPES.EMAIL_STAGE],
+      ['crm.email', 'stage_draft', { ...validEmail, approved: true }, SPRINT_CRM_SCOPES.EMAIL_STAGE],
+      ['crm.email', 'stage_draft', { ...validEmail, send: true }, SPRINT_CRM_SCOPES.EMAIL_STAGE],
+      ['crm.email', 'stage_draft', { ...validEmail, subject: 'Hello {{name}}' }, SPRINT_CRM_SCOPES.EMAIL_STAGE],
+    ]
+    for (const [namespace, operationId, input, scope] of invalidCases) {
+      const result = await route(adapter, namespace, operationId, input, {
+        scopes: [scope], idempotencyKey: `invalid-${operationId}`,
+        sourceSnapshotId: SNAPSHOT_ID,
+      })
+      expect(result, `${namespace}:${operationId} ${JSON.stringify(input)}`).toMatchObject({
+        ok: false, error: { code: BRIDGE_ERROR_CODES.SCHEMA_INVALID },
+      })
+    }
+
+    const noScope = await route(adapter, 'crm.email', 'stage_draft', validEmail, {
+      scopes: [], idempotencyKey: 'missing-email-stage-scope', sourceSnapshotId: SNAPSHOT_ID,
+    })
+    expect(noScope).toMatchObject({ ok: false, error: { code: BRIDGE_ERROR_CODES.SCOPE_DENIED } })
+    expect(boundary.prepare).not.toHaveBeenCalled()
+  })
+
+  it('advertises staged writes as pending review and preserves operation-specific receipts', async () => {
+    const boundary = stagingBoundary()
+    const adapter = new SprintCrmReadOnlyProductAdapter(createReadModel(), boundary)
+    const research = await route(adapter, 'crm.research', 'stage_snapshot', {
+      campaignMemberId: CAMPAIGN_MEMBER_ID,
+      observedOpportunity: 'A concrete current commercial opportunity supported by bounded public evidence.',
+      recommendedOffer: 'A focused implementation engagement with one measurable next step.',
+      evidence: [{
+        url: 'https://example.test/evidence',
+        note: 'A bounded factual note supporting the proposed commercial opportunity.',
+      }],
+    }, {
+      scopes: [SPRINT_CRM_SCOPES.RESEARCH_STAGE],
+      idempotencyKey: 'adapter-research-stage-key', sourceSnapshotId: SNAPSHOT_ID,
+    })
+    const email = await route(adapter, 'crm.email', 'stage_draft', {
+      campaignMemberId: CAMPAIGN_MEMBER_ID,
+      researchSnapshotId: RESEARCH_ID,
+      subject: 'A focused improvement for your inquiry flow',
+      body: 'Hello, I reviewed the public inquiry path and found a concrete way to reduce friction for qualified visitors. This draft is staged for human review and no communication is sent.',
+      language: 'en',
+    }, {
+      scopes: [SPRINT_CRM_SCOPES.EMAIL_STAGE],
+      idempotencyKey: 'adapter-email-stage-key', sourceSnapshotId: SNAPSHOT_ID,
+    })
+
+    expect(research).toMatchObject({
+      ok: true,
+      receipt: {
+        operationClass: 'STAGED_WRITE', status: 'staged', stagedEntityId: RESEARCH_ID,
+        result: { entityType: 'research_snapshot', status: 'research_ready', version: 3 },
+        validation: { state: 'pending' }, approval: { state: 'pending' },
+      },
+    })
+    expect(email).toMatchObject({
+      ok: true,
+      receipt: {
+        operationClass: 'STAGED_WRITE', status: 'staged', stagedEntityId: MESSAGE_ID,
+        result: { entityType: 'outbound_message', status: 'draft', version: 1 },
+        validation: { state: 'pending' }, approval: { state: 'pending' },
+      },
+    })
   })
 
   it('rejects organization, user, self-grant and malformed bounded inputs before invocation', async () => {
@@ -505,30 +715,33 @@ describe('SprintCrmReadOnlyProductAdapter', () => {
     expect(serialized).not.toContain(accessToken)
   })
 
-  it('passes Shared READ-only conformance with the exact 7/0/0 operation profile', async () => {
-    const adapter = new SprintCrmReadOnlyProductAdapter(createReadModel())
+  it('passes Shared READ + STAGED_WRITE conformance with the exact 8/2/0 operation profile', async () => {
+    const adapter = new SprintCrmReadOnlyProductAdapter(createReadModel(), stagingBoundary())
     const fixtures = createSprintCrmConformanceFixtures(ORGANIZATION_ID)
     const report = await runProductAdapterConformanceSuite({
       adapter,
       fixtures,
       expectations: {
         expectedProductId: SPRINT_CRM_PRODUCT_ID,
-        expectedOperationClasses: [OPERATION_CLASSES.READ],
+        expectedOperationClasses: [OPERATION_CLASSES.READ, OPERATION_CLASSES.STAGED_WRITE],
       },
     })
 
     expect(report.passed, JSON.stringify(report.checks.filter(({ passed }) => !passed))).toBe(true)
     expect(report.operationClassProfile).toEqual({
-      operationClasses: [OPERATION_CLASSES.READ],
-      readOperationCount: 7,
-      stagedWriteOperationCount: 0,
+      operationClasses: [OPERATION_CLASSES.READ, OPERATION_CLASSES.STAGED_WRITE],
+      readOperationCount: 8,
+      stagedWriteOperationCount: 2,
       privilegedActionOperationCount: 0,
     })
-    expect(fixtures).not.toHaveProperty('validStagedWrite')
+    expect(fixtures).toHaveProperty('validStagedWrite')
     expect(fixtures).not.toHaveProperty('validPrivilegedAction')
     expect(report.checks).toEqual(expect.arrayContaining([
       expect.objectContaining({ checkId: 'read-receipt', passed: true }),
-      expect.objectContaining({ checkId: 'staged-write-absent', passed: true }),
+      expect.objectContaining({ checkId: 'staged-write-receipt', passed: true }),
+      expect.objectContaining({ checkId: 'idempotent-replay', passed: true }),
+      expect.objectContaining({ checkId: 'idempotency-conflict', passed: true }),
+      expect.objectContaining({ checkId: 'stale-write-blocked', passed: true }),
       expect.objectContaining({ checkId: 'privileged-action-absent', passed: true }),
       expect.objectContaining({ checkId: 'missing-scope', passed: true }),
       expect.objectContaining({ checkId: 'metadata-cannot-grant-scope', passed: true }),
@@ -537,7 +750,7 @@ describe('SprintCrmReadOnlyProductAdapter', () => {
       expect.objectContaining({ checkId: 'safe-adapter-error', passed: true }),
       expect.objectContaining({ checkId: 'safe-audit-metadata', passed: true }),
     ]))
-    expect(SPRINT_CRM_OPERATIONS).toHaveLength(7)
+    expect(SPRINT_CRM_OPERATIONS).toHaveLength(10)
     expect(CRM_LEAD_STAGES).toEqual(['new', 'contacted', 'replied', 'proposal', 'won', 'lost'])
   })
 })

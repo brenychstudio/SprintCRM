@@ -40,7 +40,7 @@ export type CommitOutcome =
   | { readonly outcome: 'STALE'; readonly currentFreshness: string | null }
   | { readonly outcome: 'INVALID_STATE' }
 
-interface ClaimInput {
+export interface ClaimInput {
   readonly operationId: CrmStagedWriteOperationId
   readonly idempotencyKey: string
   readonly semanticFingerprint: string
@@ -49,7 +49,7 @@ interface ClaimInput {
   readonly provenance: SafeBridgeProvenance
 }
 
-interface CommitBase {
+export interface CommitBase {
   readonly idempotencyKey: string
   readonly semanticFingerprint: string
   readonly claimToken: string
@@ -80,6 +80,14 @@ export interface CommitEmailDraftInput extends CommitBase {
   readonly subject: string
   readonly body: string
   readonly language: 'en' | 'es' | 'uk' | 'ru'
+}
+
+export interface CrmStagedWriteDomainGateway {
+  getStagingContext(campaignMemberId: string): Promise<CrmStagingContext>
+  claim(input: ClaimInput): Promise<ClaimOutcome>
+  release(input: Omit<ClaimInput, 'leaseSeconds' | 'provenance'>): Promise<boolean>
+  commitResearch(input: CommitResearchInput): Promise<CommitOutcome>
+  commitEmailDraft(input: CommitEmailDraftInput): Promise<CommitOutcome>
 }
 
 function failSafely(): never {
@@ -145,9 +153,9 @@ function parseCommit(value: Json | null): CommitOutcome {
 
 /**
  * Product-owned authenticated/RLS RPC gateway for CRM-PBG-02A.
- * It is deliberately not exported by the current adapter/runtime entrypoint.
+ * CRM-PBG-02B exposes only its semantic staging operations through the Product Adapter.
  */
-export class SupabaseCrmStagedWriteDomainGateway {
+export class SupabaseCrmStagedWriteDomainGateway implements CrmStagedWriteDomainGateway {
   constructor(
     private readonly client: SupabaseClient<Database>,
     private readonly binding: CrmStagedWriteGatewayBinding,

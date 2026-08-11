@@ -4,6 +4,7 @@ import {
   type ProductCapability,
   type ProductDescriptor,
   type ProductOperationDefinition,
+  type RuntimeSchema,
   type SafeValue,
   type SchemaValidationResult,
 } from '@brenych/product-bridge-contracts'
@@ -34,10 +35,23 @@ import {
   type RecentActivitiesInput,
   type SprintCrmSemanticReadModel,
 } from './crm-read-model.js'
+import {
+  projectSafeCrmStagingContext,
+  type EmailStageDraftInput,
+  type ResearchStageSnapshotInput,
+  type SafeCrmStagingContext,
+  type SprintCrmStagingBoundary,
+} from './crm-staged-write-coordinator.js'
+import {
+  CRM_CAMPAIGN_MEMBER_STAGING_STATUSES,
+  CRM_OUTBOUND_MESSAGE_STATUSES,
+  CRM_OUTREACH_CHANNELS,
+  CRM_OUTREACH_LANGUAGES,
+} from './crm-staging-context.js'
 
 export const SPRINT_CRM_PRODUCT_ID = 'sprint-crm' as const
 export const SPRINT_CRM_PRODUCT_VERSION = '0.0.0' as const
-export const SPRINT_CRM_ADAPTER_VERSION = '0.1.0-dev' as const
+export const SPRINT_CRM_ADAPTER_VERSION = '0.2.0-dev' as const
 export const SPRINT_CRM_SCHEMA_VERSION = '1.0.0' as const
 
 export const SPRINT_CRM_NAMESPACES = Object.freeze([
@@ -46,6 +60,9 @@ export const SPRINT_CRM_NAMESPACES = Object.freeze([
   'crm.followups',
   'crm.activities',
   'crm.pipeline',
+  'crm.outreach',
+  'crm.research',
+  'crm.email',
 ] as const)
 
 export const SPRINT_CRM_SCOPES = Object.freeze({
@@ -55,6 +72,9 @@ export const SPRINT_CRM_SCOPES = Object.freeze({
   FOLLOWUPS_READ: 'crm.followups.read',
   ACTIVITIES_READ: 'crm.activities.read',
   PIPELINE_READ: 'crm.pipeline.read',
+  OUTREACH_READ: 'crm.outreach.read',
+  RESEARCH_STAGE: 'crm.research.stage',
+  EMAIL_STAGE: 'crm.email.stage',
 } as const)
 
 export const SPRINT_CRM_DEFAULT_PILOT_SCOPES = Object.freeze([
@@ -63,6 +83,7 @@ export const SPRINT_CRM_DEFAULT_PILOT_SCOPES = Object.freeze([
   SPRINT_CRM_SCOPES.FOLLOWUPS_READ,
   SPRINT_CRM_SCOPES.ACTIVITIES_READ,
   SPRINT_CRM_SCOPES.PIPELINE_READ,
+  SPRINT_CRM_SCOPES.OUTREACH_READ,
 ] as const)
 
 export const SPRINT_CRM_CAPABILITIES = Object.freeze({
@@ -71,6 +92,9 @@ export const SPRINT_CRM_CAPABILITIES = Object.freeze({
   FOLLOWUPS_READ: 'crm.followups.read',
   ACTIVITIES_READ: 'crm.activities.read',
   PIPELINE_SUMMARY: 'crm.pipeline.summary',
+  OUTREACH_STAGING_CONTEXT: 'crm.outreach.staging-context',
+  RESEARCH_STAGE: 'crm.research.stage',
+  EMAIL_STAGE: 'crm.email.stage',
 } as const)
 
 export const SPRINT_CRM_SEMANTIC_OPERATIONS = Object.freeze({
@@ -81,6 +105,9 @@ export const SPRINT_CRM_SEMANTIC_OPERATIONS = Object.freeze({
   FOLLOWUPS_LIST_DUE: 'crm.followups.listDue',
   ACTIVITIES_LIST_RECENT: 'crm.activities.listRecent',
   PIPELINE_GET_SUMMARY: 'crm.pipeline.getSummary',
+  OUTREACH_GET_STAGING_CONTEXT: 'crm.outreach.getStagingContext',
+  RESEARCH_STAGE_SNAPSHOT: 'crm.research.stageSnapshot',
+  EMAIL_STAGE_DRAFT: 'crm.email.stageDraft',
 } as const)
 
 export const SPRINT_CRM_MCP_TOOL_ALIASES = Object.freeze({
@@ -91,7 +118,12 @@ export const SPRINT_CRM_MCP_TOOL_ALIASES = Object.freeze({
   'crm.followups:list_due': 'crm_followups__listDue',
   'crm.activities:list_recent': 'crm_activities__listRecent',
   'crm.pipeline:get_summary': 'crm_pipeline__getSummary',
+  'crm.outreach:get_staging_context': 'crm_outreach__getStagingContext',
+  'crm.research:stage_snapshot': 'crm_research__stageSnapshot',
+  'crm.email:stage_draft': 'crm_email__stageDraft',
 } as const)
+
+export const CRM_STAGED_WRITE_OUTPUT_MAXIMUM_BYTES = 16_384
 
 type InputRecord = Record<string, unknown>
 
@@ -340,6 +372,148 @@ function pipelineSummaryInputSchema() {
   })
 }
 
+function stagingContextInputSchema() {
+  return defineRuntimeSchema<{ readonly campaignMemberId: string }>({
+    schemaId: 'crm.outreach.get-staging-context.input',
+    schemaVersion: SPRINT_CRM_SCHEMA_VERSION,
+    jsonSchemaSafe: {
+      type: 'object',
+      additionalProperties: false,
+      properties: { campaignMemberId: { type: 'string', format: 'uuid' } },
+      required: ['campaignMemberId'],
+    },
+  }, (value) => isRecord(value) && hasOnlyKeys(value, ['campaignMemberId']) && isUuid(value.campaignMemberId)
+    ? { ok: true, value: { campaignMemberId: value.campaignMemberId } }
+    : invalidInput('Campaign member ID is malformed.'))
+}
+
+function normalizedEvidenceUrl(value: string): string {
+  return value.toLowerCase().replace(/\/+$/u, '')
+}
+
+function validResearchEvidence(value: unknown): value is ResearchStageSnapshotInput['evidence'] {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 3) return false
+  const normalized = new Set<string>()
+  for (const item of value) {
+    if (!isRecord(item) || !hasOnlyKeys(item, ['url', 'note'])
+        || Object.keys(item).length !== 2
+        || typeof item.url !== 'string' || item.url.trim() !== item.url
+        || item.url.length < 9 || item.url.length > 2_048
+        || !/^https:\/\/[^\s]+$/u.test(item.url)
+        || !isBoundedText(item.note, 350) || item.note.length < 20) return false
+    const key = normalizedEvidenceUrl(item.url)
+    if (normalized.has(key)) return false
+    normalized.add(key)
+  }
+  return true
+}
+
+function researchStageInputSchema() {
+  return defineRuntimeSchema<ResearchStageSnapshotInput>({
+    schemaId: 'crm.research.stage-snapshot.input',
+    schemaVersion: SPRINT_CRM_SCHEMA_VERSION,
+    jsonSchemaSafe: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        campaignMemberId: { type: 'string', format: 'uuid' },
+        observedOpportunity: { type: 'string', minLength: 50, maxLength: 900 },
+        recommendedOffer: { type: 'string', minLength: 30, maxLength: 700 },
+        evidence: {
+          type: 'array', minItems: 1, maxItems: 3,
+          items: {
+            type: 'object', additionalProperties: false,
+            properties: {
+              url: { type: 'string', minLength: 9, maxLength: 2_048, pattern: '^https://[^\\s]+$' },
+              note: { type: 'string', minLength: 20, maxLength: 350 },
+            },
+            required: ['url', 'note'],
+          },
+        },
+        recommendedCase: { type: ['string', 'null'], minLength: 1, maxLength: 700 },
+        confidence: { type: ['number', 'null'], minimum: 0, maximum: 0.85 },
+        warnings: {
+          type: 'array', maxItems: 5,
+          items: { type: 'string', minLength: 1, maxLength: 300 },
+        },
+      },
+      required: ['campaignMemberId', 'observedOpportunity', 'recommendedOffer', 'evidence'],
+    },
+  }, (value) => {
+    if (!isRecord(value) || !hasOnlyKeys(value, [
+      'campaignMemberId', 'observedOpportunity', 'recommendedOffer', 'evidence',
+      'recommendedCase', 'confidence', 'warnings',
+    ]) || !isUuid(value.campaignMemberId)
+      || !isBoundedText(value.observedOpportunity, 900) || value.observedOpportunity.length < 50
+      || !isBoundedText(value.recommendedOffer, 700) || value.recommendedOffer.length < 30
+      || !validResearchEvidence(value.evidence)
+      || !(value.recommendedCase === undefined || value.recommendedCase === null
+        || isBoundedText(value.recommendedCase, 700))
+      || !(value.confidence === undefined || value.confidence === null
+        || (typeof value.confidence === 'number' && Number.isFinite(value.confidence)
+          && value.confidence >= 0 && value.confidence <= 0.85))
+      || !(value.warnings === undefined || (Array.isArray(value.warnings)
+        && value.warnings.length <= 5
+        && value.warnings.every((warning) => isBoundedText(warning, 300))))) {
+      return invalidInput('Research staging input is malformed.')
+    }
+    return {
+      ok: true,
+      value: {
+        campaignMemberId: value.campaignMemberId,
+        observedOpportunity: value.observedOpportunity,
+        recommendedOffer: value.recommendedOffer,
+        evidence: value.evidence,
+        recommendedCase: value.recommendedCase ?? null,
+        confidence: value.confidence ?? null,
+        warnings: value.warnings ?? [],
+      },
+    }
+  })
+}
+
+function isBoundedEmailBody(value: unknown): value is string {
+  if (typeof value !== 'string' || value.trim() !== value || value.length < 120 || value.length > 2_400) return false
+  return !Array.from(value).some((character) => {
+    const codePoint = character.codePointAt(0) ?? 0
+    return (codePoint < 32 && !['\n', '\r', '\t'].includes(character)) || codePoint === 127
+  })
+}
+
+function containsMarkupOrPlaceholder(value: string): boolean {
+  return /[<>]|[{}]|<<|>>|\[\[|\]\]/u.test(value)
+}
+
+function emailStageInputSchema() {
+  return defineRuntimeSchema<EmailStageDraftInput>({
+    schemaId: 'crm.email.stage-draft.input',
+    schemaVersion: SPRINT_CRM_SCHEMA_VERSION,
+    jsonSchemaSafe: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        campaignMemberId: { type: 'string', format: 'uuid' },
+        researchSnapshotId: { type: 'string', format: 'uuid' },
+        subject: { type: 'string', minLength: 5, maxLength: 120 },
+        body: { type: 'string', minLength: 120, maxLength: 2_400 },
+        language: { type: 'string', enum: [...CRM_OUTREACH_LANGUAGES] },
+      },
+      required: ['campaignMemberId', 'researchSnapshotId', 'subject', 'body', 'language'],
+    },
+  }, (value) => {
+    if (!isRecord(value) || Object.keys(value).length !== 5 || !hasOnlyKeys(value, [
+      'campaignMemberId', 'researchSnapshotId', 'subject', 'body', 'language',
+    ]) || !isUuid(value.campaignMemberId) || !isUuid(value.researchSnapshotId)
+      || !isBoundedText(value.subject, 120) || value.subject.length < 5
+      || containsMarkupOrPlaceholder(value.subject)
+      || !isBoundedEmailBody(value.body) || containsMarkupOrPlaceholder(value.body)
+      || !CRM_OUTREACH_LANGUAGES.includes(value.language as never)) {
+      return invalidInput('Email draft staging input is malformed.')
+    }
+    return { ok: true, value: value as unknown as EmailStageDraftInput }
+  })
+}
+
 function safeValue(value: unknown, depth = 0): value is SafeValue {
   if (depth > 12) return false
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return true
@@ -349,7 +523,8 @@ function safeValue(value: unknown, depth = 0): value is SafeValue {
   return Object.values(value).every((entry) => safeValue(entry, depth + 1))
 }
 
-type OutputKind = 'workspace' | 'lead_search' | 'lead_get' | 'action_queue' | 'due_followups' | 'activities' | 'pipeline'
+type OutputKind = 'workspace' | 'lead_search' | 'lead_get' | 'action_queue' | 'due_followups'
+  | 'activities' | 'pipeline' | 'staging_context' | 'research_staged' | 'email_staged'
 
 const COMMON_OUTPUT_KEYS = ['generatedAt', 'canonicalStateVersion'] as const
 const SAFE_ACTIVITY_METADATA_KEYS: Readonly<Record<string, readonly string[]>> = Object.freeze({
@@ -458,7 +633,67 @@ function validSafeActivity(value: unknown): boolean {
     && validActivityMetadata(String(value.type), value.metadata)
 }
 
+function validVersionedStagingRecord(value: unknown, kind: 'research' | 'message'): boolean {
+  if (value === null) return true
+  if (!isRecord(value)) return false
+  const keys = kind === 'research'
+    ? ['id', 'version', 'createdAt']
+    : ['id', 'version', 'status', 'updatedAt']
+  return exactKeys(value, keys)
+    && isUuid(value.id)
+    && Number.isSafeInteger(value.version)
+    && Number(value.version) >= 1
+    && (kind === 'research'
+      ? isTimestamp(value.createdAt)
+      : CRM_OUTBOUND_MESSAGE_STATUSES.includes(value.status as never) && isTimestamp(value.updatedAt))
+}
+
+function validStagingContextOutput(value: InputRecord): boolean {
+  if (!exactKeys(value, [
+    'campaignMember', 'campaign', 'lead', 'latestResearch', 'latestOutboundMessage', 'freshness',
+  ]) || !isRecord(value.campaignMember) || !isRecord(value.campaign)
+    || !isRecord(value.lead) || !isRecord(value.freshness)) return false
+  return exactKeys(value.campaignMember, ['id', 'status', 'updatedAt'])
+    && isUuid(value.campaignMember.id)
+    && CRM_CAMPAIGN_MEMBER_STAGING_STATUSES.includes(value.campaignMember.status as never)
+    && isTimestamp(value.campaignMember.updatedAt)
+    && exactKeys(value.campaign, ['id', 'channel', 'defaultLanguage', 'updatedAt'])
+    && isUuid(value.campaign.id)
+    && CRM_OUTREACH_CHANNELS.includes(value.campaign.channel as never)
+    && CRM_OUTREACH_LANGUAGES.includes(value.campaign.defaultLanguage as never)
+    && isTimestamp(value.campaign.updatedAt)
+    && exactKeys(value.lead, ['language', 'updatedAt'])
+    && (value.lead.language === null || isBoundedText(value.lead.language, 16))
+    && isTimestamp(value.lead.updatedAt)
+    && validVersionedStagingRecord(value.latestResearch, 'research')
+    && validVersionedStagingRecord(value.latestOutboundMessage, 'message')
+    && exactKeys(value.freshness, ['subjectType', 'subjectId', 'version', 'generatedAt'])
+    && value.freshness.subjectType === 'campaign_member_staging_context'
+    && value.freshness.subjectId === value.campaignMember.id
+    && typeof value.freshness.version === 'string'
+    && /^sha256:[0-9a-f]{64}$/u.test(value.freshness.version)
+    && isTimestamp(value.freshness.generatedAt)
+}
+
+function validStagedOutput(value: InputRecord, kind: 'research_staged' | 'email_staged'): boolean {
+  const research = kind === 'research_staged'
+  const expectedKeys = research
+    ? ['entityType', 'entityId', 'version', 'status', 'campaignMemberId']
+    : ['entityType', 'entityId', 'version', 'status', 'campaignMemberId', 'researchSnapshotId', 'researchVersion']
+  return exactKeys(value, expectedKeys)
+    && value.entityType === (research ? 'research_snapshot' : 'outbound_message')
+    && isUuid(value.entityId)
+    && Number.isSafeInteger(value.version)
+    && Number(value.version) >= 1
+    && value.status === (research ? 'research_ready' : 'draft')
+    && isUuid(value.campaignMemberId)
+    && (research || (isUuid(value.researchSnapshotId)
+      && Number.isSafeInteger(value.researchVersion) && Number(value.researchVersion) >= 1))
+}
+
 function validateOperationOutput(value: InputRecord, kind: OutputKind): boolean {
+  if (kind === 'staging_context') return validStagingContextOutput(value)
+  if (kind === 'research_staged' || kind === 'email_staged') return validStagedOutput(value, kind)
   if (!validCommonOutput(value)) return false
   if (kind === 'workspace') {
     if (!exactKeys(value, [...COMMON_OUTPUT_KEYS, 'workspace', 'capabilities']) || !isRecord(value.workspace)) return false
@@ -697,8 +932,8 @@ function outputJsonSchema(kind: OutputKind): JsonSchemaSafe {
       }),
       capabilities: {
         type: 'array',
-        minItems: 7,
-        maxItems: 7,
+        minItems: Object.keys(SPRINT_CRM_SEMANTIC_OPERATIONS).length,
+        maxItems: Object.keys(SPRINT_CRM_SEMANTIC_OPERATIONS).length,
         uniqueItems: true,
         items: { type: 'string', enum: Object.values(SPRINT_CRM_SEMANTIC_OPERATIONS) },
       },
@@ -775,7 +1010,7 @@ function outputJsonSchema(kind: OutputKind): JsonSchemaSafe {
       hasMore: { type: 'boolean' },
     })
   }
-  return strictJsonObject({
+  if (kind === 'pipeline') return strictJsonObject({
     ...COMMON_OUTPUT_PROPERTIES,
     status: { type: 'string', enum: [...CRM_LEAD_STATUSES] },
     filters: strictJsonObject({
@@ -789,6 +1024,62 @@ function outputJsonSchema(kind: OutputKind): JsonSchemaSafe {
     latestUpdatedAt: nullableStringJsonSchema(40, 'date-time'),
     consistency: { const: 'bounded_multi_query_read' },
   })
+  if (kind === 'staging_context') {
+    const versionedResearch = {
+      type: ['object', 'null'],
+      oneOf: [{ type: 'null' }, strictJsonObject({
+        id: UUID_JSON_SCHEMA,
+        version: { type: 'integer', minimum: 1 },
+        createdAt: TIMESTAMP_JSON_SCHEMA,
+      })],
+    }
+    const versionedMessage = {
+      type: ['object', 'null'],
+      oneOf: [{ type: 'null' }, strictJsonObject({
+        id: UUID_JSON_SCHEMA,
+        version: { type: 'integer', minimum: 1 },
+        status: { type: 'string', enum: [...CRM_OUTBOUND_MESSAGE_STATUSES] },
+        updatedAt: TIMESTAMP_JSON_SCHEMA,
+      })],
+    }
+    return strictJsonObject({
+      campaignMember: strictJsonObject({
+        id: UUID_JSON_SCHEMA,
+        status: { type: 'string', enum: [...CRM_CAMPAIGN_MEMBER_STAGING_STATUSES] },
+        updatedAt: TIMESTAMP_JSON_SCHEMA,
+      }),
+      campaign: strictJsonObject({
+        id: UUID_JSON_SCHEMA,
+        channel: { type: 'string', enum: [...CRM_OUTREACH_CHANNELS] },
+        defaultLanguage: { type: 'string', enum: [...CRM_OUTREACH_LANGUAGES] },
+        updatedAt: TIMESTAMP_JSON_SCHEMA,
+      }),
+      lead: strictJsonObject({
+        language: nullableStringJsonSchema(16),
+        updatedAt: TIMESTAMP_JSON_SCHEMA,
+      }),
+      latestResearch: versionedResearch,
+      latestOutboundMessage: versionedMessage,
+      freshness: strictJsonObject({
+        subjectType: { const: 'campaign_member_staging_context' },
+        subjectId: UUID_JSON_SCHEMA,
+        version: { type: 'string', pattern: '^sha256:[0-9a-f]{64}$', maxLength: 71 },
+        generatedAt: TIMESTAMP_JSON_SCHEMA,
+      }),
+    })
+  }
+  const research = kind === 'research_staged'
+  return strictJsonObject({
+    entityType: { const: research ? 'research_snapshot' : 'outbound_message' },
+    entityId: UUID_JSON_SCHEMA,
+    version: { type: 'integer', minimum: 1 },
+    status: { const: research ? 'research_ready' : 'draft' },
+    campaignMemberId: UUID_JSON_SCHEMA,
+    ...(research ? {} : {
+      researchSnapshotId: UUID_JSON_SCHEMA,
+      researchVersion: { type: 'integer', minimum: 1 },
+    }),
+  })
 }
 
 function outputSchema(schemaId: string, kind: OutputKind) {
@@ -799,7 +1090,10 @@ function outputSchema(schemaId: string, kind: OutputKind) {
   }, (value) => {
     if (!isRecord(value) || !safeValue(value)) return invalidInput('Output must be a bounded JSON-safe object.')
     if (!validateOperationOutput(value, kind)) return invalidInput('Output projection is malformed.')
-    if (Buffer.byteLength(JSON.stringify(value), 'utf8') > CRM_READ_LIMITS.outputMaximumBytes) {
+    const maximumBytes = kind === 'research_staged' || kind === 'email_staged'
+      ? CRM_STAGED_WRITE_OUTPUT_MAXIMUM_BYTES
+      : CRM_READ_LIMITS.outputMaximumBytes
+    if (Buffer.byteLength(JSON.stringify(value), 'utf8') > maximumBytes) {
       return invalidInput('Output exceeds the SprintCRM bridge byte bound.')
     }
     return { ok: true, value }
@@ -813,14 +1107,12 @@ interface OperationSpec {
   readonly descriptionSafe: string
   readonly scope: string
   readonly capability: string
-  readonly inputSchema: ReturnType<typeof emptyInputSchema>
-    | ReturnType<typeof leadSearchInputSchema>
-    | ReturnType<typeof leadGetInputSchema>
-    | ReturnType<typeof actionQueueInputSchema>
-    | ReturnType<typeof dueFollowupsInputSchema>
-    | ReturnType<typeof recentActivitiesInputSchema>
-    | ReturnType<typeof pipelineSummaryInputSchema>
+  readonly inputSchema: RuntimeSchema
   readonly outputKind: OutputKind
+  readonly operationClass?: 'READ' | 'STAGED_WRITE'
+  readonly freshnessRequirement?: 'REQUIRED' | 'NOT_REQUIRED'
+  readonly idempotencyRequirement?: 'REQUIRED' | 'NOT_SUPPORTED'
+  readonly maximumBytes?: number
   readonly maximumItems?: number
 }
 
@@ -867,6 +1159,30 @@ const operationSpecs: readonly OperationSpec[] = [
     scope: SPRINT_CRM_SCOPES.PIPELINE_READ, capability: SPRINT_CRM_CAPABILITIES.PIPELINE_SUMMARY,
     inputSchema: pipelineSummaryInputSchema(), outputKind: 'pipeline',
   },
+  {
+    namespace: 'crm.outreach', operationId: 'get_staging_context', displayName: 'Get CRM outreach staging context',
+    descriptionSafe: 'Read one bounded, content-free campaign-member context and canonical freshness version for supervised staging.',
+    scope: SPRINT_CRM_SCOPES.OUTREACH_READ, capability: SPRINT_CRM_CAPABILITIES.OUTREACH_STAGING_CONTEXT,
+    inputSchema: stagingContextInputSchema(), outputKind: 'staging_context',
+  },
+  {
+    namespace: 'crm.research', operationId: 'stage_snapshot', displayName: 'Stage CRM research snapshot',
+    descriptionSafe: 'Stage one immutable bounded research snapshot for human review without invoking AI or communication providers.',
+    scope: SPRINT_CRM_SCOPES.RESEARCH_STAGE, capability: SPRINT_CRM_CAPABILITIES.RESEARCH_STAGE,
+    inputSchema: researchStageInputSchema(), outputKind: 'research_staged',
+    operationClass: OPERATION_CLASSES.STAGED_WRITE,
+    freshnessRequirement: 'REQUIRED', idempotencyRequirement: 'REQUIRED',
+    maximumBytes: CRM_STAGED_WRITE_OUTPUT_MAXIMUM_BYTES,
+  },
+  {
+    namespace: 'crm.email', operationId: 'stage_draft', displayName: 'Stage CRM email draft',
+    descriptionSafe: 'Stage one immutable email draft tied to exact current research for human review; never approve or send.',
+    scope: SPRINT_CRM_SCOPES.EMAIL_STAGE, capability: SPRINT_CRM_CAPABILITIES.EMAIL_STAGE,
+    inputSchema: emailStageInputSchema(), outputKind: 'email_staged',
+    operationClass: OPERATION_CLASSES.STAGED_WRITE,
+    freshnessRequirement: 'REQUIRED', idempotencyRequirement: 'REQUIRED',
+    maximumBytes: CRM_STAGED_WRITE_OUTPUT_MAXIMUM_BYTES,
+  },
 ]
 
 export const SPRINT_CRM_OPERATIONS: readonly ProductOperationDefinition[] = Object.freeze(
@@ -875,7 +1191,7 @@ export const SPRINT_CRM_OPERATIONS: readonly ProductOperationDefinition[] = Obje
     namespace: spec.namespace,
     displayName: spec.displayName,
     descriptionSafe: spec.descriptionSafe,
-    operationClass: OPERATION_CLASSES.READ,
+    operationClass: spec.operationClass ?? OPERATION_CLASSES.READ,
     inputSchema: spec.inputSchema,
     outputSchema: outputSchema(
       `${spec.namespace}.${spec.operationId.replaceAll('_', '-')}.output`,
@@ -883,10 +1199,10 @@ export const SPRINT_CRM_OPERATIONS: readonly ProductOperationDefinition[] = Obje
     ),
     requiredScopes: [spec.scope],
     requiredCapabilities: [spec.capability],
-    freshnessRequirement: 'NOT_REQUIRED' as const,
-    idempotencyRequirement: 'NOT_SUPPORTED' as const,
+    freshnessRequirement: spec.freshnessRequirement ?? 'NOT_REQUIRED',
+    idempotencyRequirement: spec.idempotencyRequirement ?? 'NOT_SUPPORTED',
     boundedOutput: {
-      maxBytes: CRM_READ_LIMITS.outputMaximumBytes,
+      maxBytes: spec.maximumBytes ?? CRM_READ_LIMITS.outputMaximumBytes,
       ...(spec.maximumItems === undefined ? {} : {
         maxItems: spec.maximumItems,
         truncationSupported: true,
@@ -916,8 +1232,17 @@ function operationKey(operation: ProductOperationDefinition): string {
   return `${operation.namespace}:${operation.operationId}`
 }
 
-export class SprintCrmReadOnlyProductAdapter implements ProductAdapter {
-  constructor(private readonly readModel: SprintCrmSemanticReadModel) {}
+const UNAVAILABLE_STAGING_BOUNDARY: SprintCrmStagingBoundary = {
+  async getStagingContext() { throw new Error('SprintCRM staging boundary is unavailable.') },
+  async evaluateFreshness() { return { state: 'UNKNOWN', reasonSafe: 'SprintCRM staging boundary is unavailable.' } },
+  async prepare() { throw new Error('SprintCRM staging boundary is unavailable.') },
+}
+
+export class SprintCrmProductAdapter implements ProductAdapter {
+  constructor(
+    private readonly readModel: SprintCrmSemanticReadModel,
+    private readonly staging: SprintCrmStagingBoundary = UNAVAILABLE_STAGING_BOUNDARY,
+  ) {}
 
   describe(): ProductDescriptor {
     return SPRINT_CRM_PRODUCT_DESCRIPTOR
@@ -927,10 +1252,22 @@ export class SprintCrmReadOnlyProductAdapter implements ProductAdapter {
     return SPRINT_CRM_OPERATIONS
   }
 
+  evaluateFreshness(
+    request: ActionRequest,
+    operation: ProductOperationDefinition,
+  ) {
+    return operation.operationClass === OPERATION_CLASSES.STAGED_WRITE
+      ? this.staging.evaluateFreshness(request, operation)
+      : Promise.resolve({ state: 'NOT_APPLICABLE' as const })
+  }
+
   async invoke(
     request: ActionRequest,
     operation: ProductOperationDefinition,
   ): Promise<ProductInvocationResult> {
+    if (operation.operationClass === OPERATION_CLASSES.STAGED_WRITE) {
+      return this.staging.prepare(request, operation)
+    }
     const includeContactData = request.identity.scopes.includes(SPRINT_CRM_SCOPES.CONTACT_DATA_READ)
     let result: unknown
     switch (operationKey(operation)) {
@@ -965,8 +1302,28 @@ export class SprintCrmReadOnlyProductAdapter implements ProductAdapter {
       case 'crm.pipeline:get_summary':
         result = await this.readModel.getPipelineSummary(request.input as PipelineSummaryInput)
         break
+      case 'crm.outreach:get_staging_context': {
+        const input = request.input as { readonly campaignMemberId: string }
+        const context = await this.staging.getStagingContext(input.campaignMemberId)
+        const safeContext: SafeCrmStagingContext = projectSafeCrmStagingContext(context)
+        return {
+          status: 'completed',
+          result: safeContext as unknown as SafeValue,
+          resultSnapshotId: context.freshness.version,
+          validation: { state: 'not_applicable' },
+          approval: { state: 'not_applicable' },
+          provenance: [{
+            sourceType: 'supabase_rls_staging_context',
+            sourceId: context.campaignMember.id,
+            sourceVersion: context.freshness.version,
+            capturedAt: context.freshness.generatedAt,
+            productId: SPRINT_CRM_PRODUCT_ID,
+          }],
+          metadataSafe: { bounded: true, readOnly: true, contentFree: true },
+        }
+      }
       default:
-        throw new Error('SprintCRM READ operation is not implemented.')
+        throw new Error('SprintCRM operation is not implemented.')
     }
     if (!isRecord(result) || !isTimestamp(result.generatedAt) || !isBoundedText(result.canonicalStateVersion, 512)) {
       throw new Error('SprintCRM read model returned invalid freshness evidence.')
@@ -988,3 +1345,6 @@ export class SprintCrmReadOnlyProductAdapter implements ProductAdapter {
     }
   }
 }
+
+/** Backward-compatible export name for CRM-PBG-01 consumers. */
+export { SprintCrmProductAdapter as SprintCrmReadOnlyProductAdapter }

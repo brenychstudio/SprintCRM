@@ -1,4 +1,4 @@
-import type { ProductDescriptor, ProductOperationDefinition } from '@brenych/product-bridge-contracts'
+import type { ActionRequest, BridgeResult, ProductDescriptor, ProductOperationDefinition } from '@brenych/product-bridge-contracts'
 import { BridgeCore, InMemoryAuditSink } from '@brenych/product-bridge-core'
 import {
   deriveProductAdapterOperationClassProfile,
@@ -17,13 +17,18 @@ import {
 
 import type { VerifiedSprintCrmAuthority } from './authenticated-supabase-runtime.js'
 import type { SprintCrmSemanticReadModel } from './crm-read-model.js'
+import type { CrmStagedWriteDomainGateway } from './crm-staged-write-domain-gateway.js'
+import {
+  SprintCrmStagedWriteCoordinator,
+  fingerprintSprintCrmLogicalRequest,
+} from './crm-staged-write-coordinator.js'
 import {
   SPRINT_CRM_ADAPTER_VERSION,
   SPRINT_CRM_DEFAULT_PILOT_SCOPES,
   SPRINT_CRM_MCP_TOOL_ALIASES,
   SPRINT_CRM_PRODUCT_ID,
   SPRINT_CRM_SCOPES,
-  SprintCrmReadOnlyProductAdapter,
+  SprintCrmProductAdapter,
 } from './sprint-crm-product-adapter.js'
 
 export const SPRINT_CRM_MCP_DEFAULT_PORT = 47_841
@@ -77,6 +82,7 @@ export function createSprintCrmTrustedCallerContextFactory(
 
 export interface SprintCrmMcpRuntimeOptions {
   readonly readModel: SprintCrmSemanticReadModel
+  readonly stagedWriteGateway: CrmStagedWriteDomainGateway
   readonly authority: VerifiedSprintCrmAuthority
   readonly scopes?: readonly string[]
   readonly http?: Readonly<Pick<LocalMcpHttpConfiguration, 'port'>>
@@ -85,18 +91,48 @@ export interface SprintCrmMcpRuntimeOptions {
   readonly callerContextFactory?: McpTransportContextFactory
 }
 
+function bindTrustedOrganization(
+  request: ActionRequest,
+  authority: VerifiedSprintCrmAuthority,
+): ActionRequest {
+  const usesTransportDefault = request.subject.type === 'product'
+    && request.subject.id === SPRINT_CRM_PRODUCT_ID
+  const usesExpectedOrganization = request.subject.type === 'organization'
+    && request.subject.id === authority.organizationId
+  return {
+    ...request,
+    subject: usesTransportDefault || usesExpectedOrganization
+      ? { type: 'organization', id: authority.organizationId }
+      : request.subject,
+    identity: { ...request.identity, subject: authority.organizationId },
+  }
+}
+
 export function createSprintCrmMcpRuntime(options: SprintCrmMcpRuntimeOptions) {
   const now = options.now ?? (() => new Date().toISOString())
   const scopes = Object.freeze([...(options.scopes ?? SPRINT_CRM_DEFAULT_PILOT_SCOPES)])
-  const adapter = new SprintCrmReadOnlyProductAdapter(options.readModel)
+  const coordinator = new SprintCrmStagedWriteCoordinator({
+    gateway: options.stagedWriteGateway,
+    authority: options.authority,
+    now,
+  })
+  const adapter = new SprintCrmProductAdapter(options.readModel, coordinator)
   const registry = new ProductRegistry()
   registry.registerProduct(adapter)
   const audit = new InMemoryAuditSink()
-  const core = new BridgeCore({
+  const bridgeCore = new BridgeCore({
     registry,
     auditSink: audit,
     now,
     createId: options.createId,
+    idempotencyStore: coordinator,
+    fingerprintRequest: fingerprintSprintCrmLogicalRequest,
+  })
+  const core = Object.freeze({
+    route(request: ActionRequest): Promise<BridgeResult> {
+      const boundRequest = bindTrustedOrganization(request, options.authority)
+      return coordinator.runWithRequest(boundRequest, () => bridgeCore.route(boundRequest))
+    },
   })
   const serverFactory = new ProductBridgeMcpServerFactory({
     bridgeCore: core,
@@ -130,6 +166,8 @@ export function createSprintCrmMcpRuntime(options: SprintCrmMcpRuntimeOptions) {
   return Object.freeze({
     adapter,
     audit,
+    bridgeCore,
+    coordinator,
     core,
     registry,
     serverFactory,
@@ -152,8 +190,9 @@ export interface SprintCrmSafeStartupStatus {
     readonly STAGED_WRITE: number
     readonly PRIVILEGED_ACTION: number
   }
-  readonly sourceMode: 'authenticated-rls-readonly'
+  readonly sourceMode: 'authenticated-rls-staging'
   readonly contactDataGranted: boolean
+  readonly stagedWriteGranted: boolean
   readonly canonicalRemoteUntouched: boolean
 }
 
@@ -178,8 +217,10 @@ export function createSprintCrmSafeStartupStatus(
       STAGED_WRITE: operationClassProfile.stagedWriteOperationCount,
       PRIVILEGED_ACTION: operationClassProfile.privilegedActionOperationCount,
     },
-    sourceMode: 'authenticated-rls-readonly',
+    sourceMode: 'authenticated-rls-staging',
     contactDataGranted: scopes.includes(SPRINT_CRM_SCOPES.CONTACT_DATA_READ),
+    stagedWriteGranted: scopes.includes(SPRINT_CRM_SCOPES.RESEARCH_STAGE)
+      || scopes.includes(SPRINT_CRM_SCOPES.EMAIL_STAGE),
     canonicalRemoteUntouched,
   }
 }

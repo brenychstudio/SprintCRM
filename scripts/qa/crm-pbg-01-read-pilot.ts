@@ -40,6 +40,7 @@ async function main(): Promise<void> {
   const {
     ProductOwnedSprintCrmReadModel,
     SupabaseCrmReadGateway,
+    SupabaseCrmStagedWriteDomainGateway,
     createAuthenticatedSprintCrmRuntime,
     createSprintCrmMcpRuntime,
     createSprintCrmSafeStartupStatus,
@@ -54,8 +55,13 @@ async function main(): Promise<void> {
     userId: authenticated.authority.userId,
   })
   const readModel = new ProductOwnedSprintCrmReadModel(gateway)
+  const stagedWriteGateway = new SupabaseCrmStagedWriteDomainGateway(authenticated.client, {
+    organizationId: authenticated.authority.organizationId,
+    userId: authenticated.authority.userId,
+  })
   const runtime = createSprintCrmMcpRuntime({
     readModel,
+    stagedWriteGateway,
     authority: authenticated.authority,
     scopes,
     http: { port: config.mcpPort },
@@ -78,6 +84,6 @@ async function main(): Promise<void> {
 }
 
 void main().catch(() => {
-  process.stderr.write('{"status":"failed","safeMessage":"SprintCRM READ pilot failed safely."}\n')
+  process.stderr.write('{"status":"failed","safeMessage":"SprintCRM Bridge pilot failed safely."}\n')
   process.exitCode = 1
 })

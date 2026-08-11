@@ -39,11 +39,58 @@ export function createSprintCrmReadActionRequest(
   }
 }
 
+export function createSprintCrmStagedActionRequest(
+  organizationId: string,
+  overrides: Partial<ActionRequest> = {},
+): ActionRequest {
+  const identity: BridgeIdentity = {
+    identityId: 'crm-conformance-staged-identity',
+    actor: { actorType: 'test-operator', actorId: 'crm-conformance-staged' },
+    productId: SPRINT_CRM_PRODUCT_ID,
+    scopes: [SPRINT_CRM_SCOPES.RESEARCH_STAGE],
+    subject: organizationId,
+    issuedAt: '2026-08-10T12:00:00.000Z',
+  }
+  return {
+    schemaVersion: SPRINT_CRM_SCHEMA_VERSION,
+    requestId: 'crm-conformance-staged',
+    correlationId: 'crm-conformance-staged-correlation',
+    timestamp: '2026-08-10T12:00:00.000Z',
+    productId: SPRINT_CRM_PRODUCT_ID,
+    namespace: 'crm.research',
+    operationId: 'stage_snapshot',
+    operationClass: OPERATION_CLASSES.STAGED_WRITE,
+    subject: { type: 'organization', id: organizationId },
+    identity,
+    input: {
+      campaignMemberId: '22222222-2222-4222-8222-222222222222',
+      observedOpportunity: 'A concrete current commercial opportunity supported by bounded public evidence.',
+      recommendedOffer: 'A focused implementation engagement with one measurable next step.',
+      evidence: [{
+        url: 'https://example.test/conformance',
+        note: 'A bounded factual note supporting the proposed commercial opportunity.',
+      }],
+      recommendedCase: null,
+      confidence: 0.8,
+      warnings: [],
+    },
+    sourceSnapshot: {
+      snapshotId: `sha256:${'a'.repeat(64)}`,
+      generatedAt: '2026-08-10T12:00:00.000Z',
+    },
+    idempotencyKey: 'crm-conformance-staged-key',
+    ...overrides,
+  }
+}
+
 export function createSprintCrmConformanceFixtures(
   organizationId: string,
 ): ProductAdapterConformanceFixtures {
   return {
     validRead: () => createSprintCrmReadActionRequest(organizationId, { requestId: 'crm-valid-read' }),
+    validStagedWrite: () => createSprintCrmStagedActionRequest(organizationId, {
+      requestId: 'crm-valid-staged-write', idempotencyKey: 'crm-valid-staged-key',
+    }),
     malformedInput: () => createSprintCrmReadActionRequest(organizationId, {
       requestId: 'crm-malformed-input',
       input: { organizationId },
@@ -51,6 +98,29 @@ export function createSprintCrmConformanceFixtures(
     missingScope: () => {
       const request = createSprintCrmReadActionRequest(organizationId, { requestId: 'crm-missing-scope' })
       return { ...request, identity: { ...request.identity, scopes: [] } }
+    },
+    staleSnapshot: () => createSprintCrmStagedActionRequest(organizationId, {
+      requestId: 'crm-stale-staged-write', idempotencyKey: 'crm-stale-staged-key',
+    }),
+    unknownFreshness: () => createSprintCrmStagedActionRequest(organizationId, {
+      requestId: 'crm-unknown-staged-write', idempotencyKey: 'crm-unknown-staged-key',
+    }),
+    duplicateIdempotencyKey: () => {
+      const first = createSprintCrmStagedActionRequest(organizationId, {
+        requestId: 'crm-duplicate-first', idempotencyKey: 'crm-duplicate-key',
+      })
+      return {
+        first,
+        replay: { ...first, requestId: 'crm-duplicate-replay' },
+        conflict: {
+          ...first,
+          requestId: 'crm-duplicate-conflict',
+          input: {
+            ...(first.input as Record<string, unknown>),
+            recommendedOffer: 'A materially different bounded offer reusing the same key must conflict.',
+          },
+        },
+      }
     },
     wrongProductScope: () => {
       const request = createSprintCrmReadActionRequest(organizationId, { requestId: 'crm-wrong-product' })

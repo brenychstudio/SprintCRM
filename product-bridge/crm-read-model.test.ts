@@ -160,6 +160,9 @@ describe('ProductOwnedSprintCrmReadModel', () => {
       'crm.followups.listDue',
       'crm.activities.listRecent',
       'crm.pipeline.getSummary',
+      'crm.outreach.getStagingContext',
+      'crm.research.stageSnapshot',
+      'crm.email.stageDraft',
     ])
     expect(first.canonicalStateVersion).toMatch(/^sha256:[0-9a-f]{64}$/u)
     expect(second.canonicalStateVersion).toBe(first.canonicalStateVersion)

@@ -62,13 +62,20 @@ export interface CrmStagingContext {
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
 const SHA256_PATTERN = /^sha256:[0-9a-f]{64}$/u
-const MEMBER_STATUSES = new Set<CampaignMemberStagingStatus>([
+export const CRM_CAMPAIGN_MEMBER_STAGING_STATUSES = Object.freeze([
   'queued', 'researching', 'research_ready', 'draft_ready', 'needs_review',
   'approved', 'provider_draft', 'sent', 'replied', 'followup_due', 'skipped',
   'suppressed', 'failed',
-])
-const CHANNELS = new Set(['email', 'linkedin', 'ig', 'other'])
-const LANGUAGES = new Set(['en', 'es', 'uk', 'ru'])
+] as const)
+export const CRM_OUTREACH_CHANNELS = Object.freeze(['email', 'linkedin', 'ig', 'other'] as const)
+export const CRM_OUTREACH_LANGUAGES = Object.freeze(['en', 'es', 'uk', 'ru'] as const)
+export const CRM_OUTBOUND_MESSAGE_STATUSES = Object.freeze([
+  'draft', 'needs_review', 'approved', 'provider_draft', 'sent', 'failed', 'cancelled',
+] as const)
+const MEMBER_STATUSES = new Set<CampaignMemberStagingStatus>(CRM_CAMPAIGN_MEMBER_STAGING_STATUSES)
+const CHANNELS = new Set<string>(CRM_OUTREACH_CHANNELS)
+const LANGUAGES = new Set<string>(CRM_OUTREACH_LANGUAGES)
+const MESSAGE_STATUSES = new Set<string>(CRM_OUTBOUND_MESSAGE_STATUSES)
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -88,6 +95,14 @@ function isTimestamp(value: unknown): value is string {
   return typeof value === 'string' && Number.isFinite(Date.parse(value))
 }
 
+function isBoundedText(value: unknown, maximum: number): value is string {
+  if (typeof value !== 'string' || value.length < 1 || value.length > maximum || value.trim() !== value) return false
+  return !Array.from(value).some((character) => {
+    const code = character.codePointAt(0) ?? 0
+    return code < 32 || code === 127
+  })
+}
+
 function isVersionedRecord(value: unknown, kind: 'research' | 'message'): boolean {
   if (value === null) return true
   if (!isRecord(value)) return false
@@ -99,7 +114,7 @@ function isVersionedRecord(value: unknown, kind: 'research' | 'message'): boolea
   }
   return kind === 'research'
     ? isTimestamp(value.createdAt)
-    : typeof value.status === 'string' && value.status.length <= 32 && isTimestamp(value.updatedAt)
+    : typeof value.status === 'string' && MESSAGE_STATUSES.has(value.status) && isTimestamp(value.updatedAt)
 }
 
 /** Fail-closed parser for the deliberately PII/content-free staging context RPC. */
@@ -132,7 +147,7 @@ export function parseCrmStagingContext(value: Json | null): CrmStagingContext {
       || !isTimestamp(campaign.updatedAt)
       || !isRecord(lead)
       || !exactKeys(lead, ['language', 'updatedAt'])
-      || !(lead.language === null || (typeof lead.language === 'string' && lead.language.length <= 16))
+      || !(lead.language === null || isBoundedText(lead.language, 16))
       || !isTimestamp(lead.updatedAt)
       || !isVersionedRecord(value.latestResearch, 'research')
       || !isVersionedRecord(value.latestOutboundMessage, 'message')

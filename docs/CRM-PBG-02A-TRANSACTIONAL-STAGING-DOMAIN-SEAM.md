@@ -1,8 +1,8 @@
 # CRM-PBG-02A — Transactional staging domain seam
 
-Status: **IMPLEMENTED — REAL POSTGRESQL BEHAVIORAL GATE PASS**
+Status: **ACCEPTED — REAL POSTGRESQL BEHAVIORAL GATE PASS**
 
-This checkpoint adds the CRM-owned persistence boundary needed by future revenue staged writes. It does not register an operation, expose an MCP tool, call an AI provider, approve a message, create a provider draft, or send communication. The accepted Product Adapter remains 7 READ / 0 STAGED_WRITE / 0 PRIVILEGED_ACTION.
+This document records the CRM-PBG-02A checkpoint: the CRM-owned persistence boundary needed by revenue staged writes. At 02A acceptance it did not register an operation, expose an MCP tool, call an AI provider, approve a message, create a provider draft, or send communication; the then-current Product Adapter remained 7 READ / 0 STAGED_WRITE / 0 PRIVILEGED_ACTION. CRM-PBG-02B subsequently consumes this accepted seam without changing its database contract; see `CRM-PBG-02B-BRIDGE-STAGED-WRITE-INTEGRATION.md` for the current `8/2/0` surface.
 
 ## Purpose and authority boundary
 
@@ -122,12 +122,12 @@ Persisted provenance is an exact bounded object containing only product ID, sema
 
 The completed ledger receipt is the exact JSON object supplied at the future Shared commit boundary. It is capped at 16 KiB, must identify `sprint-crm`, `STAGED_WRITE`, `staged`, the exact staged entity and source snapshot, an allowlisted ID/version/status-only result, and pending validation/approval. Bounded safe diagnostics are permitted. Receipt-level `metadataSafe` and duplicate `provenance` are deliberately omitted in this seam; canonical bounded provenance lives in the ledger/audit payload. Staged research/email content and secrets are rejected.
 
-## TypeScript seam for CRM-PBG-02B
+## TypeScript seam consumed by CRM-PBG-02B
 
 - `crm-staging-context.ts` defines and fail-closed parses the PII/content-free context.
 - `crm-staged-write-domain-gateway.ts` binds the verified organization/user and calls only the five narrow RPCs.
 
-The future product-specific coordinator should implement Shared `IdempotencyStore` semantics around this gateway:
+The product-specific CRM-PBG-02B coordinator implements Shared `IdempotencyStore` semantics around this gateway:
 
 - `claim(address, fingerprint)` → `claim_product_bridge_write`;
 - Product Adapter invocation → validate and register a prepared effect in process, without writing;
@@ -136,7 +136,7 @@ The future product-specific coordinator should implement Shared `IdempotencyStor
 
 This lets Shared create the receipt before the CRM effect commit while CRM transactionally couples that exact receipt to the immutable effect. No Shared package change is required.
 
-CRM-PBG-02B must add exactly two staged operations/scopes only after this database seam passes behavioral proof. It must not expose `get_product_bridge_staging_context` as an MCP tool or add generic lead/contact/follow-up mutations.
+CRM-PBG-02B adds exactly two staged operations/scopes after this database seam passed behavioral proof. It also exposes the safe semantic read `crm.outreach.getStagingContext`; it does not expose the raw PostgreSQL function or add generic lead/contact/follow-up mutations.
 
 ## Verification and local behavioral proof
 

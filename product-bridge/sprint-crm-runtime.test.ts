@@ -14,6 +14,11 @@ import {
   type VerifiedSprintCrmAuthority,
 } from './authenticated-supabase-runtime.js'
 import type { SprintCrmSemanticReadModel } from './crm-read-model.js'
+import type {
+  CommitEmailDraftInput,
+  CrmStagedWriteDomainGateway,
+} from './crm-staged-write-domain-gateway.js'
+import type { CrmStagingContext } from './crm-staging-context.js'
 import {
   createSprintCrmMcpRuntime,
   createSprintCrmSafeStartupStatus,
@@ -30,6 +35,7 @@ const NOW = '2026-08-10T10:00:00.000Z'
 const ORGANIZATION_ID = '11111111-1111-4111-8111-111111111111'
 const OTHER_ORGANIZATION_ID = '22222222-2222-4222-8222-222222222222'
 const USER_ID = '33333333-3333-4333-8333-333333333333'
+const CAMPAIGN_MEMBER_ID = '44444444-4444-4444-8444-444444444444'
 const CANONICAL_STATE_VERSION = `sha256:${'a'.repeat(64)}`
 const AUTHORITY_FAILURE = 'SprintCRM authenticated organization authority could not be established.'
 const PUBLISHABLE_PROJECT_KEY = 'sb_publishable_1234567890abcdefghij_checksum'
@@ -118,6 +124,30 @@ function semanticReadModel(): SprintCrmSemanticReadModel {
       generatedAt: NOW,
       canonicalStateVersion: CANONICAL_STATE_VERSION,
     })),
+  }
+}
+
+function stagedWriteGateway(): CrmStagedWriteDomainGateway {
+  return {
+    getStagingContext: vi.fn(async (): Promise<CrmStagingContext> => ({
+      organizationId: ORGANIZATION_ID,
+      actorSubject: `user:${USER_ID}`,
+      campaignMember: { id: CAMPAIGN_MEMBER_ID, status: 'research_ready', updatedAt: NOW },
+      campaign: { id: '55555555-5555-4555-8555-555555555555', channel: 'email', defaultLanguage: 'en', updatedAt: NOW },
+      lead: { language: 'en', updatedAt: NOW },
+      latestResearch: { id: '66666666-6666-4666-8666-666666666666', version: 1, createdAt: NOW },
+      latestOutboundMessage: null,
+      freshness: {
+        subjectType: 'campaign_member_staging_context',
+        subjectId: CAMPAIGN_MEMBER_ID,
+        version: CANONICAL_STATE_VERSION as `sha256:${string}`,
+        generatedAt: NOW,
+      },
+    })),
+    claim: vi.fn(async () => ({ outcome: 'IN_PROGRESS' as const })),
+    release: vi.fn(async () => true),
+    commitResearch: vi.fn(async () => ({ outcome: 'INVALID_STATE' as const })),
+    commitEmailDraft: vi.fn(async () => ({ outcome: 'INVALID_STATE' as const })),
   }
 }
 
@@ -296,7 +326,7 @@ describe('SprintCRM pilot configuration and scopes', () => {
     }
   })
 
-  it('uses the bounded READ defaults without granting contact data', () => {
+  it('uses bounded read defaults without granting contact data or staged writes', () => {
     const scopes = parseSprintCrmRuntimeScopes()
     expect(scopes).toEqual(SPRINT_CRM_DEFAULT_PILOT_SCOPES)
     expect(scopes).toEqual([
@@ -305,8 +335,11 @@ describe('SprintCRM pilot configuration and scopes', () => {
       'crm.followups.read',
       'crm.activities.read',
       'crm.pipeline.read',
+      'crm.outreach.read',
     ])
     expect(scopes).not.toContain(SPRINT_CRM_SCOPES.CONTACT_DATA_READ)
+    expect(scopes).not.toContain(SPRINT_CRM_SCOPES.RESEARCH_STAGE)
+    expect(scopes).not.toContain(SPRINT_CRM_SCOPES.EMAIL_STAGE)
   })
 
   it('parses, trims and deduplicates an explicit trusted scope set', () => {
@@ -319,34 +352,40 @@ describe('SprintCRM pilot configuration and scopes', () => {
 })
 
 describe('SprintCRM MCP runtime surface', () => {
-  it('publishes exactly seven READ-only aliases and the derived 7/0/0 profile', () => {
-    const runtime = createSprintCrmMcpRuntime({ readModel: semanticReadModel(), authority: authority() })
+  it('publishes exactly ten aliases and the derived 8/2/0 profile', () => {
+    const runtime = createSprintCrmMcpRuntime({
+      readModel: semanticReadModel(), stagedWriteGateway: stagedWriteGateway(), authority: authority(),
+    })
     const catalog = runtime.serverFactory.getToolCatalog()
     const aliases = Object.values(SPRINT_CRM_MCP_TOOL_ALIASES).sort((left, right) => left.localeCompare(right))
 
     expect(catalog.map(({ definition }) => definition.name)).toEqual(aliases)
-    expect(catalog).toHaveLength(7)
-    expect(catalog.every(({ operation }) => operation.operationClass === 'READ')).toBe(true)
-    for (const { definition } of catalog) {
+    expect(catalog).toHaveLength(10)
+    expect(catalog.filter(({ operation }) => operation.operationClass === 'READ')).toHaveLength(8)
+    expect(catalog.filter(({ operation }) => operation.operationClass === 'STAGED_WRITE')).toHaveLength(2)
+    for (const { definition, operation } of catalog) {
       expect(definition.annotations).toEqual({
-        readOnlyHint: true,
+        readOnlyHint: operation.operationClass === 'READ',
         destructiveHint: false,
-        idempotentHint: false,
+        idempotentHint: operation.operationClass === 'STAGED_WRITE',
         openWorldHint: false,
       })
     }
     expect(runtime.operationClassProfile).toEqual({
-      operationClasses: ['READ'],
-      readOperationCount: 7,
-      stagedWriteOperationCount: 0,
+      operationClasses: ['READ', 'STAGED_WRITE'],
+      readOperationCount: 8,
+      stagedWriteOperationCount: 2,
       privilegedActionOperationCount: 0,
     })
     expect(runtime.scopes).not.toContain(SPRINT_CRM_SCOPES.CONTACT_DATA_READ)
+    expect(runtime.scopes).not.toContain(SPRINT_CRM_SCOPES.RESEARCH_STAGE)
+    expect(runtime.scopes).not.toContain(SPRINT_CRM_SCOPES.EMAIL_STAGE)
   })
 
   it('reports a safe product startup status while preserving Shared minimal /health', async () => {
     const runtime = createSprintCrmMcpRuntime({
       readModel: semanticReadModel(),
+      stagedWriteGateway: stagedWriteGateway(),
       authority: authority(),
       http: { port: 0 },
       now: () => NOW,
@@ -360,7 +399,7 @@ describe('SprintCRM MCP runtime surface', () => {
       status: 'ready',
       transport: 'streamable-http',
       sessionMode: 'stateless',
-      toolCount: 7,
+      toolCount: 10,
     })
 
     const safeStatus = createSprintCrmSafeStartupStatus(
@@ -376,10 +415,11 @@ describe('SprintCRM MCP runtime surface', () => {
       stateless: true,
       endpoint: status.endpoint,
       healthEndpoint: status.healthEndpoint,
-      toolCount: 7,
-      operationClassProfile: { READ: 7, STAGED_WRITE: 0, PRIVILEGED_ACTION: 0 },
-      sourceMode: 'authenticated-rls-readonly',
+      toolCount: 10,
+      operationClassProfile: { READ: 8, STAGED_WRITE: 2, PRIVILEGED_ACTION: 0 },
+      sourceMode: 'authenticated-rls-staging',
       contactDataGranted: false,
+      stagedWriteGranted: false,
       canonicalRemoteUntouched: true,
     })
 
@@ -397,9 +437,11 @@ describe('SprintCRM MCP runtime surface', () => {
 
   it('supports real credential-free MCP Client discovery and a fake semantic READ call', async () => {
     const readModel = semanticReadModel()
+    const stagingGateway = stagedWriteGateway()
     let id = 0
     const runtime = createSprintCrmMcpRuntime({
       readModel,
+      stagedWriteGateway: stagingGateway,
       authority: authority(),
       http: { port: 0 },
       now: () => NOW,
@@ -415,7 +457,9 @@ describe('SprintCRM MCP runtime surface', () => {
     expect(catalog.tools.map(({ name }) => name)).toEqual(
       Object.values(SPRINT_CRM_MCP_TOOL_ALIASES).sort((left, right) => left.localeCompare(right)),
     )
-    expect(catalog.tools.every(({ annotations }) => annotations?.readOnlyHint === true)).toBe(true)
+    expect(catalog.tools.filter(({ annotations }) => annotations?.readOnlyHint === true)).toHaveLength(8)
+    expect(catalog.tools.filter(({ annotations }) => annotations?.idempotentHint === true)).toHaveLength(2)
+    expect(catalog.tools.every(({ annotations }) => annotations?.destructiveHint === false)).toBe(true)
 
     const result = await client.callTool({ name: 'crm_workspace__getContext', arguments: {} })
     expect(result).toMatchObject({
@@ -442,14 +486,104 @@ describe('SprintCRM MCP runtime surface', () => {
     expect(JSON.stringify(result)).not.toContain(USER_ID)
     expect(JSON.stringify(result)).not.toContain(VALID_USER_ACCESS_TOKEN)
     expect(readModel.getWorkspaceContext).toHaveBeenCalledOnce()
+
+    const deniedWrite = await client.callTool({
+      name: 'crm_email__stageDraft',
+      arguments: {
+        campaignMemberId: CAMPAIGN_MEMBER_ID,
+        researchSnapshotId: '66666666-6666-4666-8666-666666666666',
+        subject: 'A focused improvement for your inquiry flow',
+        body: 'Hello, I reviewed the public inquiry path and found a concrete way to reduce friction for qualified visitors. This draft remains unavailable under the safe default scope set.',
+        language: 'en',
+        _bridge: {
+          idempotencyKey: 'crm-mcp-default-scope-denial',
+          sourceSnapshot: { snapshotId: CANONICAL_STATE_VERSION, generatedAt: NOW },
+        },
+      },
+    })
+    expect(deniedWrite).toMatchObject({
+      isError: true,
+      structuredContent: { ok: false, error: { code: 'SCOPE_DENIED' } },
+    })
+    expect(stagingGateway.claim).not.toHaveBeenCalled()
+  })
+
+  it('routes one credential-free MCP staged draft through the CRM transactional boundary', async () => {
+    const baseGateway = stagedWriteGateway()
+    const gateway: CrmStagedWriteDomainGateway = {
+      ...baseGateway,
+      claim: vi.fn(async () => ({
+        outcome: 'CLAIMED' as const,
+        requestLedgerId: '77777777-7777-4777-8777-777777777777',
+        leaseExpiresAt: NOW,
+      })),
+      commitEmailDraft: vi.fn(async (input: CommitEmailDraftInput) => ({
+        outcome: 'COMPLETED' as const,
+        receipt: input.receipt,
+        stagedEntity: {
+          type: 'outbound_message', id: input.stagedEntityId,
+          version: input.expectedVersion, status: 'draft',
+        },
+      })),
+    }
+    let id = 0
+    const runtime = createSprintCrmMcpRuntime({
+      readModel: semanticReadModel(), stagedWriteGateway: gateway, authority: authority(),
+      scopes: [SPRINT_CRM_SCOPES.EMAIL_STAGE],
+      http: { port: 0 }, now: () => NOW,
+      createId: () => `crm-mcp-staged-test-${id += 1}`,
+    })
+    services.push(runtime.http)
+    const status = await runtime.http.start()
+    const client = new Client({ name: 'sprint-crm-staged-write-test', version: '1.0.0' })
+    clients.push(client)
+    await client.connect(new StreamableHTTPClientTransport(new URL(status.endpoint)))
+
+    const result = await client.callTool({
+      name: 'crm_email__stageDraft',
+      arguments: {
+        campaignMemberId: CAMPAIGN_MEMBER_ID,
+        researchSnapshotId: '66666666-6666-4666-8666-666666666666',
+        subject: 'A focused improvement for your inquiry flow',
+        body: 'Hello, I reviewed the public inquiry path and found a concrete way to reduce friction for qualified visitors. This is staged for human review and no message is sent.',
+        language: 'en',
+        _bridge: {
+          idempotencyKey: 'crm-mcp-email-stage-key',
+          sourceSnapshot: { snapshotId: CANONICAL_STATE_VERSION, generatedAt: NOW },
+        },
+      },
+    })
+
+    expect(result).toMatchObject({
+      isError: false,
+      structuredContent: {
+        ok: true,
+        receipt: {
+          productId: 'sprint-crm', operationId: 'stage_draft',
+          operationClass: 'STAGED_WRITE', status: 'staged',
+          sourceSnapshotId: CANONICAL_STATE_VERSION,
+          result: {
+            entityType: 'outbound_message', version: 1, status: 'draft',
+            campaignMemberId: CAMPAIGN_MEMBER_ID,
+            researchSnapshotId: '66666666-6666-4666-8666-666666666666',
+          },
+          validation: { state: 'pending' }, approval: { state: 'pending' },
+        },
+      },
+    })
+    expect(gateway.claim).toHaveBeenCalledOnce()
+    expect(gateway.commitEmailDraft).toHaveBeenCalledOnce()
+    const serialized = JSON.stringify(result)
+    expect(serialized).not.toMatch(/approved_by|approvedAt|sent_at|provider|gmail|ai_generations/iu)
   })
 })
 
 describe('SprintCRM runtime security guardrails', () => {
-  it('contains no mutation, AI invocation, raw SQL, browser storage or service-role path', () => {
+  it('contains only the five CRM staging RPCs and no uncontrolled mutation, AI, raw SQL or elevated key path', () => {
     const sourceFiles = [
       'product-bridge/authenticated-supabase-runtime.ts',
       'product-bridge/crm-read-model.ts',
+      'product-bridge/crm-staged-write-coordinator.ts',
       'product-bridge/sprint-crm-mcp-runtime.ts',
       'product-bridge/sprint-crm-product-adapter.ts',
       'product-bridge/supabase-crm-read-gateway.ts',
@@ -460,9 +594,8 @@ describe('SprintCRM runtime security guardrails', () => {
       .join('\n')
 
     const forbiddenPaths = [
-      /\.(?:insert|upsert|delete)\s*\(/u,
       /\.from\s*\([^)]*\)[\s\S]{0,500}\.(?:insert|upsert|update|delete)\s*\(/u,
-      /\.rpc\s*\(|functions\s*\.\s*invoke\s*\(/u,
+      /functions\s*\.\s*invoke\s*\(/u,
       /\b(?:SELECT\s+.+\s+FROM|INSERT\s+INTO|UPDATE\s+\w+\s+SET|DELETE\s+FROM|CREATE\s+TABLE|ALTER\s+TABLE)\b/iu,
       /\.select\s*\(\s*['"`]\s*\*\s*['"`]\s*\)/u,
       /outreach-ai-runtime|\bopenai\b|\banthropic\b|generate(?:Text|Object)\s*\(/iu,
@@ -470,6 +603,23 @@ describe('SprintCRM runtime security guardrails', () => {
       /SUPABASE_SERVICE_ROLE|service[_ -]?role|admin[_ -]?key/iu,
     ]
     for (const forbidden of forbiddenPaths) expect(sources).not.toMatch(forbidden)
+
+    const gatewaySource = readFileSync(
+      path.join(process.cwd(), 'product-bridge/crm-staged-write-domain-gateway.ts'),
+      'utf8',
+    )
+    const rpcNames = [...gatewaySource.matchAll(/\.rpc\('([^']+)'/gu)]
+      .map((match) => match[1])
+      .sort((left, right) => left.localeCompare(right))
+    expect(rpcNames).toEqual([
+      'claim_product_bridge_write',
+      'get_product_bridge_staging_context',
+      'release_product_bridge_write',
+      'stage_product_bridge_email_draft',
+      'stage_product_bridge_research_snapshot',
+    ])
+    expect(gatewaySource).not.toMatch(/\.from\s*\(|functions\s*\.\s*invoke\s*\(/u)
+    expect(gatewaySource).not.toMatch(/outreach-ai-runtime|\bopenai\b|\bgmail\b|service[_ -]?role/iu)
 
     const pilotSource = readFileSync(
       path.join(process.cwd(), 'scripts/qa/crm-pbg-01-read-pilot.ts'),

@@ -180,10 +180,11 @@ describe('CRM-PBG-02A staging context and gateway', () => {
     expect(fake.rpc).toHaveBeenCalledTimes(1)
   })
 
-  it('leaves the accepted Product Adapter and MCP profile at exactly 7 READ / 0 / 0', () => {
-    expect(SPRINT_CRM_OPERATIONS).toHaveLength(7)
-    expect(SPRINT_CRM_OPERATIONS.every(({ operationClass }) => operationClass === 'READ')).toBe(true)
-    expect(SPRINT_CRM_OPERATIONS.some(({ operationId }) => operationId.includes('stage'))).toBe(false)
+  it('exposes the accepted seam through exactly 8 READ / 2 STAGED_WRITE / 0 privileged operations', () => {
+    expect(SPRINT_CRM_OPERATIONS).toHaveLength(10)
+    expect(SPRINT_CRM_OPERATIONS.filter(({ operationClass }) => operationClass === 'READ')).toHaveLength(8)
+    expect(SPRINT_CRM_OPERATIONS.filter(({ operationClass }) => operationClass === 'STAGED_WRITE')).toHaveLength(2)
+    expect(SPRINT_CRM_OPERATIONS.some(({ operationClass }) => operationClass === 'PRIVILEGED_ACTION')).toBe(false)
   })
 })
 
