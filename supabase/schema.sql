@@ -1378,7 +1378,7 @@ begin
   if jsonb_typeof(p_value) = 'object' then
     for v_key, v_child in select key, value from jsonb_each(p_value)
     loop
-      if lower(v_key) ~ '(authorization|access.?token|refresh.?token|jwt|secret|password|api.?key|publishable.?key|prompt|message.?body|draft.?body|research.?text|observed.?opportunity|recommended.?offer|recommended.?case|evidence|warnings|subject|body)' then
+      if lower(v_key) ~ '^(authorization|access.?token|refresh.?token|jwt|secret|password|api.?key|publishable.?key|prompt|message.?body|draft.?body|research.?text|observed.?opportunity|recommended.?offer|recommended.?case|evidence|warnings|subject|body)$' then
         return true;
       end if;
       if public.product_bridge_json_has_forbidden_key(v_child) then
@@ -1826,19 +1826,21 @@ begin
      or p_lease_seconds not between 15 and 300
      or jsonb_typeof(p_provenance) <> 'object'
      or octet_length(p_provenance::text) > 4096
-     or not case
-       when coalesce(p_provenance ->> 'campaignMemberId', '') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-        and coalesce(p_provenance ->> 'stagedEntityId', '') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-        and coalesce(p_provenance ->> 'sourceSnapshotId', '') ~ '^sha256:[0-9a-f]{64}$'
-       then public.product_bridge_valid_provenance(
-         p_provenance, p_expected_organization_id, p_operation_id,
-         (p_provenance ->> 'campaignMemberId')::uuid,
-         p_provenance ->> 'sourceSnapshotId',
-         (p_provenance ->> 'stagedEntityId')::uuid,
-         v_actor
-       )
-       else false
-     end then
+     or not (
+       case
+         when coalesce(p_provenance ->> 'campaignMemberId', '') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+          and coalesce(p_provenance ->> 'stagedEntityId', '') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+          and coalesce(p_provenance ->> 'sourceSnapshotId', '') ~ '^sha256:[0-9a-f]{64}$'
+         then public.product_bridge_valid_provenance(
+           p_provenance, p_expected_organization_id, p_operation_id,
+           (p_provenance ->> 'campaignMemberId')::uuid,
+           p_provenance ->> 'sourceSnapshotId',
+           (p_provenance ->> 'stagedEntityId')::uuid,
+           v_actor
+         )
+         else false
+       end
+     ) then
     raise exception 'Invalid Product Bridge write claim' using errcode = '22023';
   end if;
 

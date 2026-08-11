@@ -4,9 +4,9 @@ create extension if not exists pgtap with schema extensions;
 select plan(37);
 
 insert into auth.users (
-  instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+  instance_id, id, aud, role, email, encrypted_password, confirmed_at,
   created_at, updated_at, confirmation_token, recovery_token,
-  email_change_token_new, email_change
+  email_change_token, email_change
 ) values
   ('00000000-0000-0000-0000-000000000000', '10000000-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'bridge-owner@example.test', '', now(), now(), now(), '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', '10000000-0000-4000-8000-000000000002', 'authenticated', 'authenticated', 'other-owner@example.test', '', now(), now(), now(), '', '', '', '');
@@ -45,6 +45,8 @@ grant all on table bridge_test_state to authenticated;
 
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}';
+set local request.jwt.claim.sub = '10000000-0000-4000-8000-000000000001';
+set local request.jwt.claim.role = 'authenticated';
 
 insert into bridge_test_state values (
   'initial_context',
@@ -54,14 +56,20 @@ insert into bridge_test_state values (
   )
 );
 
-select is((select value #>> '{campaignMember,status}' from bridge_test_state where key = 'initial_context'), 'queued', 'context returns member status');
-select is((select value #>> '{campaign,channel}' from bridge_test_state where key = 'initial_context'), 'email', 'context returns campaign channel');
-select is((select value #>> '{campaign,defaultLanguage}' from bridge_test_state where key = 'initial_context'), 'es', 'context returns default language');
-select like((select value #>> '{freshness,version}' from bridge_test_state where key = 'initial_context'), 'sha256:%', 'context returns opaque SHA-256 version');
-select ok((select value -> 'latestResearch' is null from bridge_test_state where key = 'initial_context'), 'context reports no research');
-select ok((select value -> 'latestOutboundMessage' is null from bridge_test_state where key = 'initial_context'), 'context reports no message');
+select ok((
+  select value #>> '{campaignMember,status}' = 'queued'
+    and value #>> '{campaign,channel}' = 'email'
+    and value #>> '{campaign,defaultLanguage}' = 'es'
+  from bridge_test_state where key = 'initial_context'
+), 'context returns bounded member and campaign state');
+select alike((select value #>> '{freshness,version}' from bridge_test_state where key = 'initial_context'), 'sha256:%', 'context returns opaque SHA-256 version');
+select ok((
+  select value -> 'latestResearch' = 'null'::jsonb
+    and value -> 'latestOutboundMessage' = 'null'::jsonb
+  from bridge_test_state where key = 'initial_context'
+), 'context reports no staged research or message');
 select ok((select value::text !~ 'private@example|34999999999|Private fixture person' from bridge_test_state where key = 'initial_context'), 'context excludes contact PII');
-select ok((select value::text !~ 'observed_opportunity|recommended_offer|body|subject|notes' from bridge_test_state where key = 'initial_context'), 'context excludes staged content');
+select ok((select value::text !~ '"(observed_opportunity|recommended_offer|body|subject|notes)"[[:space:]]*:' from bridge_test_state where key = 'initial_context'), 'context excludes staged content');
 
 insert into bridge_test_state values (
   'research_provenance', jsonb_build_object(
@@ -142,6 +150,8 @@ set lease_expires_at = clock_timestamp() - interval '1 second'
 where idempotency_key = 'expired-key-1';
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}';
+set local request.jwt.claim.sub = '10000000-0000-4000-8000-000000000001';
+set local request.jwt.claim.role = 'authenticated';
 select ok((
   select result ->> 'outcome' = 'CLAIMED' and (result ->> 'reclaimed')::boolean
   from (
@@ -195,11 +205,23 @@ insert into bridge_test_state values (
 );
 
 select is((select value ->> 'outcome' from bridge_test_state where key = 'research_result'), 'COMPLETED', 'research effect completes atomically');
-select is((select source from public.research_snapshots where id = '70000000-0000-4000-8000-000000000001'), 'bridge', 'research source is bridge');
-select is((select version from public.research_snapshots where id = '70000000-0000-4000-8000-000000000001'), 1, 'research uses expected next version');
-select is((select status from public.campaign_members where id = '50000000-0000-4000-8000-000000000001'), 'research_ready', 'research moves only eligible member to research_ready');
-select is((select count(*)::integer from public.activities where type = 'research_saved' and meta ->> 'source' = 'bridge'), 1, 'research appends canonical activity');
-select is((select count(*)::integer from public.audit_events where event_type = 'product_bridge.research.staged'), 1, 'research appends audit event');
+select ok((select source = 'bridge' and version = 1 from public.research_snapshots where id = '70000000-0000-4000-8000-000000000001')
+  and (select status = 'research_ready' from public.campaign_members where id = '50000000-0000-4000-8000-000000000001'),
+  'research uses bridge source, next version, and eligible member transition');
+select ok(
+  (select count(*) = 1 from public.activities where type = 'research_saved' and meta ->> 'source' = 'bridge')
+  and (select count(*) = 1 from public.audit_events where event_type = 'product_bridge.research.staged'),
+  'research appends one canonical activity and audit event');
+select ok(
+  (select value #>> '{receipt,stagedEntityId}' = '70000000-0000-4000-8000-000000000001'
+     and value #>> '{stagedEntity,id}' = '70000000-0000-4000-8000-000000000001'
+   from bridge_test_state where key = 'research_result')
+  and exists (
+    select 1 from public.audit_events
+    where event_type = 'product_bridge.research.staged'
+      and entity_id = '70000000-0000-4000-8000-000000000001'
+      and payload ->> 'request_id' = 'request-research-1'
+  ), 'research receipt, entity, and audit provenance correlate exactly');
 select ok(
   public.claim_product_bridge_write(
     '20000000-0000-4000-8000-000000000001', 'crm.research.stageSnapshot', 'research-key-1',
@@ -221,6 +243,81 @@ select is(
   'REPLAY', 'completed replay precedes freshness evaluation'
 );
 select is((select count(*)::integer from public.research_snapshots where campaign_member_id = '50000000-0000-4000-8000-000000000001'), 1, 'replay does not create version plus two');
+
+insert into bridge_test_state values (
+  'stale_research_provenance', jsonb_build_object(
+    'productId', 'sprint-crm', 'operationId', 'crm.research.stageSnapshot',
+    'requestId', 'request-research-stale', 'correlationId', 'correlation-research-stale',
+    'actorSubject', 'user:10000000-0000-4000-8000-000000000001',
+    'organizationId', '20000000-0000-4000-8000-000000000001',
+    'campaignMemberId', '50000000-0000-4000-8000-000000000001',
+    'sourceSnapshotId', (select value #>> '{freshness,version}' from bridge_test_state where key = 'initial_context'),
+    'stagedEntityId', '70000000-0000-4000-8000-000000000002',
+    'timestamp', '2026-08-10T10:02:00.000Z'
+  )
+);
+insert into bridge_test_state values (
+  'stale_research_claim', public.claim_product_bridge_write(
+    '20000000-0000-4000-8000-000000000001', 'crm.research.stageSnapshot', 'research-stale-key-1',
+    'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    '60000000-0000-4000-8000-000000000020', 60,
+    (select value from bridge_test_state where key = 'stale_research_provenance')
+  )
+);
+insert into bridge_test_state values (
+  'stale_research_result', public.stage_product_bridge_research_snapshot(
+    '20000000-0000-4000-8000-000000000001', 'research-stale-key-1',
+    'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    '60000000-0000-4000-8000-000000000020', '50000000-0000-4000-8000-000000000001',
+    (select value #>> '{freshness,version}' from bridge_test_state where key = 'initial_context'),
+    '70000000-0000-4000-8000-000000000002', 2,
+    'A stale observed opportunity that must never be persisted.',
+    'A stale recommended offer that must never be persisted.',
+    '[{"url":"https://example.test/stale","note":"This evidence belongs to a stale request and must not persist."}]'::jsonb,
+    null, 0.7, '[]'::jsonb,
+    (select value from bridge_test_state where key = 'stale_research_provenance'),
+    jsonb_build_object(
+      'schemaVersion', '1.0.0', 'receiptId', 'receipt-research-stale',
+      'requestId', 'request-research-stale', 'correlationId', 'correlation-research-stale',
+      'productId', 'sprint-crm', 'operationId', 'stage_snapshot',
+      'operationClass', 'STAGED_WRITE', 'status', 'staged',
+      'timestamp', '2026-08-10T10:02:00.000Z',
+      'sourceSnapshotId', (select value #>> '{freshness,version}' from bridge_test_state where key = 'initial_context'),
+      'stagedEntityId', '70000000-0000-4000-8000-000000000002',
+      'result', jsonb_build_object('entityType', 'research_snapshot', 'entityId', '70000000-0000-4000-8000-000000000002', 'version', 2, 'status', 'research_ready'),
+      'validation', jsonb_build_object('state', 'pending'),
+      'approval', jsonb_build_object('state', 'pending')
+    )
+  )
+);
+select is((select value ->> 'outcome' from bridge_test_state where key = 'stale_research_result'), 'STALE', 'new stale research request fails closed');
+reset role;
+select ok(
+  not exists (select 1 from public.research_snapshots where id = '70000000-0000-4000-8000-000000000002')
+  and not exists (select 1 from public.activities where meta ->> 'research_snapshot_id' = '70000000-0000-4000-8000-000000000002')
+  and not exists (select 1 from public.audit_events where entity_id = '70000000-0000-4000-8000-000000000002')
+  and not exists (select 1 from public.product_bridge_write_requests where idempotency_key = 'research-stale-key-1'),
+  'stale research creates no entity, timeline, audit, or durable completed claim');
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}';
+set local request.jwt.claim.sub = '10000000-0000-4000-8000-000000000001';
+set local request.jwt.claim.role = 'authenticated';
+
+select throws_ok(
+  $$select public.get_product_bridge_staging_context('20000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000099')$$,
+  'P0002', 'Product Bridge staging context is unavailable', 'unknown required state fails closed before claim'
+);
+reset role;
+select ok(
+  not exists (select 1 from public.research_snapshots where campaign_member_id = '50000000-0000-4000-8000-000000000099')
+  and not exists (select 1 from public.outbound_messages where campaign_member_id = '50000000-0000-4000-8000-000000000099')
+  and not exists (select 1 from public.activities where meta ->> 'campaign_member_id' = '50000000-0000-4000-8000-000000000099')
+  and not exists (select 1 from public.audit_events where payload ->> 'campaign_member_id' = '50000000-0000-4000-8000-000000000099'),
+  'unknown required state creates zero product effect');
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}';
+set local request.jwt.claim.sub = '10000000-0000-4000-8000-000000000001';
+set local request.jwt.claim.role = 'authenticated';
 
 insert into bridge_test_state values (
   'email_context', public.get_product_bridge_staging_context(
@@ -289,12 +386,48 @@ insert into bridge_test_state values (
 );
 
 select is((select value ->> 'outcome' from bridge_test_state where key = 'email_result'), 'COMPLETED', 'email draft completes atomically');
-select is((select source from public.outbound_messages where id = '80000000-0000-4000-8000-000000000001'), 'bridge', 'email source is bridge');
-select is((select status from public.outbound_messages where id = '80000000-0000-4000-8000-000000000001'), 'draft', 'email remains draft');
-select ok((select approved_by is null and approved_at is null and sent_at is null and channel = 'email' from public.outbound_messages where id = '80000000-0000-4000-8000-000000000001'), 'email has no approval, provider, or send effect');
-select is((select research_snapshot_id from public.outbound_messages where id = '80000000-0000-4000-8000-000000000001'), '70000000-0000-4000-8000-000000000001'::uuid, 'email references exact latest research');
-select is((select count(*)::integer from public.activities where type = 'outreach_draft_saved' and meta ->> 'source' = 'bridge'), 1, 'email appends canonical activity');
-select is((select count(*)::integer from public.audit_events where event_type = 'product_bridge.email_draft.staged'), 1, 'email appends audit event');
+select ok((
+  select source = 'bridge' and status = 'draft' and channel = 'email'
+    and approved_by is null and approved_at is null and sent_at is null
+    and research_snapshot_id = '70000000-0000-4000-8000-000000000001'::uuid
+  from public.outbound_messages where id = '80000000-0000-4000-8000-000000000001'
+), 'email is an unapproved bridge draft with exact research and zero provider or send effect');
+select ok(
+  (select count(*) = 1 from public.activities where type = 'outreach_draft_saved' and meta ->> 'source' = 'bridge')
+  and (select count(*) = 1 from public.audit_events where event_type = 'product_bridge.email_draft.staged'),
+  'email appends one canonical activity and audit event');
+select ok(
+  (select ai_generation_id is null from public.research_snapshots where id = '70000000-0000-4000-8000-000000000001')
+  and (select ai_generation_id is null from public.outbound_messages where id = '80000000-0000-4000-8000-000000000001'),
+  'Bridge staging invokes no OpenAI generation path');
+select throws_ok(
+  $$update public.outbound_messages set subject = 'Forbidden in-place rewrite' where id = '80000000-0000-4000-8000-000000000001'$$,
+  '55000', 'outbound message content is immutable; create a new version instead',
+  'staged email content is immutable and requires a new version'
+);
+select ok(
+  public.claim_product_bridge_write(
+    '20000000-0000-4000-8000-000000000001', 'crm.email.stageDraft', 'email-key-1',
+    'sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+    '60000000-0000-4000-8000-000000000021', 60,
+    (select value from bridge_test_state where key = 'email_provenance')
+  ) -> 'receipt' = (select value -> 'receipt' from bridge_test_state where key = 'email_result'),
+  'email replay returns the exact durable original receipt');
+select ok(
+  (select count(*) = 1 from public.outbound_messages where campaign_member_id = '50000000-0000-4000-8000-000000000001')
+  and (select count(*) = 1 from public.activities where type = 'outreach_draft_saved' and meta ->> 'source' = 'bridge')
+  and (select count(*) = 1 from public.audit_events where event_type = 'product_bridge.email_draft.staged'),
+  'email replay creates no version plus two or duplicate side effect');
+select ok(
+  (select value #>> '{receipt,stagedEntityId}' = '80000000-0000-4000-8000-000000000001'
+     and value #>> '{stagedEntity,id}' = '80000000-0000-4000-8000-000000000001'
+   from bridge_test_state where key = 'email_result')
+  and exists (
+    select 1 from public.audit_events
+    where event_type = 'product_bridge.email_draft.staged'
+      and entity_id = '80000000-0000-4000-8000-000000000001'
+      and payload ->> 'request_id' = 'request-email-1'
+  ), 'email receipt, entity, and audit provenance correlate exactly');
 
 select throws_ok(
   $$select public.get_product_bridge_staging_context('20000000-0000-4000-8000-000000000002', '50000000-0000-4000-8000-000000000001')$$,
@@ -303,12 +436,16 @@ select throws_ok(
 
 reset role;
 set local request.jwt.claims = '{}';
+set local request.jwt.claim.sub = '';
+set local request.jwt.claim.role = '';
 select throws_ok(
   $$select public.get_product_bridge_staging_context('20000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000001')$$,
   '42501', 'Product Bridge staging is unavailable', 'unauthenticated access fails closed'
 );
 set local role service_role;
 set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000001","role":"service_role"}';
+set local request.jwt.claim.sub = '10000000-0000-4000-8000-000000000001';
+set local request.jwt.claim.role = 'service_role';
 select throws_ok(
   $$select public.get_product_bridge_staging_context('20000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000001')$$,
   '42501', null, 'service-role execution is rejected before any effect'

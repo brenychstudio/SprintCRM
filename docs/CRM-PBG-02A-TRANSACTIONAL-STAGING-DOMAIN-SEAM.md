@@ -1,6 +1,6 @@
 # CRM-PBG-02A — Transactional staging domain seam
 
-Status: **IMPLEMENTED — LOCAL DB BEHAVIORAL PROOF REQUIRED**
+Status: **IMPLEMENTED — REAL POSTGRESQL BEHAVIORAL GATE PASS**
 
 This checkpoint adds the CRM-owned persistence boundary needed by future revenue staged writes. It does not register an operation, expose an MCP tool, call an AI provider, approve a message, create a provider draft, or send communication. The accepted Product Adapter remains 7 READ / 0 STAGED_WRITE / 0 PRIVILEGED_ACTION.
 
@@ -142,15 +142,17 @@ CRM-PBG-02B must add exactly two staged operations/scopes only after this databa
 
 Static migration guards, generated types, gateway unit tests, existing Product Adapter tests, typecheck, lint, unit suite, build, diff check, and audit are required. `supabase/tests/product_bridge_transactional_staging.test.sql` is a disposable-database pgTAP suite covering context redaction, authenticated org binding, claim/replay/conflict, immutable effects, exact receipt, lifecycle, activity/audit, and no approval/send effect.
 
-Acceptance additionally requires running on a disposable local Supabase stack:
+Run the repository-owned acceptance gate from Windows PowerShell with Docker Desktop running:
 
 ```powershell
-supabase start
-supabase db reset
-supabase test db supabase/tests/product_bridge_transactional_staging.test.sql
+npm run test:product-bridge:postgres
 ```
 
-No production or linked database may substitute for this proof. At implementation time on this workstation, Supabase CLI `2.108.0` was present but no Docker daemon/local PostgreSQL runtime was available. Therefore this checkpoint remains **blocked on local DB behavioral proof**, even if all credential-free checks pass.
+The gate starts a uniquely named disposable container from a digest-pinned Supabase PostgreSQL 17.6 image on `127.0.0.1:54522`, composes the accepted pre-02A baseline without rewriting historical migrations, applies the complete PBG-02A migration, verifies all 14 functions, runs exactly 37 pgTAP assertions, and proves equivalent concurrent authenticated claims resolve to one `CLAIMED`, one `IN_PROGRESS`, and one ledger row. It always removes only its own disposable container.
+
+The gate passed on 2026-08-11. The 37 assertions include authenticated organization authority, service-role rejection, claim/release/lease reclaim, conflict and exact durable replay, stale and unknown-state zero-effect behavior, research and email atomicity, immutable email content, receipt/effect/audit correlation, pending approval, and zero OpenAI/provider/send effect.
+
+This test-only baseline composition exists because the historical SprintCRM chain is not clean-bootstrap reproducible: it includes a historical BOM and accepted snapshots/migrations with ordering assumptions around `leads` and `ai_generations`. The gate deliberately uses canonical snapshot slices plus the accepted AI-foundation dependency. It does not change, replay against, or connect to production/linked Supabase.
 
 ## Rollback / forward-fix
 
