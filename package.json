@@ -12,6 +12,7 @@
     "test": "npm run test:unit",
     "test:product-bridge": "vitest run product-bridge",
     "test:product-bridge:postgres": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qa/crm-pbg-02a-postgres-proof.ps1",
+    "test:product-bridge:postgres:conflict": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qa/crm-pbg-02c-conflict-postgres-proof.ps1",
     "test:unit": "vitest run",
     "test:watch": "vitest",
     "verify:migrations": "node scripts/verify-migrations.mjs",

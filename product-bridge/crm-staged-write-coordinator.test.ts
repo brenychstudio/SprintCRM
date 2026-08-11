@@ -14,6 +14,7 @@ import type {
   CommitResearchInput,
   CrmStagedWriteDomainGateway,
 } from './crm-staged-write-domain-gateway.js'
+import { durableReceiptsAreJsonEquivalent } from './crm-staged-write-coordinator.js'
 import type { CrmStagingContext } from './crm-staging-context.js'
 import { createSprintCrmMcpRuntime } from './sprint-crm-mcp-runtime.js'
 import {
@@ -33,6 +34,28 @@ const RESEARCH_ID = '66666666-6666-4666-8666-666666666666'
 const FRESHNESS = `sha256:${'a'.repeat(64)}` as const
 const STALE_FRESHNESS = `sha256:${'b'.repeat(64)}` as const
 
+function equalityReceipt(overrides: Record<string, unknown> = {}): ActionReceipt {
+  return {
+    schemaVersion: SPRINT_CRM_SCHEMA_VERSION,
+    receiptId: 'receipt-json-equivalence',
+    requestId: 'request-json-equivalence',
+    correlationId: 'correlation-json-equivalence',
+    productId: SPRINT_CRM_PRODUCT_ID,
+    operationId: 'stage_draft',
+    operationClass: OPERATION_CLASSES.STAGED_WRITE,
+    status: 'staged',
+    timestamp: NOW,
+    result: {
+      entityType: 'outbound_message',
+      entityId: '77777777-7777-4777-8777-777777777777',
+      version: 1,
+    },
+    validation: { state: 'pending' },
+    approval: { state: 'pending' },
+    ...overrides,
+  } as ActionReceipt
+}
+
 interface DurableClaim {
   readonly fingerprint: string
   readonly claimToken: string
@@ -48,6 +71,7 @@ class FakeDurableStagingGateway implements CrmStagedWriteDomainGateway {
   releases = 0
   failContext = false
   failCommitAsStale = false
+  roundTripCommitReceiptsThroughJson = false
 
   constructor(readonly context: CrmStagingContext = stagingContext()) {}
 
@@ -91,10 +115,11 @@ class FakeDurableStagingGateway implements CrmStagedWriteDomainGateway {
       return { outcome: 'STALE' as const, currentFreshness: this.context.freshness.version }
     }
     this.researchEffects.push(structuredClone(input))
-    this.complete('crm.research.stageSnapshot', input.idempotencyKey, input.receipt as unknown as ActionReceipt)
+    const receipt = this.persistedReceipt(input.receipt)
+    this.complete('crm.research.stageSnapshot', input.idempotencyKey, receipt as unknown as ActionReceipt)
     return {
       outcome: 'COMPLETED' as const,
-      receipt: input.receipt,
+      receipt,
       stagedEntity: {
         type: 'research_snapshot', id: input.stagedEntityId,
         version: input.expectedVersion, status: 'research_ready',
@@ -107,10 +132,11 @@ class FakeDurableStagingGateway implements CrmStagedWriteDomainGateway {
       return { outcome: 'STALE' as const, currentFreshness: this.context.freshness.version }
     }
     this.emailEffects.push(structuredClone(input))
-    this.complete('crm.email.stageDraft', input.idempotencyKey, input.receipt as unknown as ActionReceipt)
+    const receipt = this.persistedReceipt(input.receipt)
+    this.complete('crm.email.stageDraft', input.idempotencyKey, receipt as unknown as ActionReceipt)
     return {
       outcome: 'COMPLETED' as const,
-      receipt: input.receipt,
+      receipt,
       stagedEntity: {
         type: 'outbound_message', id: input.stagedEntityId,
         version: input.expectedVersion, status: 'draft',
@@ -127,6 +153,11 @@ class FakeDurableStagingGateway implements CrmStagedWriteDomainGateway {
     const existing = this.claims.get(key)
     if (!existing) throw new Error('Missing claim.')
     existing.receipt = structuredClone(receipt)
+  }
+
+  private persistedReceipt<T>(receipt: T): T {
+    if (!this.roundTripCommitReceiptsThroughJson) return receipt
+    return JSON.parse(JSON.stringify(receipt)) as T
   }
 }
 
@@ -271,6 +302,89 @@ function runtime(gateway: FakeDurableStagingGateway, scopes: readonly string[]) 
     now: () => NOW, createId: () => `crm-staging-test-id-${id += 1}`,
   })
 }
+
+describe('durable receipt JSON equivalence', () => {
+  it('treats absent optional object properties and undefined optional properties as equal', () => {
+    expect(durableReceiptsAreJsonEquivalent(
+      equalityReceipt({ metadataSafe: undefined }),
+      equalityReceipt(),
+    )).toBe(true)
+    expect(durableReceiptsAreJsonEquivalent(
+      equalityReceipt({ validation: { state: 'pending', diagnosticsSafe: undefined } }),
+      equalityReceipt({ validation: { state: 'pending' } }),
+    )).toBe(true)
+  })
+
+  it.each([
+    ['null', null],
+    ['false', false],
+    ['zero', 0],
+    ['empty string', ''],
+  ])('preserves a meaningful %s value rather than treating it as absent', (_label, value) => {
+    expect(durableReceiptsAreJsonEquivalent(
+      equalityReceipt({ metadataSafe: { meaningful: value } }),
+      equalityReceipt({ metadataSafe: {} }),
+    )).toBe(false)
+  })
+
+  it('preserves receipt identity, effect identity, nested values, and array order', () => {
+    expect(durableReceiptsAreJsonEquivalent(
+      equalityReceipt({ receiptId: 'receipt-one' }),
+      equalityReceipt({ receiptId: 'receipt-two' }),
+    )).toBe(false)
+    expect(durableReceiptsAreJsonEquivalent(
+      equalityReceipt({ result: { entityId: '77777777-7777-4777-8777-777777777777', version: 1 } }),
+      equalityReceipt({ result: { entityId: '88888888-8888-4888-8888-888888888888', version: 1 } }),
+    )).toBe(false)
+    expect(durableReceiptsAreJsonEquivalent(
+      equalityReceipt({ result: { entityId: '77777777-7777-4777-8777-777777777777', version: 1 } }),
+      equalityReceipt({ result: { entityId: '77777777-7777-4777-8777-777777777777', version: 2 } }),
+    )).toBe(false)
+    expect(durableReceiptsAreJsonEquivalent(
+      equalityReceipt({ diagnosticsSafe: ['first', 'second'] }),
+      equalityReceipt({ diagnosticsSafe: ['second', 'first'] }),
+    )).toBe(false)
+  })
+
+  it('ignores plain-object insertion order while retaining every meaningful key', () => {
+    expect(durableReceiptsAreJsonEquivalent(
+      equalityReceipt({ metadataSafe: { alpha: 1, beta: 2 } }),
+      equalityReceipt({ metadataSafe: { beta: 2, alpha: 1 } }),
+    )).toBe(true)
+    expect(durableReceiptsAreJsonEquivalent(
+      equalityReceipt({ metadataSafe: { alpha: 1, beta: 2 } }),
+      equalityReceipt({ metadataSafe: { alpha: 1, beta: 3 } }),
+    )).toBe(false)
+  })
+
+  it.each([
+    ['non-finite number', Number.NaN],
+    ['bigint', BigInt(1)],
+    ['function', () => 'not JSON'],
+    ['symbol', Symbol('not-json')],
+    ['Date', new Date(NOW)],
+  ])('fails closed for unsupported JSON value: %s', (_label, value) => {
+    expect(durableReceiptsAreJsonEquivalent(
+      equalityReceipt({ metadataSafe: { unsupported: value } }),
+      equalityReceipt({ metadataSafe: { unsupported: value } }),
+    )).toBe(false)
+  })
+
+  it('fails closed for sparse arrays and cyclic objects', () => {
+    const sparse = new Array<unknown>(1)
+    const cyclic: Record<string, unknown> = {}
+    cyclic.self = cyclic
+
+    expect(durableReceiptsAreJsonEquivalent(
+      equalityReceipt({ diagnosticsSafe: sparse }),
+      equalityReceipt({ diagnosticsSafe: sparse }),
+    )).toBe(false)
+    expect(durableReceiptsAreJsonEquivalent(
+      equalityReceipt({ metadataSafe: cyclic }),
+      equalityReceipt({ metadataSafe: cyclic }),
+    )).toBe(false)
+  })
+})
 
 describe('SprintCRM staged-write coordinator', () => {
   it('stages one research snapshot and preserves the exact Shared receipt and trusted provenance', async () => {
@@ -436,6 +550,29 @@ describe('SprintCRM staged-write coordinator', () => {
     })
     const serialized = JSON.stringify({ result: first, effect: gateway.emailEffects[0] })
     expect(serialized).not.toMatch(/approved_by|approvedAt|sent_at|provider|gmail|ai_generations/iu)
+  })
+
+  it('accepts the exact Shared receipt after a JSONB-equivalent persistence roundtrip', async () => {
+    const gateway = new FakeDurableStagingGateway()
+    gateway.roundTripCommitReceiptsThroughJson = true
+    const result = await runtime(gateway, [SPRINT_CRM_SCOPES.EMAIL_STAGE]).core.route(
+      emailRequest({ idempotencyKey: 'email-json-roundtrip-key' }),
+    )
+
+    const originalReceipt = gateway.emailEffects[0]?.receipt as unknown as Record<string, unknown>
+    expect(Object.keys(originalReceipt).filter((key) => originalReceipt[key] === undefined)).toEqual([
+      'resultSnapshotId',
+      'provenance',
+      'diagnosticsSafe',
+      'metadataSafe',
+    ])
+    const persistedReceipt = JSON.parse(JSON.stringify(originalReceipt)) as Record<string, unknown>
+    expect(Object.hasOwn(persistedReceipt, 'resultSnapshotId')).toBe(false)
+    expect(Object.hasOwn(persistedReceipt, 'provenance')).toBe(false)
+    expect(Object.hasOwn(persistedReceipt, 'diagnosticsSafe')).toBe(false)
+    expect(Object.hasOwn(persistedReceipt, 'metadataSafe')).toBe(false)
+    expect(result).toMatchObject({ ok: true, receipt: { status: 'staged' } })
+    expect(gateway.emailEffects).toHaveLength(1)
   })
 
   it('fails closed on a transactional commit-time stale result and releases the pending claim', async () => {

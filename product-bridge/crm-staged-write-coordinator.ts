@@ -256,8 +256,69 @@ function parseSafeReceipt(
   return value as unknown as ActionReceipt
 }
 
-function sameReceipt(left: ActionReceipt, right: ActionReceipt): boolean {
-  return canonicalize(left, new Set()) === canonicalize(right, new Set())
+function canonicalizeDurableReceiptJson(value: unknown, ancestors: Set<object>): string {
+  if (value === null) return 'null'
+  if (typeof value === 'string' || typeof value === 'boolean') return JSON.stringify(value)
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) throw new Error('SprintCRM durable receipt is not JSON-safe.')
+    return JSON.stringify(value)
+  }
+  if (value === undefined || typeof value === 'bigint'
+      || typeof value === 'function' || typeof value === 'symbol') {
+    throw new Error('SprintCRM durable receipt is not JSON-safe.')
+  }
+  if (ancestors.has(value)) throw new Error('SprintCRM durable receipt contains a cycle.')
+  ancestors.add(value)
+  try {
+    if (Array.isArray(value)) {
+      const ownKeys = Reflect.ownKeys(value)
+      if (ownKeys.some((key) => typeof key !== 'string'
+          || (key !== 'length' && !/^(?:0|[1-9][0-9]*)$/u.test(key)))) {
+        throw new Error('SprintCRM durable receipt is not a plain JSON array.')
+      }
+      const entries: string[] = []
+      for (let index = 0; index < value.length; index += 1) {
+        if (!Object.hasOwn(value, index)) {
+          throw new Error('SprintCRM durable receipt contains a sparse JSON array.')
+        }
+        entries.push(canonicalizeDurableReceiptJson(value[index], ancestors))
+      }
+      return `[${entries.join(',')}]`
+    }
+
+    const prototype = Object.getPrototypeOf(value) as unknown
+    if (prototype !== Object.prototype && prototype !== null) {
+      throw new Error('SprintCRM durable receipt is not a plain JSON object.')
+    }
+    const record = value as Record<string, unknown>
+    const ownKeys = Reflect.ownKeys(record)
+    if (ownKeys.some((key) => typeof key !== 'string'
+        || !Object.prototype.propertyIsEnumerable.call(record, key))) {
+      throw new Error('SprintCRM durable receipt contains non-JSON object properties.')
+    }
+    const entries: string[] = []
+    for (const key of Object.keys(record).sort()) {
+      const descriptor = Object.getOwnPropertyDescriptor(record, key)
+      if (!descriptor || !('value' in descriptor)) {
+        throw new Error('SprintCRM durable receipt contains an accessor.')
+      }
+      if (descriptor.value === undefined) continue
+      entries.push(`${JSON.stringify(key)}:${canonicalizeDurableReceiptJson(descriptor.value, ancestors)}`)
+    }
+    return `{${entries.join(',')}}`
+  } finally {
+    ancestors.delete(value)
+  }
+}
+
+/** Compare an in-memory receipt with its durable JSON/JSONB representation. */
+export function durableReceiptsAreJsonEquivalent(left: ActionReceipt, right: ActionReceipt): boolean {
+  try {
+    return canonicalizeDurableReceiptJson(left, new Set())
+      === canonicalizeDurableReceiptJson(right, new Set())
+  } catch {
+    return false
+  }
 }
 
 function receiptMatchesPreparedEffect(
@@ -473,7 +534,7 @@ export class SprintCrmStagedWriteCoordinator implements IdempotencyStore, Sprint
         ? await this.options.gateway.commitResearch(this.researchCommit(claim, prepared, canonicalReceipt))
         : await this.options.gateway.commitEmailDraft(this.emailCommit(claim, prepared, canonicalReceipt))
       if ((outcome.outcome !== 'COMPLETED' && outcome.outcome !== 'REPLAY')
-          || !sameReceipt(parseSafeReceipt(
+          || !durableReceiptsAreJsonEquivalent(parseSafeReceipt(
             outcome.receipt,
             address.operationId,
             claim.stagedEntityId,
