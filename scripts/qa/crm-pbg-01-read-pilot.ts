@@ -1,32 +1,4 @@
-import { execFileSync } from 'node:child_process'
-
-const FROZEN_SHARED_PATH = 'C:\\PROJECTS\\shared-ai-product-bridge'
-const FROZEN_SHARED_HEAD = '563b6c8f0b6452ccc5f18f3aac5e058633b7cdb0'
-
-function createGitPreflightEnvironment(): NodeJS.ProcessEnv {
-  return Object.fromEntries(
-    Object.entries(process.env).filter(
-      ([name]) => !name.toUpperCase().startsWith('SPRINTCRM_BRIDGE_'),
-    ),
-  )
-}
-
-function readGitOutput(argumentsValue: readonly string[]): string {
-  return execFileSync('git', ['-c', 'core.fsmonitor=false', ...argumentsValue], {
-    encoding: 'utf8',
-    env: createGitPreflightEnvironment(),
-    stdio: ['ignore', 'pipe', 'ignore'],
-    windowsHide: true,
-  }).trim()
-}
-
-function verifyFrozenSharedCheckout(): void {
-  const head = readGitOutput(['-C', FROZEN_SHARED_PATH, 'rev-parse', 'HEAD'])
-  const status = readGitOutput(['-C', FROZEN_SHARED_PATH, 'status', '--porcelain'])
-  if (head !== FROZEN_SHARED_HEAD || status.length > 0) {
-    throw new Error('Frozen Shared Bridge preflight failed.')
-  }
-}
+import { verifyFrozenSharedCheckout } from './crm-shared-checkout-preflight.js'
 
 async function waitForShutdownSignal(): Promise<void> {
   await new Promise<void>((resolve) => {

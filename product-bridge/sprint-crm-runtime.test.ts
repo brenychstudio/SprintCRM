@@ -25,6 +25,10 @@ import {
   parseSprintCrmRuntimeScopes,
 } from './sprint-crm-mcp-runtime.js'
 import {
+  SPRINT_CRM_ACCEPTED_SHARED_HEAD,
+  verifyFrozenSharedCheckout,
+} from '../scripts/qa/crm-shared-checkout-preflight.js'
+import {
   SPRINT_CRM_DEFAULT_PILOT_SCOPES,
   SPRINT_CRM_MCP_TOOL_ALIASES,
   SPRINT_CRM_SCOPES,
@@ -579,6 +583,21 @@ describe('SprintCRM MCP runtime surface', () => {
 })
 
 describe('SprintCRM runtime security guardrails', () => {
+  it('accepts only the clean SHARED-PBG-FIX3 checkout state', () => {
+    const verifyState = (head: string, status: string): void => {
+      verifyFrozenSharedCheckout((argumentsValue) => (
+        argumentsValue.includes('rev-parse') ? head : status
+      ))
+    }
+
+    expect(SPRINT_CRM_ACCEPTED_SHARED_HEAD).toBe('cf37a7937e55803ea48cd23cc028521cc8fc5881')
+    expect(() => verifyState(SPRINT_CRM_ACCEPTED_SHARED_HEAD, '')).not.toThrow()
+    expect(() => verifyState('563b6c8f0b6452ccc5f18f3aac5e058633b7cdb0', ''))
+      .toThrow('Frozen Shared Bridge preflight failed.')
+    expect(() => verifyState(SPRINT_CRM_ACCEPTED_SHARED_HEAD, ' M packages/transport-mcp/src/mcp-tool-mapper.ts'))
+      .toThrow('Frozen Shared Bridge preflight failed.')
+  })
+
   it('contains only the five CRM staging RPCs and no uncontrolled mutation, AI, raw SQL or elevated key path', () => {
     const sourceFiles = [
       'product-bridge/authenticated-supabase-runtime.ts',
@@ -588,6 +607,7 @@ describe('SprintCRM runtime security guardrails', () => {
       'product-bridge/sprint-crm-product-adapter.ts',
       'product-bridge/supabase-crm-read-gateway.ts',
       'scripts/qa/crm-pbg-01-read-pilot.ts',
+      'scripts/qa/crm-shared-checkout-preflight.ts',
     ]
     const sources = sourceFiles
       .map((file) => readFileSync(path.join(process.cwd(), file), 'utf8'))
@@ -625,6 +645,10 @@ describe('SprintCRM runtime security guardrails', () => {
       path.join(process.cwd(), 'scripts/qa/crm-pbg-01-read-pilot.ts'),
       'utf8',
     )
+    const preflightSource = readFileSync(
+      path.join(process.cwd(), 'scripts/qa/crm-shared-checkout-preflight.ts'),
+      'utf8',
+    )
     const sharedPreflightCall = pilotSource.indexOf('  verifyFrozenSharedCheckout()')
     const productBridgeDynamicImport = pilotSource.indexOf("  } = await import('../../product-bridge/index.js')")
     expect(sharedPreflightCall).toBeGreaterThan(-1)
@@ -632,8 +656,8 @@ describe('SprintCRM runtime security guardrails', () => {
     expect(pilotSource.slice(0, productBridgeDynamicImport)).not.toContain(
       "from '../../product-bridge/index.js'",
     )
-    expect(pilotSource).toContain("!name.toUpperCase().startsWith('SPRINTCRM_BRIDGE_')")
-    expect(pilotSource).toContain('env: createGitPreflightEnvironment()')
+    expect(preflightSource).toContain("!name.toUpperCase().startsWith('SPRINTCRM_BRIDGE_')")
+    expect(preflightSource).toContain('env: createGitPreflightEnvironment()')
     expect(pilotSource).not.toMatch(/JSON\.stringify\(\s*(?:config|authenticated|authority|process\.env)/u)
     expect(pilotSource).not.toMatch(/console\.(?:log|error)\([^\n]*(?:token|anonKey|userId|organizationId)/iu)
   })

@@ -238,7 +238,7 @@ The required Shared repository baseline is:
 
 ```text
 C:\PROJECTS\shared-ai-product-bridge
-563b6c8f0b6452ccc5f18f3aac5e058633b7cdb0
+cf37a7937e55803ea48cd23cc028521cc8fc5881
 ```
 
 Before installing dependencies or running the pilot, verify that this exact commit is checked out and its working tree is clean. The relative package links resolve from SprintCRM to the Shared `packages/*` directories. This is an internal local pilot distribution mechanism, not the final external packaging or release strategy.
@@ -294,7 +294,7 @@ Use this lifecycle for a later supervised rerun. Do not automate credential extr
 
 ### Prepare
 
-1. Verify the intended SprintCRM baseline and a clean frozen Shared checkout at `563b6c8f0b6452ccc5f18f3aac5e058633b7cdb0`.
+1. Verify the intended SprintCRM baseline and a clean accepted Shared checkout at `cf37a7937e55803ea48cd23cc028521cc8fc5881`.
 2. Obtain the existing SprintCRM Supabase project URL.
 3. Use only the project's publishable key or legacy `anon` identity; never use `sb_secret_...`, `service_role`, or an equivalent elevated credential.
 4. Select one expected SprintCRM organization UUID through trusted operator configuration. Do not pass it through semantic tool input.
