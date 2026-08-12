@@ -21,6 +21,7 @@ const expectedAiDraftPromptV2Migration = '20260801000008_accept_ai_draft_prompt_
 const expectedAiDraftPromptV3Migration = '20260801000009_accept_ai_draft_prompt_v3.sql'
 const expectedAiDraftPromptV4Migration = '20260801000010_accept_ai_draft_prompt_v4.sql'
 const expectedProductBridgeStagingMigration = '20260810000001_product_bridge_transactional_staging.sql'
+const expectedGmailFoundationMigration = '20260812000001_gmail_account_communication_foundation.sql'
 const requiredCampaignTables = [
   'campaigns',
   'campaign_members',
@@ -74,6 +75,12 @@ if (!files.includes(expectedManualMessageChannelFix)) {
 
 if (!files.includes(expectedProductBridgeStagingMigration)) {
   throw new Error(`Missing required Product Bridge staging migration: ${expectedProductBridgeStagingMigration}`)
+}
+if (!files.includes(expectedGmailFoundationMigration)) {
+  throw new Error(`Missing required Gmail account/communication migration: ${expectedGmailFoundationMigration}`)
+}
+if (files.indexOf(expectedGmailFoundationMigration) <= files.indexOf(expectedProductBridgeStagingMigration)) {
+  throw new Error('Gmail foundation migration must follow the accepted Product Bridge baseline.')
 }
 
 if (!files.includes(expectedAiRuntimeProbeRequestIdFix)) {
@@ -518,6 +525,73 @@ for (const forbidden of [
   }
 }
 
+const gmailFoundationSql = await readFile(
+  path.join(migrationsDirectory, expectedGmailFoundationMigration),
+  'utf8',
+)
+for (const marker of [
+  "alter type public.next_action add value if not exists 'review_reply'",
+  'create table public.mailbox_accounts',
+  'create table private.gmail_oauth_requests',
+  'create table private.mailbox_account_credentials',
+  'create table public.communication_threads',
+  'create table public.communication_links',
+  'create table public.external_messages',
+  'create table public.email_send_requests',
+  'provider_account_subject text not null',
+  'references vault.secrets(id)',
+  'communication_links_has_target_check',
+  'email_send_requests_idempotency_key',
+  'email_send_requests_outbound_account_key',
+  'email_send_requests_stable_message_id_key',
+  'alter table public.mailbox_accounts enable row level security',
+  'alter table public.communication_threads enable row level security',
+  'alter table public.communication_links enable row level security',
+  'alter table public.external_messages enable row level security',
+  'alter table public.email_send_requests enable row level security',
+  'revoke all on table private.gmail_oauth_requests from public, anon, authenticated, service_role',
+  'revoke all on table vault.decrypted_secrets from public, anon, authenticated, service_role',
+  'create or replace function public.create_gmail_oauth_request(',
+  'create or replace function public.claim_gmail_oauth_callback(',
+  'create or replace function public.complete_gmail_account_connection(',
+  'create or replace function public.get_gmail_refresh_credential(',
+  'create or replace function public.mark_gmail_reauthorization_required(',
+  'create or replace function public.complete_gmail_account_disconnect(',
+  'grant execute on function public.create_gmail_oauth_request',
+  'grant execute on function public.claim_gmail_oauth_callback(text) to service_role',
+  'mailbox provider identity is immutable',
+  'external provider message identity is immutable',
+  'email send request identity is immutable',
+]) {
+  if (!gmailFoundationSql.includes(marker)) {
+    throw new Error(`Gmail foundation migration is missing required guard: ${marker}`)
+  }
+}
+for (const marker of [
+  'mailbox_account_credentials_account_org_fkey',
+  'communication_threads_account_org_fkey',
+  'communication_links_thread_org_fkey',
+  'communication_links_lead_org_fkey',
+  'communication_links_campaign_member_org_fkey',
+  'communication_links_outbound_message_org_fkey',
+  'external_messages_thread_identity_fkey',
+  'email_send_requests_account_org_fkey',
+  'email_send_requests_outbound_org_fkey',
+]) {
+  if (!gmailFoundationSql.includes(marker)) {
+    throw new Error(`Gmail foundation migration is missing organization-safe FK: ${marker}`)
+  }
+}
+if (/grant\s+(?:insert|update|delete|all)[^;]*on\s+(?:table\s+)?public\.(?:mailbox_accounts|communication_threads|communication_links|external_messages|email_send_requests)[^;]*to\s+authenticated/i.test(gmailFoundationSql)) {
+  throw new Error('Gmail foundation grants direct authenticated writes to communication state.')
+}
+if (/users[.]messages[.]send|gmail[.]googleapis[.]com\/gmail\/v1|create\s+(?:or\s+replace\s+)?function\s+public\.(?:gmail_send|send_gmail)/i.test(gmailFoundationSql)) {
+  throw new Error('Gmail foundation introduces provider send authority.')
+}
+if (/alter\s+table\s+public\.product_bridge|create\s+(?:or\s+replace\s+)?function\s+public\.product_bridge/i.test(gmailFoundationSql)) {
+  throw new Error('Gmail foundation changes the accepted Product Bridge surface.')
+}
+
 const schemaSnapshot = await readFile(schemaSnapshotPath, 'utf8')
 for (const marker of [
   'uidx_leads_org_email_norm on public.leads(org_id, email_norm)',
@@ -525,6 +599,22 @@ for (const marker of [
   'uidx_leads_org_phone_norm on public.leads(org_id, phone_norm)',
 ]) {
   if (!schemaSnapshot.includes(marker)) throw new Error(`Schema snapshot is missing organization-scoped dedup guard: ${marker}`)
+}
+for (const marker of [
+  '-- 18) Gmail account and communication foundation (CRM-GMAIL-00A)',
+  'create table public.mailbox_accounts',
+  'create table private.gmail_oauth_requests',
+  'create table private.mailbox_account_credentials',
+  'create table public.communication_threads',
+  'create table public.communication_links',
+  'create table public.external_messages',
+  'create table public.email_send_requests',
+  'create or replace function public.complete_gmail_account_connection(',
+  'create or replace function public.complete_gmail_account_disconnect(',
+]) {
+  if (!schemaSnapshot.includes(marker)) {
+    throw new Error(`Schema snapshot is missing Gmail foundation seam: ${marker}`)
+  }
 }
 for (const marker of [
   'create table public.product_bridge_write_requests',

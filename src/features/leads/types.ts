@@ -1,6 +1,6 @@
 export type LeadStage = 'new' | 'contacted' | 'replied' | 'proposal' | 'won' | 'lost'
 export type LeadStatus = 'active' | 'archived'
-export type NextAction = 'follow_up' | 'send_proposal' | 'request_call' | 'nurture'
+export type NextAction = 'follow_up' | 'send_proposal' | 'request_call' | 'nurture' | 'review_reply'
 export type OutreachChannel = 'email' | 'linkedin' | 'ig' | 'other'
 export type OutreachLanguage = 'en' | 'uk' | 'es' | 'ru'
 export type OutreachVariant = 'short' | 'standard' | 'premium'
