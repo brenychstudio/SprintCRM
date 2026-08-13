@@ -275,7 +275,8 @@ export async function verifyGoogleIdToken(input: {
   }
   const jwk = jwks.keys.find((candidate) => {
     const key = readObject(candidate)
-    return key?.kid === header.kid && key.kty === 'RSA' && (key.use === undefined || key.use === 'sig')
+    if (!key) return false
+    return key.kid === header.kid && key.kty === 'RSA' && (key.use === undefined || key.use === 'sig')
   })
   if (!jwk) return { ok: false, code: 'identity_invalid' }
 

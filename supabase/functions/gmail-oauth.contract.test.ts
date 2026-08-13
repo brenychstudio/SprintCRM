@@ -21,13 +21,20 @@ describe('Gmail connection authority contract', () => {
     expect(scopeBlock).not.toMatch(/mail\.google\.com|gmail\.(?:readonly|metadata|modify|compose|settings)/)
   })
 
+  it('pins every Gmail Edge client to the accepted Supabase JS version', () => {
+    for (const source of [start, callback, disconnect]) {
+      expect(source).toContain("npm:@supabase/supabase-js@2.97.0")
+      expect(source).not.toMatch(/npm:@supabase\/supabase-js@2['"]/)
+    }
+  })
+
   it('stores state only as SHA-256, retains PKCE privately, and makes callback claim one-time', () => {
     expect(start).toContain('p_state_hash: material.stateHash')
     expect(start).not.toContain('p_state: material.state')
     expect(start).toContain('p_pkce_code_verifier: material.codeVerifier')
     expect(callback).toContain("claim.claim_outcome === 'EXPIRED'")
     expect(callback).toContain("claim.claim_outcome !== 'CLAIMED'")
-    expect(migration).toContain("where request.state_hash = p_state_hash\n  for update")
+    expect(migration).toMatch(/where request\.state_hash = p_state_hash\r?\n\s+for update/)
     expect(migration).toContain("set status = 'claimed', consumed_at = now()")
   })
 

@@ -8,6 +8,7 @@ $ErrorActionPreference = 'Stop'
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $containerName = 'sprintcrm-gmail00a-proof'
 $postgresImage = 'public.ecr.aws/supabase/postgres@sha256:178f0976b54a39237096bfa310c1a352dbc82fb1b08dda45cdb8acb5d40c1426'
+$expectedSupabaseCliVersion = '2.108.0'
 $containerStarted = $false
 
 function Invoke-TrackedSql {
@@ -79,6 +80,8 @@ try {
   if ($domainIndex -lt 0 -or $pbgIndex -le $domainIndex) { throw 'Accepted baseline markers are unavailable.' }
 
   Invoke-TrackedSql -SqlLines $schemaLines[0..($domainIndex - 1)] -Label 'Foundation schema slice' | Out-Null
+  Invoke-TrackedSql -SqlLines (Get-Content 'supabase/migrations/20260222_org_ready_hardening_patch.sql') `
+    -Label 'Accepted organization hardening dependency' | Out-Null
   Invoke-TrackedSql -SqlLines (Get-Content 'supabase/migrations/20260427000001_ai_outreach_foundation.sql') `
     -Label 'Accepted AI foundation dependency' | Out-Null
   Invoke-TrackedSql -SqlLines $schemaLines[$domainIndex..($pbgIndex - 1)] `
@@ -140,35 +143,25 @@ where pronamespace = 'public'::regnamespace
   Write-Output 'CRM-GMAIL-00A pgTAP=PASS assertions=37/37'
 
   if ($GenerateTypes) {
+    $supabaseCliVersion = (& npx --yes "supabase@$expectedSupabaseCliVersion" --version | Select-Object -Last 1).Trim()
+    if ($LASTEXITCODE -ne 0 -or $supabaseCliVersion -ne $expectedSupabaseCliVersion) {
+      throw "Expected Supabase CLI $expectedSupabaseCliVersion for canonical type generation, received $supabaseCliVersion."
+    }
     $databaseUrl = "postgresql://postgres:postgres@127.0.0.1:${DatabasePort}/postgres"
-    $generatedTypes = @(& npx supabase gen types typescript --db-url $databaseUrl --schema public)
+    $generatedTypes = @(& npx --yes "supabase@$expectedSupabaseCliVersion" gen types typescript --db-url $databaseUrl --schema public)
     if ($LASTEXITCODE -ne 0 -or -not $generatedTypes) {
       throw 'Supabase database type generation failed against disposable PostgreSQL.'
     }
     $typesPath = Join-Path $repositoryRoot 'src\lib\supabase\database.types.ts'
     $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
     $generatedText = (($generatedTypes -join [Environment]::NewLine).TrimEnd() + [Environment]::NewLine)
-    # postgres-meta cannot infer non-STRICT function argument nullability. Keep
-    # the already accepted PBG nullable input contract synchronized without
-    # changing the immutable PBG migration or its runtime surface.
-    $pbgStart = $generatedText.IndexOf('      stage_product_bridge_research_snapshot:')
-    $pbgEnd = $generatedText.IndexOf('      start_ai_draft_job:', $pbgStart)
-    if ($pbgStart -lt 0 -or $pbgEnd -le $pbgStart) {
-      throw 'Generated Product Bridge type block was not found.'
-    }
-    $pbgBlock = $generatedText.Substring($pbgStart, $pbgEnd - $pbgStart)
-    $normalizedPbgBlock = $pbgBlock `
-      -replace 'p_confidence: number\r?\n', "p_confidence: number | null$([Environment]::NewLine)" `
-      -replace 'p_recommended_case: string\r?\n', "p_recommended_case: string | null$([Environment]::NewLine)"
-    if ($normalizedPbgBlock -eq $pbgBlock) {
-      throw 'Generated Product Bridge nullable inputs did not require the expected metadata normalization.'
-    }
-    $generatedText = $generatedText.Substring(0, $pbgStart) + $normalizedPbgBlock + $generatedText.Substring($pbgEnd)
     [System.IO.File]::WriteAllText(
       $typesPath,
       $generatedText,
       $utf8NoBom
     )
+    & node scripts/qa/normalize-database-types.mjs $typesPath
+    if ($LASTEXITCODE -ne 0) { throw 'Generated database type normalization failed.' }
     Write-Output 'Generated database types=PASS source=disposable PostgreSQL'
   }
 

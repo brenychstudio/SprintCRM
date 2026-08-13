@@ -1,4 +1,4 @@
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.97.0'
 import {
   buildSafeAppRedirect,
   exchangeAuthorizationCode,

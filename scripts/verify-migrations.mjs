@@ -3,6 +3,7 @@ import path from 'node:path'
 
 const migrationsDirectory = path.resolve('supabase/migrations')
 const schemaSnapshotPath = path.resolve('supabase/schema.sql')
+const databaseTypesPath = path.resolve('src/lib/supabase/database.types.ts')
 const expectedFoundationMigration = '20260427000001_ai_outreach_foundation.sql'
 const expectedImportDriftMigration = '20260722000001_capture_import_schema_drift.sql'
 const expectedCampaignDomainMigration = '20260722000002_outreach_campaign_domain.sql'
@@ -590,6 +591,73 @@ if (/users[.]messages[.]send|gmail[.]googleapis[.]com\/gmail\/v1|create\s+(?:or\
 }
 if (/alter\s+table\s+public\.product_bridge|create\s+(?:or\s+replace\s+)?function\s+public\.product_bridge/i.test(gmailFoundationSql)) {
   throw new Error('Gmail foundation changes the accepted Product Bridge surface.')
+}
+
+const databaseTypes = await readFile(databaseTypesPath, 'utf8')
+function generatedRpcBlock(name) {
+  const marker = `      ${name}: {`
+  const start = databaseTypes.indexOf(marker)
+  if (start < 0) throw new Error(`Generated database types are missing RPC: ${name}`)
+  const remaining = databaseTypes.slice(start + marker.length)
+  const next = remaining.match(/\n      [a-z][a-z0-9_]*: /)
+  if (next?.index === undefined) throw new Error(`Generated RPC type block is unterminated: ${name}`)
+  return databaseTypes.slice(start, start + marker.length + next.index)
+}
+function requireNullableGeneratedArgs(name, fields) {
+  const block = generatedRpcBlock(name)
+  const args = block.slice(block.indexOf('        Args:'), block.indexOf('        Returns:'))
+  for (const field of fields) {
+    if (!new RegExp(`          ${field}: [^\\n]+\\| null`).test(args)) {
+      throw new Error(`Generated RPC ${name} lost nullable argument: ${field}`)
+    }
+  }
+}
+const nullableAiFinishArgs = [
+  'p_cached_input_tokens',
+  'p_error_code',
+  'p_error_message',
+  'p_input_tokens',
+  'p_output_payload',
+  'p_output_tokens',
+  'p_provider_request_id',
+  'p_provider_response_id',
+  'p_total_tokens',
+]
+for (const name of ['finish_ai_research_job', 'finish_ai_draft_job']) {
+  requireNullableGeneratedArgs(name, nullableAiFinishArgs)
+}
+requireNullableGeneratedArgs('finish_ai_runtime_probe', [...nullableAiFinishArgs, 'p_duration_ms'])
+for (const name of [
+  'claim_gmail_oauth_callback',
+  'complete_gmail_account_connection',
+  'complete_gmail_account_disconnect',
+  'create_gmail_oauth_request',
+  'fail_gmail_oauth_request',
+  'get_gmail_refresh_credential',
+  'mark_gmail_reauthorization_required',
+]) {
+  generatedRpcBlock(name)
+}
+for (const table of [
+  'mailbox_accounts',
+  'communication_threads',
+  'communication_links',
+  'external_messages',
+  'email_send_requests',
+]) {
+  if (!databaseTypes.includes(`      ${table}: {`)) {
+    throw new Error(`Generated database types are missing Gmail table: ${table}`)
+  }
+}
+for (const marker of [
+  '__InternalSupabase:',
+  'PostgrestVersion: "14.1"',
+  '      default_next_step_for_stage: {',
+  '      get_product_bridge_staging_context: {',
+  '      stage_product_bridge_research_snapshot: {',
+  '      stage_product_bridge_email_draft: {',
+]) {
+  if (!databaseTypes.includes(marker)) throw new Error(`Generated database types are missing canonical contract: ${marker}`)
 }
 
 const schemaSnapshot = await readFile(schemaSnapshotPath, 'utf8')

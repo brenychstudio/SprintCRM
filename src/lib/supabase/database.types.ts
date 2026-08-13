@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.1"
+  }
   public: {
     Tables: {
       activities: {
@@ -1558,6 +1563,17 @@ export type Database = {
             }
           }
       current_org_id: { Args: never; Returns: string }
+      default_next_step_for_stage: {
+        Args: {
+          p_base_at?: string
+          p_stage: Database["public"]["Enums"]["lead_stage"]
+          p_tz?: string
+        }
+        Returns: {
+          next_action: Database["public"]["Enums"]["next_action"]
+          next_action_at: string
+        }[]
+      }
       fail_gmail_oauth_request: {
         Args: { p_request_id: string; p_safe_error_code: string }
         Returns: undefined
@@ -1675,83 +1691,83 @@ export type Database = {
       finish_ai_draft_job: {
         Args: {
           p_actor_user_id: string
-          p_cached_input_tokens: number
+          p_cached_input_tokens: number | null
           p_duration_ms: number
-          p_error_code: string
-          p_error_message: string
-          p_input_tokens: number
+          p_error_code: string | null
+          p_error_message: string | null
+          p_input_tokens: number | null
           p_job_id: string
-          p_output_payload: Json
-          p_output_tokens: number
-          p_provider_request_id: string
-          p_provider_response_id: string
+          p_output_payload: Json | null
+          p_output_tokens: number | null
+          p_provider_request_id: string | null
+          p_provider_response_id: string | null
           p_status: string
-          p_total_tokens: number
+          p_total_tokens: number | null
         }
         Returns: {
-          cached_input_tokens: number
-          duration_ms: number
-          estimated_cost_usd: number
+          cached_input_tokens: number | null
+          duration_ms: number | null
+          estimated_cost_usd: number | null
           generation_status: string
-          input_tokens: number
+          input_tokens: number | null
           job_id: string
-          message_version: number
-          model_name: string
-          output_tokens: number
-          request_id: string
-          research_snapshot_id: string
-          research_version: number
-          schema_version: string
-          total_tokens: number
+          message_version: number | null
+          model_name: string | null
+          output_tokens: number | null
+          request_id: string | null
+          research_snapshot_id: string | null
+          research_version: number | null
+          schema_version: string | null
+          total_tokens: number | null
         }[]
       }
       finish_ai_research_job: {
         Args: {
           p_actor_user_id: string
-          p_cached_input_tokens: number
+          p_cached_input_tokens: number | null
           p_duration_ms: number
-          p_error_code: string
-          p_error_message: string
-          p_input_tokens: number
+          p_error_code: string | null
+          p_error_message: string | null
+          p_input_tokens: number | null
           p_job_id: string
-          p_output_payload: Json
-          p_output_tokens: number
-          p_provider_request_id: string
-          p_provider_response_id: string
+          p_output_payload: Json | null
+          p_output_tokens: number | null
+          p_provider_request_id: string | null
+          p_provider_response_id: string | null
           p_status: string
-          p_total_tokens: number
+          p_total_tokens: number | null
         }
         Returns: {
-          cached_input_tokens: number
-          duration_ms: number
-          estimated_cost_usd: number
+          cached_input_tokens: number | null
+          duration_ms: number | null
+          estimated_cost_usd: number | null
           generation_status: string
-          input_tokens: number
+          input_tokens: number | null
           job_id: string
-          model_name: string
-          output_tokens: number
-          request_id: string
-          research_snapshot_id: string
-          research_version: number
-          schema_version: string
-          total_tokens: number
+          model_name: string | null
+          output_tokens: number | null
+          request_id: string | null
+          research_snapshot_id: string | null
+          research_version: number | null
+          schema_version: string | null
+          total_tokens: number | null
         }[]
       }
       finish_ai_runtime_probe: {
         Args: {
           p_actor_user_id: string
-          p_cached_input_tokens: number
-          p_duration_ms: number
-          p_error_code: string
-          p_error_message: string
-          p_input_tokens: number
+          p_cached_input_tokens: number | null
+          p_duration_ms: number | null
+          p_error_code: string | null
+          p_error_message: string | null
+          p_input_tokens: number | null
           p_job_id: string
-          p_output_payload: Json
-          p_output_tokens: number
-          p_provider_request_id: string
-          p_provider_response_id: string
+          p_output_payload: Json | null
+          p_output_tokens: number | null
+          p_provider_request_id: string | null
+          p_provider_response_id: string | null
           p_status: string
-          p_total_tokens: number
+          p_total_tokens: number | null
         }
         Returns: {
           applied_at: string | null
@@ -2025,19 +2041,19 @@ export type Database = {
           p_request_id: string
         }
         Returns: {
-          cached_input_tokens: number
-          duration_ms: number
-          estimated_cost_usd: number
+          cached_input_tokens: number | null
+          duration_ms: number | null
+          estimated_cost_usd: number | null
           generation_status: string
-          input_tokens: number
+          input_tokens: number | null
           job_id: string
-          model_name: string
-          output_tokens: number
-          request_id: string
-          research_snapshot_id: string
-          research_version: number
-          schema_version: string
-          total_tokens: number
+          model_name: string | null
+          output_tokens: number | null
+          request_id: string | null
+          research_snapshot_id: string | null
+          research_version: number | null
+          schema_version: string | null
+          total_tokens: number | null
           was_created: boolean
         }[]
       }
@@ -2050,17 +2066,17 @@ export type Database = {
           p_request_id: string
         }
         Returns: {
-          cached_input_tokens: number
-          duration_ms: number
-          estimated_cost_usd: number
+          cached_input_tokens: number | null
+          duration_ms: number | null
+          estimated_cost_usd: number | null
           generation_status: string
-          input_tokens: number
+          input_tokens: number | null
           job_id: string
-          model_name: string
-          output_tokens: number
-          request_id: string
-          schema_version: string
-          total_tokens: number
+          model_name: string | null
+          output_tokens: number | null
+          request_id: string | null
+          schema_version: string | null
+          total_tokens: number | null
           was_created: boolean
         }[]
       }
@@ -2072,17 +2088,17 @@ export type Database = {
           p_request_id: string
         }
         Returns: {
-          cached_input_tokens: number
-          duration_ms: number
-          estimated_cost_usd: number
+          cached_input_tokens: number | null
+          duration_ms: number | null
+          estimated_cost_usd: number | null
           generation_status: string
-          input_tokens: number
+          input_tokens: number | null
           job_id: string
-          model_name: string
-          output_tokens: number
-          request_id: string
-          schema_version: string
-          total_tokens: number
+          model_name: string | null
+          output_tokens: number | null
+          request_id: string | null
+          schema_version: string | null
+          total_tokens: number | null
           was_created: boolean
         }[]
       }

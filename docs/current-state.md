@@ -10,6 +10,8 @@ The feature-gated `/settings` card exposes safe account metadata and explicit co
 
 Implementation validation uses disposable Supabase PostgreSQL 17.6 with Vault 0.3.1 and 37 pgTAP assertions; no production migration, function deployment, secret change, Google OAuth/API call, or email action is part of implementation. Production migration/OAuth acceptance remains the next operational checkpoint (`CRM-GMAIL-00A-ACCEPT`).
 
+CRM-GMAIL-00A is now rebased onto the canonical Shared-bootstrap and Edge-green `main`. The permanent Deno 2.1.12 gate discovers and checks the outreach runtime plus all three Gmail OAuth entrypoints. Generated public types retain every canonical pre-Gmail RPC, including nullable AI lifecycle fields, while adding the Gmail schema; the disposable generator is pinned to Supabase CLI 2.108.0 and followed by a fail-closed normalization/verifier for postgres-meta nullability limits. Gmail Edge imports are pinned to Supabase JS 2.97.0 and JWKS key selection uses explicit object narrowing without changing `kid`/RSA/signature-use requirements. Repository validation is green; production remains unapplied, undeployed, disabled, and unconnected.
+
 # Previous accepted state — OUTREACH-03C supervised AI draft generation
 
 ## CRM-EDGE-00A Edge Function type-safety baseline
