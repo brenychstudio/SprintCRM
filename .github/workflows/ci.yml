@@ -14,13 +14,61 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - name: Check out pinned Shared Bridge
+        uses: actions/checkout@v5
+        with:
+          repository: brenychstudio/shared-ai-product-bridge
+          ref: cf37a7937e55803ea48cd23cc028521cc8fc5881
+          token: ${{ secrets.SHARED_BRIDGE_READ_TOKEN }}
+          persist-credentials: false
+          path: .ci/node_modules/shared-ai-product-bridge
       - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: npm
+      - name: Verify and bootstrap Shared Bridge dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          readonly expected_sha='cf37a7937e55803ea48cd23cc028521cc8fc5881'
+          readonly shared_checkout="$(realpath "$GITHUB_WORKSPACE/.ci/node_modules/shared-ai-product-bridge")"
+          readonly actual_sha="$(git -C "$shared_checkout" rev-parse HEAD)"
+
+          if [[ "$actual_sha" != "$expected_sha" ]]; then
+            echo "Shared Bridge HEAD mismatch: expected $expected_sha, received $actual_sha" >&2
+            exit 1
+          fi
+
+          readonly dependency_root="$(realpath -m "$GITHUB_WORKSPACE/../../../PROJECTS/shared-ai-product-bridge")"
+          mkdir -p "$(dirname "$dependency_root")"
+          if [[ -e "$dependency_root" || -L "$dependency_root" ]]; then
+            echo "Refusing to replace existing Shared Bridge dependency root: $dependency_root" >&2
+            exit 1
+          fi
+          ln -s "$shared_checkout" "$dependency_root"
+
+          readonly packages=(contracts core product-sdk transport-mcp testing tunnel-core)
+          for package_name in "${packages[@]}"; do
+            expected_package="$shared_checkout/packages/$package_name"
+            dependency_package="$GITHUB_WORKSPACE/../../../PROJECTS/shared-ai-product-bridge/packages/$package_name"
+            if [[ ! -d "$dependency_package" ]]; then
+              echo "Missing Shared Bridge package directory: $package_name" >&2
+              exit 1
+            fi
+            if [[ "$(realpath "$dependency_package")" != "$(realpath "$expected_package")" ]]; then
+              echo "Shared Bridge package resolved outside the pinned checkout: $package_name" >&2
+              exit 1
+            fi
+          done
+
+          echo "Shared Bridge dependency bootstrap verified at $actual_sha"
+      - name: Install pinned Shared Bridge dependencies
+        run: npm ci --prefix .ci/node_modules/shared-ai-product-bridge
       - run: npm ci
       - run: npm run verify:migrations
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test:unit
       - run: npm run build
+      - run: npm run test:product-bridge
