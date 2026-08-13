@@ -3,6 +3,7 @@ import path from 'node:path'
 
 const migrationsDirectory = path.resolve('supabase/migrations')
 const schemaSnapshotPath = path.resolve('supabase/schema.sql')
+const databaseTypesPath = path.resolve('src/lib/supabase/database.types.ts')
 const expectedFoundationMigration = '20260427000001_ai_outreach_foundation.sql'
 const expectedImportDriftMigration = '20260722000001_capture_import_schema_drift.sql'
 const expectedCampaignDomainMigration = '20260722000002_outreach_campaign_domain.sql'
@@ -21,6 +22,8 @@ const expectedAiDraftPromptV2Migration = '20260801000008_accept_ai_draft_prompt_
 const expectedAiDraftPromptV3Migration = '20260801000009_accept_ai_draft_prompt_v3.sql'
 const expectedAiDraftPromptV4Migration = '20260801000010_accept_ai_draft_prompt_v4.sql'
 const expectedProductBridgeStagingMigration = '20260810000001_product_bridge_transactional_staging.sql'
+const expectedGmailFoundationMigration = '20260812000001_gmail_account_communication_foundation.sql'
+const expectedGmailScopeContractFix = '20260813000001_gmail_connection_scope_contract_fix.sql'
 const requiredCampaignTables = [
   'campaigns',
   'campaign_members',
@@ -74,6 +77,18 @@ if (!files.includes(expectedManualMessageChannelFix)) {
 
 if (!files.includes(expectedProductBridgeStagingMigration)) {
   throw new Error(`Missing required Product Bridge staging migration: ${expectedProductBridgeStagingMigration}`)
+}
+if (!files.includes(expectedGmailFoundationMigration)) {
+  throw new Error(`Missing required Gmail account/communication migration: ${expectedGmailFoundationMigration}`)
+}
+if (files.indexOf(expectedGmailFoundationMigration) <= files.indexOf(expectedProductBridgeStagingMigration)) {
+  throw new Error('Gmail foundation migration must follow the accepted Product Bridge baseline.')
+}
+if (!files.includes(expectedGmailScopeContractFix)) {
+  throw new Error(`Missing required Gmail persistence scope forward-fix: ${expectedGmailScopeContractFix}`)
+}
+if (files.indexOf(expectedGmailScopeContractFix) <= files.indexOf(expectedGmailFoundationMigration)) {
+  throw new Error('Gmail persistence scope forward-fix must follow the applied Gmail foundation migration.')
 }
 
 if (!files.includes(expectedAiRuntimeProbeRequestIdFix)) {
@@ -518,6 +533,165 @@ for (const forbidden of [
   }
 }
 
+const gmailFoundationSql = await readFile(
+  path.join(migrationsDirectory, expectedGmailFoundationMigration),
+  'utf8',
+)
+for (const marker of [
+  "alter type public.next_action add value if not exists 'review_reply'",
+  'create table public.mailbox_accounts',
+  'create table private.gmail_oauth_requests',
+  'create table private.mailbox_account_credentials',
+  'create table public.communication_threads',
+  'create table public.communication_links',
+  'create table public.external_messages',
+  'create table public.email_send_requests',
+  'provider_account_subject text not null',
+  'references vault.secrets(id)',
+  'communication_links_has_target_check',
+  'email_send_requests_idempotency_key',
+  'email_send_requests_outbound_account_key',
+  'email_send_requests_stable_message_id_key',
+  'alter table public.mailbox_accounts enable row level security',
+  'alter table public.communication_threads enable row level security',
+  'alter table public.communication_links enable row level security',
+  'alter table public.external_messages enable row level security',
+  'alter table public.email_send_requests enable row level security',
+  'revoke all on table private.gmail_oauth_requests from public, anon, authenticated, service_role',
+  'revoke all on table vault.decrypted_secrets from public, anon, authenticated, service_role',
+  'create or replace function public.create_gmail_oauth_request(',
+  'create or replace function public.claim_gmail_oauth_callback(',
+  'create or replace function public.complete_gmail_account_connection(',
+  'create or replace function public.get_gmail_refresh_credential(',
+  'create or replace function public.mark_gmail_reauthorization_required(',
+  'create or replace function public.complete_gmail_account_disconnect(',
+  'grant execute on function public.create_gmail_oauth_request',
+  'grant execute on function public.claim_gmail_oauth_callback(text) to service_role',
+  'mailbox provider identity is immutable',
+  'external provider message identity is immutable',
+  'email send request identity is immutable',
+]) {
+  if (!gmailFoundationSql.includes(marker)) {
+    throw new Error(`Gmail foundation migration is missing required guard: ${marker}`)
+  }
+}
+for (const marker of [
+  'mailbox_account_credentials_account_org_fkey',
+  'communication_threads_account_org_fkey',
+  'communication_links_thread_org_fkey',
+  'communication_links_lead_org_fkey',
+  'communication_links_campaign_member_org_fkey',
+  'communication_links_outbound_message_org_fkey',
+  'external_messages_thread_identity_fkey',
+  'email_send_requests_account_org_fkey',
+  'email_send_requests_outbound_org_fkey',
+]) {
+  if (!gmailFoundationSql.includes(marker)) {
+    throw new Error(`Gmail foundation migration is missing organization-safe FK: ${marker}`)
+  }
+}
+if (/grant\s+(?:insert|update|delete|all)[^;]*on\s+(?:table\s+)?public\.(?:mailbox_accounts|communication_threads|communication_links|external_messages|email_send_requests)[^;]*to\s+authenticated/i.test(gmailFoundationSql)) {
+  throw new Error('Gmail foundation grants direct authenticated writes to communication state.')
+}
+if (/users[.]messages[.]send|gmail[.]googleapis[.]com\/gmail\/v1|create\s+(?:or\s+replace\s+)?function\s+public\.(?:gmail_send|send_gmail)/i.test(gmailFoundationSql)) {
+  throw new Error('Gmail foundation introduces provider send authority.')
+}
+if (/alter\s+table\s+public\.product_bridge|create\s+(?:or\s+replace\s+)?function\s+public\.product_bridge/i.test(gmailFoundationSql)) {
+  throw new Error('Gmail foundation changes the accepted Product Bridge surface.')
+}
+
+const gmailScopeContractFixSql = await readFile(
+  path.join(migrationsDirectory, expectedGmailScopeContractFix),
+  'utf8',
+)
+for (const marker of [
+  'create or replace function public.complete_gmail_account_connection(',
+  'security definer',
+  'set search_path = pg_catalog, public, private, vault, extensions',
+  "'https://www.googleapis.com/auth/gmail.send'",
+  "'https://www.googleapis.com/auth/userinfo.email'",
+  "'https://www.googleapis.com/auth/userinfo.profile'",
+  'from unnest(coalesce(p_granted_scopes, array[]::text[]))',
+  'granted_scope.scope_name <> all',
+]) {
+  if (!gmailScopeContractFixSql.includes(marker)) {
+    throw new Error(`Gmail persistence scope forward-fix is missing required contract: ${marker}`)
+  }
+}
+if (!/not\s+coalesce\s*\(\s*p_granted_scopes\s*@>\s*array\s*\[\s*'https:\/\/www[.]googleapis[.]com\/auth\/gmail[.]send'/i.test(gmailScopeContractFixSql)) {
+  throw new Error('Gmail persistence scope forward-fix does not require exact gmail.send capability.')
+}
+if (/\b(?:create|alter|drop)\s+table\b|\bcreate\s+type\b|\balter\s+type\b/i.test(gmailScopeContractFixSql)) {
+  throw new Error('Gmail persistence scope forward-fix must not change tables or enums.')
+}
+
+const databaseTypes = await readFile(databaseTypesPath, 'utf8')
+function generatedRpcBlock(name) {
+  const marker = `      ${name}: {`
+  const start = databaseTypes.indexOf(marker)
+  if (start < 0) throw new Error(`Generated database types are missing RPC: ${name}`)
+  const remaining = databaseTypes.slice(start + marker.length)
+  const next = remaining.match(/\n      [a-z][a-z0-9_]*: /)
+  if (next?.index === undefined) throw new Error(`Generated RPC type block is unterminated: ${name}`)
+  return databaseTypes.slice(start, start + marker.length + next.index)
+}
+function requireNullableGeneratedArgs(name, fields) {
+  const block = generatedRpcBlock(name)
+  const args = block.slice(block.indexOf('        Args:'), block.indexOf('        Returns:'))
+  for (const field of fields) {
+    if (!new RegExp(`          ${field}: [^\\n]+\\| null`).test(args)) {
+      throw new Error(`Generated RPC ${name} lost nullable argument: ${field}`)
+    }
+  }
+}
+const nullableAiFinishArgs = [
+  'p_cached_input_tokens',
+  'p_error_code',
+  'p_error_message',
+  'p_input_tokens',
+  'p_output_payload',
+  'p_output_tokens',
+  'p_provider_request_id',
+  'p_provider_response_id',
+  'p_total_tokens',
+]
+for (const name of ['finish_ai_research_job', 'finish_ai_draft_job']) {
+  requireNullableGeneratedArgs(name, nullableAiFinishArgs)
+}
+requireNullableGeneratedArgs('finish_ai_runtime_probe', [...nullableAiFinishArgs, 'p_duration_ms'])
+for (const name of [
+  'claim_gmail_oauth_callback',
+  'complete_gmail_account_connection',
+  'complete_gmail_account_disconnect',
+  'create_gmail_oauth_request',
+  'fail_gmail_oauth_request',
+  'get_gmail_refresh_credential',
+  'mark_gmail_reauthorization_required',
+]) {
+  generatedRpcBlock(name)
+}
+for (const table of [
+  'mailbox_accounts',
+  'communication_threads',
+  'communication_links',
+  'external_messages',
+  'email_send_requests',
+]) {
+  if (!databaseTypes.includes(`      ${table}: {`)) {
+    throw new Error(`Generated database types are missing Gmail table: ${table}`)
+  }
+}
+for (const marker of [
+  '__InternalSupabase:',
+  'PostgrestVersion: "14.1"',
+  '      default_next_step_for_stage: {',
+  '      get_product_bridge_staging_context: {',
+  '      stage_product_bridge_research_snapshot: {',
+  '      stage_product_bridge_email_draft: {',
+]) {
+  if (!databaseTypes.includes(marker)) throw new Error(`Generated database types are missing canonical contract: ${marker}`)
+}
+
 const schemaSnapshot = await readFile(schemaSnapshotPath, 'utf8')
 for (const marker of [
   'uidx_leads_org_email_norm on public.leads(org_id, email_norm)',
@@ -525,6 +699,26 @@ for (const marker of [
   'uidx_leads_org_phone_norm on public.leads(org_id, phone_norm)',
 ]) {
   if (!schemaSnapshot.includes(marker)) throw new Error(`Schema snapshot is missing organization-scoped dedup guard: ${marker}`)
+}
+for (const marker of [
+  '-- 18) Gmail account and communication foundation (CRM-GMAIL-00A)',
+  'create table public.mailbox_accounts',
+  'create table private.gmail_oauth_requests',
+  'create table private.mailbox_account_credentials',
+  'create table public.communication_threads',
+  'create table public.communication_links',
+  'create table public.external_messages',
+  'create table public.email_send_requests',
+  'create or replace function public.complete_gmail_account_connection(',
+  'create or replace function public.complete_gmail_account_disconnect(',
+  'from unnest(coalesce(p_granted_scopes, array[]::text[]))',
+  'granted_scope.scope_name <> all',
+  "'https://www.googleapis.com/auth/userinfo.email'",
+  "'https://www.googleapis.com/auth/userinfo.profile'",
+]) {
+  if (!schemaSnapshot.includes(marker)) {
+    throw new Error(`Schema snapshot is missing Gmail foundation seam: ${marker}`)
+  }
 }
 for (const marker of [
   'create table public.product_bridge_write_requests',

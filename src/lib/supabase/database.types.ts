@@ -81,15 +81,15 @@ export type Database = {
           estimated_tokens: number | null
           generation_status: string
           id: string
-          input_tokens: number | null
           input_snapshot: Json
+          input_tokens: number | null
           job_type: string
           language: string
           lead_id: string | null
           model_name: string | null
+          org_id: string
           output_payload: Json | null
           output_tokens: number | null
-          org_id: string
           owner: string
           personalization_notes: string | null
           pricing_snapshot: Json | null
@@ -123,15 +123,15 @@ export type Database = {
           estimated_tokens?: number | null
           generation_status?: string
           id?: string
-          input_tokens?: number | null
           input_snapshot?: Json
+          input_tokens?: number | null
           job_type?: string
           language?: string
           lead_id?: string | null
           model_name?: string | null
+          org_id?: string
           output_payload?: Json | null
           output_tokens?: number | null
-          org_id?: string
           owner?: string
           personalization_notes?: string | null
           pricing_snapshot?: Json | null
@@ -165,15 +165,15 @@ export type Database = {
           estimated_tokens?: number | null
           generation_status?: string
           id?: string
-          input_tokens?: number | null
           input_snapshot?: Json
+          input_tokens?: number | null
           job_type?: string
           language?: string
           lead_id?: string | null
           model_name?: string | null
+          org_id?: string
           output_payload?: Json | null
           output_tokens?: number | null
-          org_id?: string
           owner?: string
           personalization_notes?: string | null
           pricing_snapshot?: Json | null
@@ -380,6 +380,299 @@ export type Database = {
           },
         ]
       }
+      communication_links: {
+        Row: {
+          campaign_member_id: string | null
+          communication_thread_id: string
+          created_at: string
+          created_by_user_id: string
+          id: string
+          lead_id: string | null
+          organization_id: string
+          outbound_message_id: string | null
+        }
+        Insert: {
+          campaign_member_id?: string | null
+          communication_thread_id: string
+          created_at?: string
+          created_by_user_id: string
+          id?: string
+          lead_id?: string | null
+          organization_id: string
+          outbound_message_id?: string | null
+        }
+        Update: {
+          campaign_member_id?: string | null
+          communication_thread_id?: string
+          created_at?: string
+          created_by_user_id?: string
+          id?: string
+          lead_id?: string | null
+          organization_id?: string
+          outbound_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_links_campaign_member_org_fkey"
+            columns: ["campaign_member_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_members"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "communication_links_lead_org_fkey"
+            columns: ["lead_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id", "org_id"]
+          },
+          {
+            foreignKeyName: "communication_links_outbound_message_org_fkey"
+            columns: ["outbound_message_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "outbound_messages"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "communication_links_thread_org_fkey"
+            columns: ["communication_thread_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "communication_threads"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      communication_threads: {
+        Row: {
+          created_at: string
+          first_message_at: string | null
+          id: string
+          latest_message_at: string | null
+          mailbox_account_id: string
+          normalized_subject: string | null
+          organization_id: string
+          provider: string
+          provider_thread_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          first_message_at?: string | null
+          id?: string
+          latest_message_at?: string | null
+          mailbox_account_id: string
+          normalized_subject?: string | null
+          organization_id: string
+          provider?: string
+          provider_thread_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          first_message_at?: string | null
+          id?: string
+          latest_message_at?: string | null
+          mailbox_account_id?: string
+          normalized_subject?: string | null
+          organization_id?: string
+          provider?: string
+          provider_thread_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_threads_account_org_fkey"
+            columns: ["mailbox_account_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "mailbox_accounts"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      email_send_requests: {
+        Row: {
+          actor_user_id: string
+          claimed_at: string | null
+          created_at: string
+          failed_at: string | null
+          id: string
+          idempotency_key: string
+          last_safe_error_code: string | null
+          mailbox_account_id: string
+          organization_id: string
+          outbound_message_id: string
+          provider_called_at: string | null
+          provider_message_id: string | null
+          provider_response_safe: Json
+          provider_thread_id: string | null
+          reconcile_required_at: string | null
+          requested_at: string
+          sent_at: string | null
+          stable_rfc_message_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          actor_user_id: string
+          claimed_at?: string | null
+          created_at?: string
+          failed_at?: string | null
+          id?: string
+          idempotency_key: string
+          last_safe_error_code?: string | null
+          mailbox_account_id: string
+          organization_id: string
+          outbound_message_id: string
+          provider_called_at?: string | null
+          provider_message_id?: string | null
+          provider_response_safe?: Json
+          provider_thread_id?: string | null
+          reconcile_required_at?: string | null
+          requested_at?: string
+          sent_at?: string | null
+          stable_rfc_message_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          actor_user_id?: string
+          claimed_at?: string | null
+          created_at?: string
+          failed_at?: string | null
+          id?: string
+          idempotency_key?: string
+          last_safe_error_code?: string | null
+          mailbox_account_id?: string
+          organization_id?: string
+          outbound_message_id?: string
+          provider_called_at?: string | null
+          provider_message_id?: string | null
+          provider_response_safe?: Json
+          provider_thread_id?: string | null
+          reconcile_required_at?: string | null
+          requested_at?: string
+          sent_at?: string | null
+          stable_rfc_message_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_send_requests_account_org_fkey"
+            columns: ["mailbox_account_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "mailbox_accounts"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "email_send_requests_outbound_org_fkey"
+            columns: ["outbound_message_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "outbound_messages"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      external_messages: {
+        Row: {
+          bcc_addresses: string[]
+          body_html_sanitized: string | null
+          body_text: string | null
+          cc_addresses: string[]
+          communication_thread_id: string
+          created_at: string
+          direction: string
+          from_address: string | null
+          id: string
+          in_reply_to: string | null
+          ingest_source: string
+          mailbox_account_id: string
+          observed_at: string
+          organization_id: string
+          provider_internal_at: string
+          provider_message_id: string
+          provider_thread_id: string
+          references: string[]
+          rfc_message_id: string | null
+          snippet: string | null
+          subject: string | null
+          to_addresses: string[]
+        }
+        Insert: {
+          bcc_addresses?: string[]
+          body_html_sanitized?: string | null
+          body_text?: string | null
+          cc_addresses?: string[]
+          communication_thread_id: string
+          created_at?: string
+          direction: string
+          from_address?: string | null
+          id?: string
+          in_reply_to?: string | null
+          ingest_source: string
+          mailbox_account_id: string
+          observed_at?: string
+          organization_id: string
+          provider_internal_at: string
+          provider_message_id: string
+          provider_thread_id: string
+          references?: string[]
+          rfc_message_id?: string | null
+          snippet?: string | null
+          subject?: string | null
+          to_addresses?: string[]
+        }
+        Update: {
+          bcc_addresses?: string[]
+          body_html_sanitized?: string | null
+          body_text?: string | null
+          cc_addresses?: string[]
+          communication_thread_id?: string
+          created_at?: string
+          direction?: string
+          from_address?: string | null
+          id?: string
+          in_reply_to?: string | null
+          ingest_source?: string
+          mailbox_account_id?: string
+          observed_at?: string
+          organization_id?: string
+          provider_internal_at?: string
+          provider_message_id?: string
+          provider_thread_id?: string
+          references?: string[]
+          rfc_message_id?: string | null
+          snippet?: string | null
+          subject?: string | null
+          to_addresses?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_messages_account_org_fkey"
+            columns: ["mailbox_account_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "mailbox_accounts"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "external_messages_thread_identity_fkey"
+            columns: [
+              "communication_thread_id",
+              "organization_id",
+              "mailbox_account_id",
+              "provider_thread_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "communication_threads"
+            referencedColumns: [
+              "id",
+              "organization_id",
+              "mailbox_account_id",
+              "provider_thread_id",
+            ]
+          },
+        ]
+      }
       imports: {
         Row: {
           dedup_rules: Json
@@ -574,6 +867,77 @@ export type Database = {
           {
             foreignKeyName: "leads_org_id_fkey"
             columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mailbox_accounts: {
+        Row: {
+          connected_at: string | null
+          connected_by_user_id: string
+          created_at: string
+          disconnected_at: string | null
+          display_name: string | null
+          email_address: string
+          granted_scopes: string[]
+          id: string
+          last_revocation_outcome: string | null
+          last_safe_error_code: string | null
+          last_verified_at: string | null
+          organization_id: string
+          provider: string
+          provider_account_subject: string
+          reauthorization_required_at: string | null
+          revoked_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          connected_at?: string | null
+          connected_by_user_id: string
+          created_at?: string
+          disconnected_at?: string | null
+          display_name?: string | null
+          email_address: string
+          granted_scopes?: string[]
+          id?: string
+          last_revocation_outcome?: string | null
+          last_safe_error_code?: string | null
+          last_verified_at?: string | null
+          organization_id: string
+          provider?: string
+          provider_account_subject: string
+          reauthorization_required_at?: string | null
+          revoked_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          connected_at?: string | null
+          connected_by_user_id?: string
+          created_at?: string
+          disconnected_at?: string | null
+          display_name?: string | null
+          email_address?: string
+          granted_scopes?: string[]
+          id?: string
+          last_revocation_outcome?: string | null
+          last_safe_error_code?: string | null
+          last_verified_at?: string | null
+          organization_id?: string
+          provider?: string
+          provider_account_subject?: string
+          reauthorization_required_at?: string | null
+          revoked_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mailbox_accounts_organization_id_fkey"
+            columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
@@ -1020,54 +1384,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      claim_product_bridge_write: {
-        Args: {
-          p_claim_token: string
-          p_expected_organization_id: string
-          p_idempotency_key: string
-          p_lease_seconds: number
-          p_operation_id: string
-          p_provenance: Json
-          p_semantic_fingerprint: string
-        }
-        Returns: Json
-      }
-      finish_ai_runtime_probe: {
-        Args: {
-          p_actor_user_id: string
-          p_cached_input_tokens: number | null
-          p_duration_ms: number | null
-          p_error_code: string | null
-          p_error_message: string | null
-          p_input_tokens: number | null
-          p_job_id: string
-          p_output_payload: Json | null
-          p_output_tokens: number | null
-          p_provider_request_id: string | null
-          p_provider_response_id: string | null
-          p_status: string
-          p_total_tokens: number | null
-        }
-        Returns: Database["public"]["Tables"]["ai_generations"]["Row"]
-        SetofOptions: { from: "*"; to: "ai_generations"; isOneToOne: true; isSetofReturn: false }
-      }
-      start_ai_runtime_probe: {
-        Args: { p_actor_user_id: string; p_campaign_member_id: string; p_model: string; p_request_id: string }
-        Returns: {
-          cached_input_tokens: number | null
-          duration_ms: number | null
-          estimated_cost_usd: number | null
-          generation_status: string
-          input_tokens: number | null
-          job_id: string
-          model_name: string | null
-          output_tokens: number | null
-          request_id: string | null
-          schema_version: string | null
-          total_tokens: number | null
-          was_created: boolean
-        }[]
-      }
       add_campaign_members: {
         Args: { p_campaign_id: string; p_lead_ids: string[] }
         Returns: {
@@ -1109,66 +1425,143 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      create_manual_campaign: {
+      claim_gmail_oauth_callback: {
+        Args: { p_state_hash: string }
+        Returns: {
+          claim_outcome: string
+          initiating_user_id: string
+          nonce: string
+          organization_id: string
+          pkce_code_verifier: string
+          request_id: string
+          requested_scopes: string[]
+        }[]
+      }
+      claim_product_bridge_write: {
         Args: {
-          p_default_channel: string
-          p_default_language: string
-          p_description: string
-          p_name: string
-          p_offer_summary: string
-          p_proof_context: string
-          p_target_segment: string
-          p_tone: string
+          p_claim_token: string
+          p_expected_organization_id: string
+          p_idempotency_key: string
+          p_lease_seconds: number
+          p_operation_id: string
+          p_provenance: Json
+          p_semantic_fingerprint: string
+        }
+        Returns: Json
+      }
+      complete_gmail_account_connection: {
+        Args: {
+          p_display_name: string
+          p_email_address: string
+          p_granted_scopes: string[]
+          p_provider_account_subject: string
+          p_refresh_token: string
+          p_request_id: string
         }
         Returns: {
-          created_at: string
-          created_by: string
-          default_channel: string
-          default_language: string
-          description: string | null
-          id: string
-          name: string
-          offer_summary: string | null
+          connected_at: string
+          email_address: string
+          mailbox_account_id: string
           organization_id: string
-          proof_context: string | null
           status: string
-          target_segment: string | null
-          tone: string | null
-          updated_at: string
+        }[]
+      }
+      complete_gmail_account_disconnect: {
+        Args: {
+          p_actor_user_id: string
+          p_mailbox_account_id: string
+          p_revocation_outcome: string
+          p_safe_error_code?: string
         }
-        SetofOptions: {
-          from: "*"
-          to: "campaigns"
-          isOneToOne: true
-          isSetofReturn: false
+        Returns: {
+          mailbox_account_id: string
+          revocation_outcome: string
+          status: string
+        }[]
+      }
+      create_gmail_oauth_request: {
+        Args: {
+          p_expires_at: string
+          p_nonce: string
+          p_organization_id: string
+          p_pkce_code_verifier: string
+          p_request_id: string
+          p_requested_scopes: string[]
+          p_state_hash: string
         }
+        Returns: {
+          expires_at: string
+          request_id: string
+        }[]
       }
-      finish_ai_research_job: {
-        Args: { p_actor_user_id: string; p_cached_input_tokens: number | null; p_duration_ms: number; p_error_code: string | null; p_error_message: string | null; p_input_tokens: number | null; p_job_id: string; p_output_payload: Json | null; p_output_tokens: number | null; p_provider_request_id: string | null; p_provider_response_id: string | null; p_status: string; p_total_tokens: number | null }
-        Returns: { cached_input_tokens: number | null; duration_ms: number | null; estimated_cost_usd: number | null; generation_status: string; input_tokens: number | null; job_id: string; model_name: string | null; output_tokens: number | null; request_id: string | null; research_snapshot_id: string | null; research_version: number | null; schema_version: string | null; total_tokens: number | null }[]
-      }
-      finish_ai_draft_job: {
-        Args: { p_actor_user_id: string; p_cached_input_tokens: number | null; p_duration_ms: number; p_error_code: string | null; p_error_message: string | null; p_input_tokens: number | null; p_job_id: string; p_output_payload: Json | null; p_output_tokens: number | null; p_provider_request_id: string | null; p_provider_response_id: string | null; p_status: string; p_total_tokens: number | null }
-        Returns: { cached_input_tokens: number | null; duration_ms: number | null; estimated_cost_usd: number | null; generation_status: string; input_tokens: number | null; job_id: string; message_version: number | null; model_name: string | null; output_tokens: number | null; request_id: string | null; research_snapshot_id: string | null; research_version: number | null; schema_version: string | null; total_tokens: number | null }[]
-      }
-      fail_stale_ai_draft_job: {
-        Args: { p_actor_user_id: string; p_error_code: string; p_job_id: string }
-        Returns: Database["public"]["Tables"]["ai_generations"]["Row"]
-        SetofOptions: { from: "*"; to: "ai_generations"; isOneToOne: true; isSetofReturn: false }
-      }
-      fail_stale_ai_research_job: {
-        Args: { p_actor_user_id: string; p_error_code: string; p_job_id: string }
-        Returns: Database["public"]["Tables"]["ai_generations"]["Row"]
-        SetofOptions: { from: "*"; to: "ai_generations"; isOneToOne: true; isSetofReturn: false }
-      }
-      start_ai_research_job: {
-        Args: { p_actor_user_id: string; p_campaign_member_id: string; p_model: string; p_prompt_version: string; p_request_id: string }
-        Returns: { cached_input_tokens: number | null; duration_ms: number | null; estimated_cost_usd: number | null; generation_status: string; input_tokens: number | null; job_id: string; model_name: string | null; output_tokens: number | null; request_id: string | null; schema_version: string | null; total_tokens: number | null; was_created: boolean }[]
-      }
-      start_ai_draft_job: {
-        Args: { p_actor_user_id: string; p_campaign_member_id: string; p_confirmed_research_snapshot_id: string; p_model: string; p_prompt_version: string; p_request_id: string }
-        Returns: { cached_input_tokens: number | null; duration_ms: number | null; estimated_cost_usd: number | null; generation_status: string; input_tokens: number | null; job_id: string; model_name: string | null; output_tokens: number | null; request_id: string | null; research_snapshot_id: string | null; research_version: number | null; schema_version: string | null; total_tokens: number | null; was_created: boolean }[]
-      }
+      create_manual_campaign:
+        | {
+            Args: {
+              p_default_channel: string
+              p_default_language: string
+              p_description: string
+              p_name: string
+              p_offer_summary: string
+              p_target_segment: string
+              p_tone: string
+            }
+            Returns: {
+              created_at: string
+              created_by: string
+              default_channel: string
+              default_language: string
+              description: string | null
+              id: string
+              name: string
+              offer_summary: string | null
+              organization_id: string
+              proof_context: string | null
+              status: string
+              target_segment: string | null
+              tone: string | null
+              updated_at: string
+            }
+            SetofOptions: {
+              from: "*"
+              to: "campaigns"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              p_default_channel: string
+              p_default_language: string
+              p_description: string
+              p_name: string
+              p_offer_summary: string
+              p_proof_context: string
+              p_target_segment: string
+              p_tone: string
+            }
+            Returns: {
+              created_at: string
+              created_by: string
+              default_channel: string
+              default_language: string
+              description: string | null
+              id: string
+              name: string
+              offer_summary: string | null
+              organization_id: string
+              proof_context: string | null
+              status: string
+              target_segment: string | null
+              tone: string | null
+              updated_at: string
+            }
+            SetofOptions: {
+              from: "*"
+              to: "campaigns"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       current_org_id: { Args: never; Returns: string }
       default_next_step_for_stage: {
         Args: {
@@ -1181,10 +1574,269 @@ export type Database = {
           next_action_at: string
         }[]
       }
-      is_org_member: { Args: { p_org_id: string }; Returns: boolean }
+      fail_gmail_oauth_request: {
+        Args: { p_request_id: string; p_safe_error_code: string }
+        Returns: undefined
+      }
+      fail_stale_ai_draft_job: {
+        Args: {
+          p_actor_user_id: string
+          p_error_code: string
+          p_job_id: string
+        }
+        Returns: {
+          applied_at: string | null
+          applied_to_lead: boolean
+          body: string | null
+          cached_input_tokens: number | null
+          campaign_id: string | null
+          campaign_member_id: string | null
+          channel: string
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          duration_ms: number | null
+          error_code: string | null
+          error_message: string | null
+          estimated_cost_usd: number | null
+          estimated_tokens: number | null
+          generation_status: string
+          id: string
+          input_snapshot: Json
+          input_tokens: number | null
+          job_type: string
+          language: string
+          lead_id: string | null
+          model_name: string | null
+          org_id: string
+          output_payload: Json | null
+          output_tokens: number | null
+          owner: string
+          personalization_notes: string | null
+          pricing_snapshot: Json | null
+          prompt_version: string
+          provider: string | null
+          provider_request_id: string | null
+          provider_response_id: string | null
+          request_id: string | null
+          schema_version: string | null
+          started_at: string | null
+          subject: string | null
+          total_tokens: number | null
+          type: string
+          variant: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ai_generations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      fail_stale_ai_research_job: {
+        Args: {
+          p_actor_user_id: string
+          p_error_code: string
+          p_job_id: string
+        }
+        Returns: {
+          applied_at: string | null
+          applied_to_lead: boolean
+          body: string | null
+          cached_input_tokens: number | null
+          campaign_id: string | null
+          campaign_member_id: string | null
+          channel: string
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          duration_ms: number | null
+          error_code: string | null
+          error_message: string | null
+          estimated_cost_usd: number | null
+          estimated_tokens: number | null
+          generation_status: string
+          id: string
+          input_snapshot: Json
+          input_tokens: number | null
+          job_type: string
+          language: string
+          lead_id: string | null
+          model_name: string | null
+          org_id: string
+          output_payload: Json | null
+          output_tokens: number | null
+          owner: string
+          personalization_notes: string | null
+          pricing_snapshot: Json | null
+          prompt_version: string
+          provider: string | null
+          provider_request_id: string | null
+          provider_response_id: string | null
+          request_id: string | null
+          schema_version: string | null
+          started_at: string | null
+          subject: string | null
+          total_tokens: number | null
+          type: string
+          variant: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ai_generations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      finish_ai_draft_job: {
+        Args: {
+          p_actor_user_id: string
+          p_cached_input_tokens: number | null
+          p_duration_ms: number
+          p_error_code: string | null
+          p_error_message: string | null
+          p_input_tokens: number | null
+          p_job_id: string
+          p_output_payload: Json | null
+          p_output_tokens: number | null
+          p_provider_request_id: string | null
+          p_provider_response_id: string | null
+          p_status: string
+          p_total_tokens: number | null
+        }
+        Returns: {
+          cached_input_tokens: number | null
+          duration_ms: number | null
+          estimated_cost_usd: number | null
+          generation_status: string
+          input_tokens: number | null
+          job_id: string
+          message_version: number | null
+          model_name: string | null
+          output_tokens: number | null
+          request_id: string | null
+          research_snapshot_id: string | null
+          research_version: number | null
+          schema_version: string | null
+          total_tokens: number | null
+        }[]
+      }
+      finish_ai_research_job: {
+        Args: {
+          p_actor_user_id: string
+          p_cached_input_tokens: number | null
+          p_duration_ms: number
+          p_error_code: string | null
+          p_error_message: string | null
+          p_input_tokens: number | null
+          p_job_id: string
+          p_output_payload: Json | null
+          p_output_tokens: number | null
+          p_provider_request_id: string | null
+          p_provider_response_id: string | null
+          p_status: string
+          p_total_tokens: number | null
+        }
+        Returns: {
+          cached_input_tokens: number | null
+          duration_ms: number | null
+          estimated_cost_usd: number | null
+          generation_status: string
+          input_tokens: number | null
+          job_id: string
+          model_name: string | null
+          output_tokens: number | null
+          request_id: string | null
+          research_snapshot_id: string | null
+          research_version: number | null
+          schema_version: string | null
+          total_tokens: number | null
+        }[]
+      }
+      finish_ai_runtime_probe: {
+        Args: {
+          p_actor_user_id: string
+          p_cached_input_tokens: number | null
+          p_duration_ms: number | null
+          p_error_code: string | null
+          p_error_message: string | null
+          p_input_tokens: number | null
+          p_job_id: string
+          p_output_payload: Json | null
+          p_output_tokens: number | null
+          p_provider_request_id: string | null
+          p_provider_response_id: string | null
+          p_status: string
+          p_total_tokens: number | null
+        }
+        Returns: {
+          applied_at: string | null
+          applied_to_lead: boolean
+          body: string | null
+          cached_input_tokens: number | null
+          campaign_id: string | null
+          campaign_member_id: string | null
+          channel: string
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          duration_ms: number | null
+          error_code: string | null
+          error_message: string | null
+          estimated_cost_usd: number | null
+          estimated_tokens: number | null
+          generation_status: string
+          id: string
+          input_snapshot: Json
+          input_tokens: number | null
+          job_type: string
+          language: string
+          lead_id: string | null
+          model_name: string | null
+          org_id: string
+          output_payload: Json | null
+          output_tokens: number | null
+          owner: string
+          personalization_notes: string | null
+          pricing_snapshot: Json | null
+          prompt_version: string
+          provider: string | null
+          provider_request_id: string | null
+          provider_response_id: string | null
+          request_id: string | null
+          schema_version: string | null
+          started_at: string | null
+          subject: string | null
+          total_tokens: number | null
+          type: string
+          variant: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ai_generations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      get_gmail_refresh_credential: {
+        Args: { p_mailbox_account_id: string }
+        Returns: {
+          account_status: string
+          organization_id: string
+          refresh_token: string
+        }[]
+      }
       get_product_bridge_staging_context: {
-        Args: { p_campaign_member_id: string; p_expected_organization_id: string }
+        Args: {
+          p_campaign_member_id: string
+          p_expected_organization_id: string
+        }
         Returns: Json
+      }
+      is_org_member: { Args: { p_org_id: string }; Returns: boolean }
+      mark_gmail_reauthorization_required: {
+        Args: { p_mailbox_account_id: string; p_safe_error_code: string }
+        Returns: undefined
       }
       product_bridge_json_has_forbidden_key: {
         Args: { p_value: Json }
@@ -1215,7 +1867,11 @@ export type Database = {
         Returns: boolean
       }
       product_bridge_valid_receipt: {
-        Args: { p_source_snapshot_id: string; p_staged_entity_id: string; p_value: Json }
+        Args: {
+          p_source_snapshot_id: string
+          p_staged_entity_id: string
+          p_value: Json
+        }
         Returns: boolean
       }
       product_bridge_valid_research_evidence: {
@@ -1314,6 +1970,27 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      skip_manual_campaign_member: {
+        Args: { p_campaign_member_id: string; p_reason?: string }
+        Returns: {
+          added_by: string
+          campaign_id: string
+          created_at: string
+          id: string
+          last_error: string | null
+          lead_id: string
+          organization_id: string
+          skip_reason: string | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "campaign_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       stage_product_bridge_email_draft: {
         Args: {
           p_body: string
@@ -1354,63 +2031,149 @@ export type Database = {
         }
         Returns: Json
       }
-      skip_manual_campaign_member: {
-        Args: { p_campaign_member_id: string; p_reason?: string }
-        Returns: {
-          added_by: string
-          campaign_id: string
-          created_at: string
-          id: string
-          last_error: string | null
-          lead_id: string
-          organization_id: string
-          skip_reason: string | null
-          status: string
-          updated_at: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "campaign_members"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
-      update_manual_campaign: {
+      start_ai_draft_job: {
         Args: {
-          p_campaign_id: string
-          p_default_channel: string
-          p_default_language: string
-          p_description: string
-          p_name: string
-          p_offer_summary: string
-          p_proof_context: string
-          p_status: string
-          p_target_segment: string
-          p_tone: string
+          p_actor_user_id: string
+          p_campaign_member_id: string
+          p_confirmed_research_snapshot_id: string
+          p_model: string
+          p_prompt_version: string
+          p_request_id: string
         }
         Returns: {
-          created_at: string
-          created_by: string
-          default_channel: string
-          default_language: string
-          description: string | null
-          id: string
-          name: string
-          offer_summary: string | null
-          organization_id: string
-          proof_context: string | null
-          status: string
-          target_segment: string | null
-          tone: string | null
-          updated_at: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "campaigns"
-          isOneToOne: true
-          isSetofReturn: false
-        }
+          cached_input_tokens: number | null
+          duration_ms: number | null
+          estimated_cost_usd: number | null
+          generation_status: string
+          input_tokens: number | null
+          job_id: string
+          model_name: string | null
+          output_tokens: number | null
+          request_id: string | null
+          research_snapshot_id: string | null
+          research_version: number | null
+          schema_version: string | null
+          total_tokens: number | null
+          was_created: boolean
+        }[]
       }
+      start_ai_research_job: {
+        Args: {
+          p_actor_user_id: string
+          p_campaign_member_id: string
+          p_model: string
+          p_prompt_version: string
+          p_request_id: string
+        }
+        Returns: {
+          cached_input_tokens: number | null
+          duration_ms: number | null
+          estimated_cost_usd: number | null
+          generation_status: string
+          input_tokens: number | null
+          job_id: string
+          model_name: string | null
+          output_tokens: number | null
+          request_id: string | null
+          schema_version: string | null
+          total_tokens: number | null
+          was_created: boolean
+        }[]
+      }
+      start_ai_runtime_probe: {
+        Args: {
+          p_actor_user_id: string
+          p_campaign_member_id: string
+          p_model: string
+          p_request_id: string
+        }
+        Returns: {
+          cached_input_tokens: number | null
+          duration_ms: number | null
+          estimated_cost_usd: number | null
+          generation_status: string
+          input_tokens: number | null
+          job_id: string
+          model_name: string | null
+          output_tokens: number | null
+          request_id: string | null
+          schema_version: string | null
+          total_tokens: number | null
+          was_created: boolean
+        }[]
+      }
+      update_manual_campaign:
+        | {
+            Args: {
+              p_campaign_id: string
+              p_default_channel: string
+              p_default_language: string
+              p_description: string
+              p_name: string
+              p_offer_summary: string
+              p_status: string
+              p_target_segment: string
+              p_tone: string
+            }
+            Returns: {
+              created_at: string
+              created_by: string
+              default_channel: string
+              default_language: string
+              description: string | null
+              id: string
+              name: string
+              offer_summary: string | null
+              organization_id: string
+              proof_context: string | null
+              status: string
+              target_segment: string | null
+              tone: string | null
+              updated_at: string
+            }
+            SetofOptions: {
+              from: "*"
+              to: "campaigns"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              p_campaign_id: string
+              p_default_channel: string
+              p_default_language: string
+              p_description: string
+              p_name: string
+              p_offer_summary: string
+              p_proof_context: string
+              p_status: string
+              p_target_segment: string
+              p_tone: string
+            }
+            Returns: {
+              created_at: string
+              created_by: string
+              default_channel: string
+              default_language: string
+              description: string | null
+              id: string
+              name: string
+              offer_summary: string | null
+              organization_id: string
+              proof_context: string | null
+              status: string
+              target_segment: string | null
+              tone: string | null
+              updated_at: string
+            }
+            SetofOptions: {
+              from: "*"
+              to: "campaigns"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
     }
     Enums: {
       activity_channel: "email" | "ig" | "linkedin" | "other"
@@ -1438,7 +2201,12 @@ export type Database = {
         | "campaign_skipped"
       lead_stage: "new" | "contacted" | "replied" | "proposal" | "won" | "lost"
       lead_status: "active" | "archived"
-      next_action: "follow_up" | "send_proposal" | "request_call" | "nurture"
+      next_action:
+        | "follow_up"
+        | "send_proposal"
+        | "request_call"
+        | "nurture"
+        | "review_reply"
       org_role: "owner" | "admin" | "member"
     }
     CompositeTypes: {
@@ -1593,7 +2361,13 @@ export const Constants = {
       ],
       lead_stage: ["new", "contacted", "replied", "proposal", "won", "lost"],
       lead_status: ["active", "archived"],
-      next_action: ["follow_up", "send_proposal", "request_call", "nurture"],
+      next_action: [
+        "follow_up",
+        "send_proposal",
+        "request_call",
+        "nurture",
+        "review_reply",
+      ],
       org_role: ["owner", "admin", "member"],
     },
   },

@@ -21,6 +21,7 @@ export function AppShell() {
       { to: '/pipeline', label: t('nav.pipeline') },
       { to: "/reports", label: t("nav.reports") },
       ...(featureFlags.outreach_ops_enabled ? [{ to: '/campaigns', label: t('nav.campaigns') }] : []),
+      { to: '/settings', label: t('nav.settings') },
     ],
     [t],
   )

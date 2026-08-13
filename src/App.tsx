@@ -10,6 +10,7 @@ import { ActiveContactsPage } from './app/pages/active-contacts/ActiveContactsPa
 import { ImportsPage } from './app/pages/imports/ImportsPage'
 import { PipelinePage } from './app/pages/pipeline/PipelinePage'
 import { ReportsPage } from './app/pages/reports/ReportsPage'
+import { SettingsPage } from './app/pages/settings/SettingsPage'
 import { featureFlags } from './features/featureFlags/featureFlags'
 import { useI18n } from './i18n/i18n'
 
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="/imports" element={<ImportsPage />} />
           <Route path="/pipeline" element={<PipelinePage />} />
           <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="/campaigns" element={<OutreachRoute><CampaignsPage /></OutreachRoute>} />
           <Route path="/campaigns/new" element={<OutreachRoute><CampaignEditorPage /></OutreachRoute>} />
           <Route path="/campaigns/:campaignId" element={<OutreachRoute><CampaignOverviewPage /></OutreachRoute>} />
