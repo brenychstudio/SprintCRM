@@ -10,11 +10,25 @@ export const gmailOAuthScopes = [
   'https://www.googleapis.com/auth/gmail.send',
 ] as const
 
-const requiredGrantedScopes = [
+const gmailSendScope = 'https://www.googleapis.com/auth/gmail.send'
+const gmailAuthorityPrefix = 'https://www.googleapis.com/auth/gmail.'
+const fullMailScopes = new Set(['https://mail.google.com', 'https://mail.google.com/'])
+const knownGoogleIdentityScopes = new Set([
   'openid',
   'email',
-  'https://www.googleapis.com/auth/gmail.send',
-] as const
+  'profile',
+  'https://www.googleapis.com/auth/userinfo.email',
+  'https://www.googleapis.com/auth/userinfo.profile',
+])
+
+export type GoogleGrantedScopeClass = 'identity' | 'gmail_send' | 'forbidden_gmail' | 'other'
+
+export function classifyGoogleGrantedScope(scope: string): GoogleGrantedScopeClass {
+  if (knownGoogleIdentityScopes.has(scope)) return 'identity'
+  if (scope === gmailSendScope) return 'gmail_send'
+  if (fullMailScopes.has(scope) || scope.startsWith(gmailAuthorityPrefix)) return 'forbidden_gmail'
+  return 'other'
+}
 
 export const gmailPublicErrorCodes = [
   'gmail_disabled',
@@ -198,8 +212,14 @@ export function normalizeGrantedScopes(value: unknown): string[] {
   return [...new Set(value.split(/\s+/).map((scope) => scope.trim()).filter(Boolean))].sort()
 }
 
-export function hasRequiredGrantedScopes(scopes: readonly string[]): boolean {
-  return requiredGrantedScopes.every((scope) => scopes.includes(scope))
+export function hasRequiredGmailCapability(scopes: readonly string[]): boolean {
+  let hasSend = false
+  for (const scope of scopes) {
+    const classification = classifyGoogleGrantedScope(scope)
+    if (classification === 'forbidden_gmail') return false
+    if (classification === 'gmail_send') hasSend = true
+  }
+  return hasSend
 }
 
 export async function exchangeAuthorizationCode(input: {

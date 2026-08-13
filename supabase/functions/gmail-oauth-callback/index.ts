@@ -2,7 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.97.0'
 import {
   buildSafeAppRedirect,
   exchangeAuthorizationCode,
-  hasRequiredGrantedScopes,
+  hasRequiredGmailCapability,
   isGmailEnabled,
   sha256StateHash,
   verifyGoogleIdToken,
@@ -90,7 +90,7 @@ Deno.serve(async (request) => {
   })
   if (!tokenResult.ok) return fail(tokenResult.code)
   if (!tokenResult.value.refreshToken) return fail('refresh_token_missing')
-  if (!hasRequiredGrantedScopes(tokenResult.value.grantedScopes)) return fail('required_scope_missing')
+  if (!hasRequiredGmailCapability(tokenResult.value.grantedScopes)) return fail('required_scope_missing')
 
   const identityResult = await verifyGoogleIdToken({
     idToken: tokenResult.value.idToken,

@@ -46,6 +46,15 @@ describe('Gmail connection authority contract', () => {
     expect(callback).toContain('p_email_address: identityResult.identity.email')
   })
 
+  it('separates Gmail capability proof from signed identity proof before persistence', () => {
+    const capabilityProof = callback.indexOf('hasRequiredGmailCapability(tokenResult.value.grantedScopes)')
+    const identityProof = callback.indexOf('verifyGoogleIdToken({')
+    const persistence = callback.indexOf("service.rpc('complete_gmail_account_connection'")
+    expect(capabilityProof).toBeGreaterThan(-1)
+    expect(identityProof).toBeGreaterThan(capabilityProof)
+    expect(persistence).toBeGreaterThan(identityProof)
+  })
+
   it('fails callback denial, missing code, missing refresh token, and missing scope with stable codes', () => {
     expect(callback).toContain("providerError === 'access_denied' ? 'oauth_access_denied'")
     expect(callback).toContain("return fail('oauth_code_missing')")

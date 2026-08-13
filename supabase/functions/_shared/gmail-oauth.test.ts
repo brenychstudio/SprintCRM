@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 import {
   buildGoogleAuthorizationUrl,
   buildSafeAppRedirect,
+  classifyGoogleGrantedScope,
   createGmailCredentialStore,
   createOAuthMaterial,
   exchangeAuthorizationCode,
@@ -10,7 +11,7 @@ import {
   googleJwksEndpoint,
   googleRevocationEndpoint,
   googleTokenEndpoint,
-  hasRequiredGrantedScopes,
+  hasRequiredGmailCapability,
   revokeGoogleToken,
   sha256Base64Url,
   sha256StateHash,
@@ -95,9 +96,40 @@ describe('Gmail OAuth material and authorization contract', () => {
     expect(url.toString()).not.toMatch(/gmail\.(?:readonly|metadata|modify|compose)|mail\.google\.com/)
   })
 
-  it('requires identity plus gmail.send while treating profile as requested but non-critical', () => {
-    expect(hasRequiredGrantedScopes(['openid', 'email', 'https://www.googleapis.com/auth/gmail.send'])).toBe(true)
-    expect(hasRequiredGrantedScopes(['openid', 'email', 'profile'])).toBe(false)
+  it.each([
+    ['OIDC aliases', ['openid', 'email', 'profile', 'https://www.googleapis.com/auth/gmail.send']],
+    ['canonical userinfo scopes', [
+      'openid',
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'https://www.googleapis.com/auth/gmail.send',
+    ]],
+    ['gmail.send with identity proven independently by the signed ID token', [
+      'https://www.googleapis.com/auth/gmail.send',
+    ]],
+  ])('accepts the %s granted-scope representation', (_label, scopes) => {
+    expect(hasRequiredGmailCapability(scopes)).toBe(true)
+  })
+
+  it.each([
+    ['missing gmail.send', ['openid', 'email', 'profile']],
+    ['gmail.readonly', ['https://www.googleapis.com/auth/gmail.send', 'https://www.googleapis.com/auth/gmail.readonly']],
+    ['gmail.metadata', ['https://www.googleapis.com/auth/gmail.send', 'https://www.googleapis.com/auth/gmail.metadata']],
+    ['gmail.modify', ['https://www.googleapis.com/auth/gmail.send', 'https://www.googleapis.com/auth/gmail.modify']],
+    ['gmail.compose', ['https://www.googleapis.com/auth/gmail.send', 'https://www.googleapis.com/auth/gmail.compose']],
+    ['gmail.labels', ['https://www.googleapis.com/auth/gmail.send', 'https://www.googleapis.com/auth/gmail.labels']],
+    ['gmail.settings', ['https://www.googleapis.com/auth/gmail.send', 'https://www.googleapis.com/auth/gmail.settings.basic']],
+    ['full mailbox', ['https://www.googleapis.com/auth/gmail.send', 'https://mail.google.com/']],
+    ['full mailbox without trailing slash', ['https://www.googleapis.com/auth/gmail.send', 'https://mail.google.com']],
+  ])('rejects %s authority', (_label, scopes) => {
+    expect(hasRequiredGmailCapability(scopes)).toBe(false)
+  })
+
+  it('classifies identity aliases separately from Gmail capabilities', () => {
+    expect(classifyGoogleGrantedScope('email')).toBe('identity')
+    expect(classifyGoogleGrantedScope('https://www.googleapis.com/auth/userinfo.email')).toBe('identity')
+    expect(classifyGoogleGrantedScope('https://www.googleapis.com/auth/gmail.send')).toBe('gmail_send')
+    expect(classifyGoogleGrantedScope('https://www.googleapis.com/auth/gmail.modify')).toBe('forbidden_gmail')
   })
 
   it('uses only fixed Settings success and allowlisted error redirects', () => {
@@ -161,6 +193,18 @@ describe('Google code exchange and identity verification', () => {
       identity: { subject: 'stable-google-subject', email: 'mutable@example.test', displayName: 'Mailbox Owner' },
     })
     expect(result.ok && result.identity.subject).not.toBe(result.ok && result.identity.email)
+  })
+
+  it('accepts gmail.send alone when the signed ID token independently proves identity', async () => {
+    expect(hasRequiredGmailCapability(['https://www.googleapis.com/auth/gmail.send'])).toBe(true)
+    const identity = await verifyGoogleIdToken({
+      idToken: await signedIdToken(), clientId: 'client-id', expectedNonce: 'expected-nonce',
+      nowSeconds: 1_900_000_000, fetchImpl: jwksFetch(),
+    })
+    expect(identity).toMatchObject({
+      ok: true,
+      identity: { subject: 'stable-google-subject', email: 'mutable@example.test' },
+    })
   })
 
   it.each([
