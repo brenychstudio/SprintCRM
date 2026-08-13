@@ -23,6 +23,7 @@ const expectedAiDraftPromptV3Migration = '20260801000009_accept_ai_draft_prompt_
 const expectedAiDraftPromptV4Migration = '20260801000010_accept_ai_draft_prompt_v4.sql'
 const expectedProductBridgeStagingMigration = '20260810000001_product_bridge_transactional_staging.sql'
 const expectedGmailFoundationMigration = '20260812000001_gmail_account_communication_foundation.sql'
+const expectedGmailScopeContractFix = '20260813000001_gmail_connection_scope_contract_fix.sql'
 const requiredCampaignTables = [
   'campaigns',
   'campaign_members',
@@ -82,6 +83,12 @@ if (!files.includes(expectedGmailFoundationMigration)) {
 }
 if (files.indexOf(expectedGmailFoundationMigration) <= files.indexOf(expectedProductBridgeStagingMigration)) {
   throw new Error('Gmail foundation migration must follow the accepted Product Bridge baseline.')
+}
+if (!files.includes(expectedGmailScopeContractFix)) {
+  throw new Error(`Missing required Gmail persistence scope forward-fix: ${expectedGmailScopeContractFix}`)
+}
+if (files.indexOf(expectedGmailScopeContractFix) <= files.indexOf(expectedGmailFoundationMigration)) {
+  throw new Error('Gmail persistence scope forward-fix must follow the applied Gmail foundation migration.')
 }
 
 if (!files.includes(expectedAiRuntimeProbeRequestIdFix)) {
@@ -593,6 +600,31 @@ if (/alter\s+table\s+public\.product_bridge|create\s+(?:or\s+replace\s+)?functio
   throw new Error('Gmail foundation changes the accepted Product Bridge surface.')
 }
 
+const gmailScopeContractFixSql = await readFile(
+  path.join(migrationsDirectory, expectedGmailScopeContractFix),
+  'utf8',
+)
+for (const marker of [
+  'create or replace function public.complete_gmail_account_connection(',
+  'security definer',
+  'set search_path = pg_catalog, public, private, vault, extensions',
+  "'https://www.googleapis.com/auth/gmail.send'",
+  "'https://www.googleapis.com/auth/userinfo.email'",
+  "'https://www.googleapis.com/auth/userinfo.profile'",
+  'from unnest(coalesce(p_granted_scopes, array[]::text[]))',
+  'granted_scope.scope_name <> all',
+]) {
+  if (!gmailScopeContractFixSql.includes(marker)) {
+    throw new Error(`Gmail persistence scope forward-fix is missing required contract: ${marker}`)
+  }
+}
+if (!/not\s+coalesce\s*\(\s*p_granted_scopes\s*@>\s*array\s*\[\s*'https:\/\/www[.]googleapis[.]com\/auth\/gmail[.]send'/i.test(gmailScopeContractFixSql)) {
+  throw new Error('Gmail persistence scope forward-fix does not require exact gmail.send capability.')
+}
+if (/\b(?:create|alter|drop)\s+table\b|\bcreate\s+type\b|\balter\s+type\b/i.test(gmailScopeContractFixSql)) {
+  throw new Error('Gmail persistence scope forward-fix must not change tables or enums.')
+}
+
 const databaseTypes = await readFile(databaseTypesPath, 'utf8')
 function generatedRpcBlock(name) {
   const marker = `      ${name}: {`
@@ -679,6 +711,10 @@ for (const marker of [
   'create table public.email_send_requests',
   'create or replace function public.complete_gmail_account_connection(',
   'create or replace function public.complete_gmail_account_disconnect(',
+  'from unnest(coalesce(p_granted_scopes, array[]::text[]))',
+  'granted_scope.scope_name <> all',
+  "'https://www.googleapis.com/auth/userinfo.email'",
+  "'https://www.googleapis.com/auth/userinfo.profile'",
 ]) {
   if (!schemaSnapshot.includes(marker)) {
     throw new Error(`Schema snapshot is missing Gmail foundation seam: ${marker}`)

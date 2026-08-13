@@ -2856,10 +2856,23 @@ begin
   if btrim(coalesce(p_provider_account_subject, '')) = ''
     or btrim(coalesce(p_email_address, '')) = ''
     or btrim(coalesce(p_refresh_token, '')) = ''
-    or not (
+    or not coalesce(
       p_granted_scopes @> array[
-        'openid', 'email', 'https://www.googleapis.com/auth/gmail.send'
-      ]::text[]
+        'https://www.googleapis.com/auth/gmail.send'
+      ]::text[],
+      false
+    )
+    or exists (
+      select 1
+      from unnest(coalesce(p_granted_scopes, array[]::text[])) as granted_scope(scope_name)
+      where granted_scope.scope_name <> all (array[
+        'openid',
+        'email',
+        'profile',
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/gmail.send'
+      ]::text[])
     )
   then
     raise exception 'gmail_invalid_connection' using errcode = '22023';

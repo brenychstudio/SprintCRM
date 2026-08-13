@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(37);
+select plan(49);
 
 select has_table('public', 'mailbox_accounts', 'mailbox account metadata is public and safe');
 select has_table('private', 'gmail_oauth_requests', 'OAuth request secrets are private');
@@ -240,6 +240,237 @@ select is(
   (select count(*)::integer from private.mailbox_account_credentials),
   0,
   'local disconnect always removes future refresh-token access'
+);
+
+insert into private.gmail_oauth_requests (
+  id, organization_id, initiating_user_id, state_hash, nonce,
+  pkce_code_verifier, requested_scopes, created_at, expires_at,
+  consumed_at, status
+) values
+  (
+    '31000000-0000-4000-8000-000000000003',
+    '21000000-0000-4000-8000-000000000001',
+    '11000000-0000-4000-8000-000000000001',
+    'sha256:1111111111111111111111111111111111111111111111111111111111111111',
+    repeat('h', 43), repeat('i', 43),
+    array['openid','email','profile','https://www.googleapis.com/auth/gmail.send'],
+    now() - interval '1 minute', now() + interval '8 minutes', now(), 'claimed'
+  ),
+  (
+    '31000000-0000-4000-8000-000000000004',
+    '21000000-0000-4000-8000-000000000001',
+    '11000000-0000-4000-8000-000000000001',
+    'sha256:2222222222222222222222222222222222222222222222222222222222222222',
+    repeat('j', 43), repeat('k', 43),
+    array['openid','email','profile','https://www.googleapis.com/auth/gmail.send'],
+    now() - interval '1 minute', now() + interval '8 minutes', now(), 'claimed'
+  );
+
+set local role service_role;
+insert into gmail_test_state
+select 'canonical_scope_account', to_jsonb(account)
+from public.complete_gmail_account_connection(
+  '31000000-0000-4000-8000-000000000003',
+  'google-sub-canonical-scopes',
+  'canonical@example.test',
+  'Canonical Scope Owner',
+  array[
+    'openid',
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'https://www.googleapis.com/auth/gmail.send'
+  ],
+  'fixture-canonical-refresh-token'
+) as account;
+insert into gmail_test_state
+select 'send_only_scope_account', to_jsonb(account)
+from public.complete_gmail_account_connection(
+  '31000000-0000-4000-8000-000000000004',
+  'google-sub-send-only',
+  'send-only@example.test',
+  'Send Only Scope Owner',
+  array['https://www.googleapis.com/auth/gmail.send'],
+  'fixture-send-only-refresh-token'
+) as account;
+reset role;
+
+select ok(
+  exists(
+    select 1 from public.mailbox_accounts
+    where provider_account_subject = 'google-sub-canonical-scopes'
+      and status = 'connected'
+      and granted_scopes = array[
+        'openid',
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/gmail.send'
+      ]::text[]
+  ),
+  'canonical Google userinfo scope representation is accepted'
+);
+select ok(
+  exists(
+    select 1 from public.mailbox_accounts
+    where provider_account_subject = 'google-sub-send-only'
+      and status = 'connected'
+      and granted_scopes = array['https://www.googleapis.com/auth/gmail.send']::text[]
+  ),
+  'gmail.send-only grant is accepted after signed identity proof'
+);
+
+set local role service_role;
+select * from public.complete_gmail_account_disconnect(
+  (select (value ->> 'mailbox_account_id')::uuid from gmail_test_state where key = 'canonical_scope_account'),
+  '11000000-0000-4000-8000-000000000001',
+  'unconfirmed',
+  'disconnect_failed'
+);
+select * from public.complete_gmail_account_disconnect(
+  (select (value ->> 'mailbox_account_id')::uuid from gmail_test_state where key = 'send_only_scope_account'),
+  '11000000-0000-4000-8000-000000000001',
+  'unconfirmed',
+  'disconnect_failed'
+);
+reset role;
+select is(
+  (select count(*)::integer from private.mailbox_account_credentials),
+  0,
+  'accepted alias and send-only fixtures cleanly remove Vault credential access'
+);
+
+insert into private.gmail_oauth_requests (
+  id, organization_id, initiating_user_id, state_hash, nonce,
+  pkce_code_verifier, requested_scopes, created_at, expires_at,
+  consumed_at, status
+) values
+  (
+    '31000000-0000-4000-8000-000000000005',
+    '21000000-0000-4000-8000-000000000001',
+    '11000000-0000-4000-8000-000000000001',
+    'sha256:3333333333333333333333333333333333333333333333333333333333333333',
+    repeat('l', 43), repeat('m', 43),
+    array['openid','email','profile','https://www.googleapis.com/auth/gmail.send'],
+    now() - interval '1 minute', now() + interval '8 minutes', now(), 'claimed'
+  ),
+  (
+    '31000000-0000-4000-8000-000000000006',
+    '21000000-0000-4000-8000-000000000001',
+    '11000000-0000-4000-8000-000000000001',
+    'sha256:4444444444444444444444444444444444444444444444444444444444444444',
+    repeat('n', 43), repeat('o', 43),
+    array['openid','email','profile','https://www.googleapis.com/auth/gmail.send'],
+    now() - interval '1 minute', now() + interval '8 minutes', now(), 'claimed'
+  ),
+  (
+    '31000000-0000-4000-8000-000000000007',
+    '21000000-0000-4000-8000-000000000001',
+    '11000000-0000-4000-8000-000000000001',
+    'sha256:5555555555555555555555555555555555555555555555555555555555555555',
+    repeat('p', 43), repeat('q', 43),
+    array['openid','email','profile','https://www.googleapis.com/auth/gmail.send'],
+    now() - interval '1 minute', now() + interval '8 minutes', now(), 'claimed'
+  ),
+  (
+    '31000000-0000-4000-8000-000000000008',
+    '21000000-0000-4000-8000-000000000001',
+    '11000000-0000-4000-8000-000000000001',
+    'sha256:6666666666666666666666666666666666666666666666666666666666666666',
+    repeat('r', 43), repeat('s', 43),
+    array['openid','email','profile','https://www.googleapis.com/auth/gmail.send'],
+    now() - interval '1 minute', now() + interval '8 minutes', now(), 'claimed'
+  ),
+  (
+    '31000000-0000-4000-8000-000000000009',
+    '21000000-0000-4000-8000-000000000001',
+    '11000000-0000-4000-8000-000000000001',
+    'sha256:7777777777777777777777777777777777777777777777777777777777777777',
+    repeat('t', 43), repeat('u', 43),
+    array['openid','email','profile','https://www.googleapis.com/auth/gmail.send'],
+    now() - interval '1 minute', now() + interval '8 minutes', now(), 'claimed'
+  );
+
+set local role service_role;
+select throws_ok(
+  $$select * from public.complete_gmail_account_connection(
+    '31000000-0000-4000-8000-000000000005', 'google-sub-reject-missing-send',
+    'reject-missing-send@example.test', 'Rejected Missing Send',
+    array['openid','email'], 'fixture-rejected-refresh-token'
+  )$$,
+  '22023', 'gmail_invalid_connection',
+  'connection without gmail.send fails closed'
+);
+select throws_ok(
+  $$select * from public.complete_gmail_account_connection(
+    '31000000-0000-4000-8000-000000000006', 'google-sub-reject-readonly',
+    'reject-readonly@example.test', 'Rejected Readonly',
+    array['https://www.googleapis.com/auth/gmail.send','https://www.googleapis.com/auth/gmail.readonly'],
+    'fixture-rejected-refresh-token'
+  )$$,
+  '22023', 'gmail_invalid_connection',
+  'gmail.readonly is rejected even when gmail.send is present'
+);
+select throws_ok(
+  $$select * from public.complete_gmail_account_connection(
+    '31000000-0000-4000-8000-000000000007', 'google-sub-reject-modify',
+    'reject-modify@example.test', 'Rejected Modify',
+    array['https://www.googleapis.com/auth/gmail.send','https://www.googleapis.com/auth/gmail.modify'],
+    'fixture-rejected-refresh-token'
+  )$$,
+  '22023', 'gmail_invalid_connection',
+  'gmail.modify is rejected even when gmail.send is present'
+);
+select throws_ok(
+  $$select * from public.complete_gmail_account_connection(
+    '31000000-0000-4000-8000-000000000008', 'google-sub-reject-compose',
+    'reject-compose@example.test', 'Rejected Compose',
+    array['https://www.googleapis.com/auth/gmail.send','https://www.googleapis.com/auth/gmail.compose'],
+    'fixture-rejected-refresh-token'
+  )$$,
+  '22023', 'gmail_invalid_connection',
+  'gmail.compose is rejected even when gmail.send is present'
+);
+select throws_ok(
+  $$select * from public.complete_gmail_account_connection(
+    '31000000-0000-4000-8000-000000000009', 'google-sub-reject-full-mail',
+    'reject-full-mail@example.test', 'Rejected Full Mail',
+    array['https://www.googleapis.com/auth/gmail.send','https://mail.google.com/'],
+    'fixture-rejected-refresh-token'
+  )$$,
+  '22023', 'gmail_invalid_connection',
+  'full-mail authority is rejected even when gmail.send is present'
+);
+reset role;
+
+select is(
+  (select count(*)::integer from public.mailbox_accounts
+   where provider_account_subject like 'google-sub-reject-%'),
+  0,
+  'rejected scope sets create no mailbox account'
+);
+select is(
+  (select count(*)::integer
+   from private.mailbox_account_credentials as credential
+   join public.mailbox_accounts as account on account.id = credential.mailbox_account_id
+   where account.provider_account_subject like 'google-sub-reject-%'),
+  0,
+  'rejected scope sets create no credential association'
+);
+select is(
+  (select count(*)::integer from vault.secrets where name like 'gmail-refresh-%'),
+  0,
+  'rejected scope sets create no Vault secret'
+);
+select is(
+  (select count(*)::integer from private.gmail_oauth_requests
+   where id in (
+     '31000000-0000-4000-8000-000000000005',
+     '31000000-0000-4000-8000-000000000006',
+     '31000000-0000-4000-8000-000000000007',
+     '31000000-0000-4000-8000-000000000008',
+     '31000000-0000-4000-8000-000000000009'
+   ) and status <> 'claimed'),
+  0,
+  'rejected scope sets do not record OAuth completion'
 );
 
 set local role authenticated;

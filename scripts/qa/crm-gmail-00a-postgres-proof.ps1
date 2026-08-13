@@ -104,6 +104,11 @@ try {
     -Label 'CRM-GMAIL-00A migration' | Out-Null
   Write-Output 'CRM-GMAIL-00A migration=PASS'
 
+  Invoke-TrackedSql `
+    -SqlLines (Get-Content 'supabase/migrations/20260813000001_gmail_connection_scope_contract_fix.sql') `
+    -Label 'CRM-GMAIL-00A-FIX-03 migration' | Out-Null
+  Write-Output 'CRM-GMAIL-00A-FIX-03 migration=PASS'
+
   $tableCount = Invoke-ScalarSql @'
 select count(*) from information_schema.tables
 where (table_schema, table_name) in (
@@ -136,11 +141,11 @@ where pronamespace = 'public'::regnamespace
   $tapOutput | Write-Output
   $tapText = $tapOutput -join "`n"
   $passedAssertions = [regex]::Matches($tapText, '(?m)^ok [0-9]+ -').Count
-  if ($tapText -notmatch '(?m)^1\.\.37$' -or $passedAssertions -ne 37 -or $tapText -match '(?m)^not ok ') {
-    throw "Expected 37/37 pgTAP assertions, observed $passedAssertions passing assertions."
+  if ($tapText -notmatch '(?m)^1\.\.49$' -or $passedAssertions -ne 49 -or $tapText -match '(?m)^not ok ') {
+    throw "Expected 49/49 pgTAP assertions, observed $passedAssertions passing assertions."
   }
 
-  Write-Output 'CRM-GMAIL-00A pgTAP=PASS assertions=37/37'
+  Write-Output 'CRM-GMAIL-00A pgTAP=PASS assertions=49/49'
 
   if ($GenerateTypes) {
     $supabaseCliVersion = (& npx --yes "supabase@$expectedSupabaseCliVersion" --version | Select-Object -Last 1).Trim()
