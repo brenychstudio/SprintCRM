@@ -1,4 +1,5 @@
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.97.0'
+import type { Database } from '../../../src/lib/supabase/database.types.ts'
 import {
   corsHeaders,
   isAllowedOrigin,
@@ -38,6 +39,8 @@ import {
   safeDraftErrorMessage,
   validateDraftRequest,
 } from '../_shared/ai-draft.ts'
+
+type SprintCrmClient = SupabaseClient<Database>
 
 type ProbeLedgerRow = {
   job_id: string
@@ -144,7 +147,7 @@ function researchCompletedResponse(row: ResearchLedgerRow, snapshotId: string, v
 }
 
 async function finishResearchFailure(
-  service: ReturnType<typeof createClient>, row: ResearchLedgerRow, userId: string, code: RuntimeErrorCode, durationMs: number,
+  service: SprintCrmClient, row: ResearchLedgerRow, userId: string, code: RuntimeErrorCode, durationMs: number,
   providerResponseId: string | null = null, providerRequestId: string | null = null, usage: NormalizedUsage | null = null,
   errorMessage = safeResearchErrorMessage(code),
 ) {
@@ -167,7 +170,7 @@ async function generateResearch(request: Request, body: unknown, requestId: stri
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   const authorization = request.headers.get('authorization')
   if (!supabaseUrl || !anonKey || !serviceRoleKey || !authorization) return researchErrorResponse('unauthorized', clientRequestId, cors)
-  const userClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authorization } } })
+  const userClient = createClient<Database>(supabaseUrl, anonKey, { global: { headers: { Authorization: authorization } } })
   const { data: authData, error: authError } = await userClient.auth.getUser()
   if (authError || !authData.user) return researchErrorResponse('unauthorized', clientRequestId, cors)
   const userId = authData.user.id
@@ -178,14 +181,17 @@ async function generateResearch(request: Request, body: unknown, requestId: stri
     userClient.from('leads').select('company_name,website,website_domain,niche,country_city,service_interest,offer_type,observed_issue,language').eq('id', member.lead_id).maybeSingle(),
   ])
   if (campaignResponse.error || leadResponse.error || !campaignResponse.data || !leadResponse.data) return researchErrorResponse('unauthorized', clientRequestId, cors, 404)
-  const website = validatePublicWebsite(leadResponse.data.website)
+  const leadWebsite = leadResponse.data.website
+  const website = validatePublicWebsite(leadWebsite)
   if (!website.ok) return researchErrorResponse(website.code, clientRequestId, cors)
+  if (leadWebsite === null) return researchErrorResponse('website_required', clientRequestId, cors)
+  const researchLead = { ...leadResponse.data, website: leadWebsite }
   if (!enabled('AI_RUNTIME_ENABLED')) return researchErrorResponse('runtime_disabled', clientRequestId, cors)
   if (!enabled('AI_RESEARCH_ENABLED')) return researchErrorResponse('research_disabled', clientRequestId, cors)
   const apiKey = Deno.env.get('OPENAI_API_KEY')
   const model = Deno.env.get('OPENAI_MODEL')?.trim()
   if (!apiKey || !model) return researchErrorResponse('configuration_missing', clientRequestId, cors)
-  const service = createClient(supabaseUrl, serviceRoleKey)
+  const service = createClient<Database>(supabaseUrl, serviceRoleKey)
   const { data: started, error: startError } = await service.rpc('start_ai_research_job', {
     p_campaign_member_id: member.id, p_actor_user_id: userId, p_request_id: clientRequestId, p_model: model, p_prompt_version: researchPromptVersion,
   })
@@ -211,7 +217,7 @@ async function generateResearch(request: Request, body: unknown, requestId: stri
         method: 'POST', signal: abort.signal,
         headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'X-Client-Request-Id': clientRequestId },
         body: JSON.stringify({
-          ...buildResearchResponsesRequest(model, { lead: leadResponse.data, campaign: campaignResponse.data, hostname: website.hostname }),
+          ...buildResearchResponsesRequest(model, { lead: researchLead, campaign: campaignResponse.data, hostname: website.hostname }),
         }),
       })
     } finally { clearTimeout(timeout) }
@@ -276,7 +282,7 @@ function draftCompletedResponse(row: DraftLedgerRow, cors: HeadersInit) {
 }
 
 async function finishDraftFailure(
-  service: ReturnType<typeof createClient>, row: DraftLedgerRow, userId: string, code: RuntimeErrorCode, durationMs: number,
+  service: SprintCrmClient, row: DraftLedgerRow, userId: string, code: RuntimeErrorCode, durationMs: number,
   providerResponseId: string | null = null, providerRequestId: string | null = null, usage: NormalizedUsage | null = null,
   errorMessage = safeDraftErrorMessage(code),
 ) {
@@ -296,7 +302,7 @@ async function generateDraft(request: Request, body: unknown, requestId: string,
   const supabaseUrl = Deno.env.get('SUPABASE_URL'); const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'); const authorization = request.headers.get('authorization')
   if (!supabaseUrl || !anonKey || !serviceRoleKey || !authorization) return draftErrorResponse('unauthorized', clientRequestId, cors)
-  const userClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authorization } } })
+  const userClient = createClient<Database>(supabaseUrl, anonKey, { global: { headers: { Authorization: authorization } } })
   const { data: authData, error: authError } = await userClient.auth.getUser()
   if (authError || !authData.user) return draftErrorResponse('unauthorized', clientRequestId, cors)
   const userId = authData.user.id
@@ -306,7 +312,7 @@ async function generateDraft(request: Request, body: unknown, requestId: string,
   if (!enabled('AI_DRAFT_GENERATION_ENABLED')) return draftErrorResponse('draft_disabled', clientRequestId, cors)
   const apiKey = Deno.env.get('OPENAI_API_KEY'); const model = Deno.env.get('OPENAI_MODEL')?.trim()
   if (!apiKey || !model) return draftErrorResponse('configuration_missing', clientRequestId, cors)
-  const service = createClient(supabaseUrl, serviceRoleKey)
+  const service = createClient<Database>(supabaseUrl, serviceRoleKey)
   const { data: started, error: startError } = await service.rpc('start_ai_draft_job', {
     p_campaign_member_id: member.id, p_actor_user_id: userId, p_confirmed_research_snapshot_id: validated.value.confirmed_research_snapshot_id,
     p_request_id: clientRequestId, p_model: model, p_prompt_version: draftPromptVersion,
@@ -384,7 +390,7 @@ async function generateDraft(request: Request, body: unknown, requestId: string,
 }
 
 async function finishFailure(
-  service: ReturnType<typeof createClient>, row: ProbeLedgerRow, userId: string, code: RuntimeErrorCode, durationMs: number,
+  service: SprintCrmClient, row: ProbeLedgerRow, userId: string, code: RuntimeErrorCode, durationMs: number,
   providerResponseId: string | null = null, providerRequestId: string | null = null,
 ) {
   const { error } = await service.rpc('finish_ai_runtime_probe', {
@@ -428,7 +434,7 @@ Deno.serve(async (request) => {
   const authorization = request.headers.get('authorization')
   if (!supabaseUrl || !anonKey || !serviceRoleKey || !authorization) return errorResponse('unauthorized', clientRequestId, cors)
 
-  const userClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authorization } } })
+  const userClient = createClient<Database>(supabaseUrl, anonKey, { global: { headers: { Authorization: authorization } } })
   const { data: authData, error: authError } = await userClient.auth.getUser()
   if (authError || !authData.user) return errorResponse('unauthorized', clientRequestId, cors)
   const userId = authData.user.id
@@ -441,7 +447,7 @@ Deno.serve(async (request) => {
   const model = Deno.env.get('OPENAI_MODEL')?.trim()
   if (!apiKey || !model) return errorResponse('configuration_missing', clientRequestId, cors)
 
-  const service = createClient(supabaseUrl, serviceRoleKey)
+  const service = createClient<Database>(supabaseUrl, serviceRoleKey)
   const { data: started, error: startError } = await service.rpc('start_ai_runtime_probe', {
     p_campaign_member_id: validated.value.campaign_member_id,
     p_actor_user_id: userId,
