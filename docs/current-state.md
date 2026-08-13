@@ -1,5 +1,9 @@
 # Current state - OUTREACH-03C supervised AI draft generation accepted
 
+## CRM-EDGE-00A Edge Function type-safety baseline
+
+SprintCRM now statically checks every discovered `supabase/functions/*/index.ts` entrypoint with pinned Deno 2.1.12. Edge Supabase JS resolution is aligned with the accepted Node lock at `2.97.0` and frozen by `supabase/functions/deno.lock`. The production-proven outreach runtime uses the canonical generated `Database` contract for both user and service-role clients, resolving the inherited RPC/client generic errors without changing prompts, provider calls, persistence, validation, or lifecycle behavior. `npm run check:functions` is a credential-free CI gate; this checkpoint performs no Edge deployment or production operation.
+
 ## OUTREACH-03C supervised AI draft generation accepted
 
 `20260801000007_supervised_ai_draft_generation.sql` is applied and the authenticated supervised draft path is operational. It adds service-role-only draft lifecycle RPCs over the existing `ai_generations` ledger. The associated Edge Function `generate_draft` is gated by both `AI_RUNTIME_ENABLED` and `AI_DRAFT_GENERATION_ENABLED`, derives allowlisted context server-side, uses strict `draft_v1` Responses output without tools or retries, preserves safe usage on rejected results, and records immutable AI `outbound_messages` versions only after the exact latest research snapshot remains current. The workspace card requires a version-specific research confirmation and is hidden unless `outreach_ops_enabled`, `ai_runtime_enabled`, and `ai_draft_generation_enabled` are all enabled.

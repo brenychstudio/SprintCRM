@@ -26,6 +26,9 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: 2.1.12
       - name: Verify and bootstrap Shared Bridge dependencies
         shell: bash
         run: |
@@ -72,3 +75,4 @@ jobs:
       - run: npm run test:unit
       - run: npm run build
       - run: npm run test:product-bridge
+      - run: npm run check:functions

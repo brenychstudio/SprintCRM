@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "check:functions": "node scripts/qa/check-edge-functions.mjs",
     "lint": "eslint .",
     "product-bridge:read-pilot": "tsx scripts/qa/crm-pbg-01-read-pilot.ts",
     "typecheck": "tsc -b --pretty false",
