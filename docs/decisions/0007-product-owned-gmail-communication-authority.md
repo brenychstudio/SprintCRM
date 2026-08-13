@@ -1,6 +1,6 @@
 # ADR 0007: Product-owned Gmail communication authority
 
-- **Status:** Accepted for implementation; production acceptance pending
+- **Status:** Accepted — production connection foundation verified
 - **Date:** 2026-08-12
 - **Checkpoint:** CRM-GMAIL-00A
 
@@ -28,3 +28,9 @@ Connection is not approval and approval is not send. A later send checkpoint mus
 - Reply ingestion, inbox scopes, follow-up cancellation, and commercial intent remain later checkpoints.
 - Disabling connection flags safely stops the OAuth surface without destructive rollback.
 - Any production schema correction is additive; accepted migrations and provider facts are never rewritten.
+
+## Production acceptance
+
+The account-connection foundation was verified in production on 2026-08-13 with one supervised External / Testing Google authorization. Connect, authoritative reread, disconnect, and reconnect preserved the same provider/mailbox identity; disconnect removed the credential reference and Vault secret, and reconnect established fresh Vault custody. No thread, external message, send request, sent/replied transition, or activity was produced by the lifecycle.
+
+This acceptance covers account identity, OAuth lifecycle, explicit connection/disconnection, and Vault refresh-credential custody. It does **not** accept Gmail message transmission, provider drafts, inbox/reply synchronization, contacts access, or automation. Those capabilities require separate authority decisions and checkpoints.

@@ -38,3 +38,19 @@ The redirect URI must exactly match Google Cloud configuration. `APP_BASE_URL` m
 - Disconnect and verify the observed revocation outcome plus disconnected account state.
 - Reconnect once and verify the same Google `sub` account is updated and the Vault secret is rotated.
 - Re-disable flags immediately if any state, identity, scope, redirect, token-custody, or audit invariant fails.
+
+## Accepted production configuration
+
+CRM-GMAIL-00A connection acceptance passed on 2026-08-13 with this non-secret configuration:
+
+- Google Auth Platform audience: **External / Testing**;
+- OAuth client: **Web application**;
+- redirect: the exact deployed Supabase Edge `gmail-oauth-callback` URL, with no wildcard;
+- requested identity scopes: `openid`, `email`, and `profile`;
+- requested Gmail capability: `https://www.googleapis.com/auth/gmail.send`;
+- Gmail readonly, metadata, modify, compose, settings, and full-mail scopes: absent;
+- real supervised connect, disconnect, and same-identity reconnect: verified;
+- refresh credential custody: Supabase Vault reference verified without plaintext read;
+- send execution, provider drafts, inbox/reply sync, and automation: disabled/not implemented.
+
+External / Testing authorization is suitable for this supervised acceptance but is not a claim of permanent verified public OAuth availability. Secrets, test-user identity details, provider subjects, and token values do not belong in this document.

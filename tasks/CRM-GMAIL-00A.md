@@ -1,5 +1,13 @@
 # CRM-GMAIL-00A — Gmail Account + Communication Domain Foundation
 
+## Status
+
+- **Implementation:** COMPLETE
+- **Production acceptance:** PASS
+- **Accepted:** 2026-08-13
+- **Authority accepted:** Gmail account connection, identity lifecycle, and Vault refresh-credential custody only
+- **Not accepted in this checkpoint:** Gmail send execution, provider drafts, inbox/reply sync, contacts sync, or automation
+
 ## Pre-edit record
 
 - **Task goal:** Add a forward-compatible communication schema, secure product-owned Gmail OAuth lifecycle, Vault-backed refresh-token custody, and a minimal Settings connect/status/disconnect surface. No email is sent or read.
@@ -54,21 +62,13 @@ The browser can list safe mailbox metadata and invoke only the authenticated Edg
 
 Supabase Vault 0.3.1 and its create/update/decrypted APIs were proven in the pinned disposable Supabase PostgreSQL 17.6 image before implementation. `scripts/qa/crm-gmail-00a-postgres-proof.ps1` composes the accepted Outreach/AI/PBG schema, applies the Gmail migration, runs pgTAP, and can generate public schema types from that isolated database. A narrow post-generation normalization preserves the accepted nullable Product Bridge RPC input contract that postgres-meta cannot infer; it does not change the database or Bridge runtime.
 
-The schema snapshot is mechanically synchronized from the migration. No migration was linked or applied to production.
+The schema snapshot is mechanically synchronized from the migrations. Production has applied both `20260812000001_gmail_account_communication_foundation.sql` and additive forward-fix `20260813000001_gmail_connection_scope_contract_fix.sql`.
 
 ## Rollout and forward-fix
 
-Production work is intentionally pending:
+The connection foundation is production-accepted. The Google OAuth application remains **External / Testing**, so the connected mailbox is a supervised acceptance authorization rather than a claim of permanent verified public OAuth availability. Server and operator connection flags are enabled; controlled send remains disabled.
 
-1. review the migration and Google Cloud checklist;
-2. verify linked migration state;
-3. configure the OAuth client and exact callback URI;
-4. set Edge Function secrets outside source control;
-5. apply the migration and deploy the three functions;
-6. enable server/client connection flags;
-7. run one supervised connect → authoritative account reread → disconnect/reconnect smoke.
-
-Rollback before production apply is code-only. After apply, do not remove tables, enum values, audit rows, or provider facts. Disable both Gmail connection flags, undeploy/replace the functions if required, and use an additive forward-fix migration for schema/security corrections. Disconnect any test account through the product-owned path so Vault access is removed. Email send remains a separate checkpoint after production acceptance.
+The pre-apply rollback path was code-only. After apply, do not remove tables, enum values, audit rows, or provider facts. Disable both Gmail connection flags, undeploy/replace the functions if required, and use an additive forward-fix migration for schema/security corrections. Disconnect any test account through the product-owned path so Vault access is removed. Email send remains a separate checkpoint after production acceptance.
 
 ## Implementation verification record
 
@@ -149,4 +149,18 @@ AST comparison found 32 canonical pre-Gmail RPCs versus 38 current RPC entries: 
 - Persistence now requires exact `https://www.googleapis.com/auth/gmail.send` with a null-safe predicate and rejects every granted scope outside `openid`, `email`, `profile`, canonical `userinfo.email/profile`, and exact `gmail.send`. Literal identity scope names may be absent because the callback independently proves signed Google identity.
 - Disposable Supabase PostgreSQL 17.6 and Vault 0.3.1 applied the accepted baseline, foundation migration, and corrective migration. All 49/49 pgTAP assertions passed, including OIDC aliases, canonical userinfo aliases, send-only, missing-send rejection, broader Gmail/full-mail rejection, and atomic zero mailbox/credential/Vault/OAuth-completion effects.
 - Local regression passes with 24 migrations, typecheck, lint, 28 files / 265 unit tests, build, 6 files / 79 Product Bridge tests, four Deno 2.1.12 Edge entrypoints, and `git diff --check`. Generated database types and the applied foundation migration have no diff. The known Vite large-chunk advisory remains unchanged.
-- Production remains fail-closed with `GMAIL_CONNECTION_ENABLED=false`. The existing local database credential returned SQLSTATE `28P01` during linked catalog verification, so no production dry-run, migration apply, function reread, redeploy, or OAuth retry has occurred yet.
+- At the end of the FIX-03 source phase, production remained fail-closed with `GMAIL_CONNECTION_ENABLED=false`; an initially stale local database credential returned SQLSTATE `28P01`, so no production operation was bypassed. After the credential was corrected, exact migration inventory/dry-run, canonical apply, live function reread, disabled smoke, and supervised OAuth acceptance completed successfully.
+
+## Production acceptance record
+
+CRM-GMAIL-00A production acceptance passed on 2026-08-13 against Supabase project `lyimwrbjyryojhprxdhk` without exposing provider subjects or token material:
+
+1. **Initial real OAuth:** Google displayed only the intended send-on-behalf permission, but the callback failed closed as `required_scope_missing` because Google's granted identity scopes used canonical representation. Mailbox, credential, Vault, communication, activity, sent, and replied deltas were all zero.
+2. **FIX-02:** Edge validation separated signed ID-token identity proof from Gmail capability proof, required exact `gmail.send`, accepted canonical/omitted identity scope names, and rejected every additional Gmail/full-mail authority.
+3. **Second real OAuth:** Edge validation passed, but the database's historical literal `email` scope predicate failed closed as `persistence_error` before mailbox insertion or Vault creation. All production effect deltas remained zero.
+4. **FIX-03:** Additive migration `20260813000001_gmail_connection_scope_contract_fix.sql` aligned the persistence RPC with the accepted capability allowlist. Disposable PostgreSQL/Vault proof passed 49/49, CI passed, dry-run identified only this migration, and production history synchronized through the new version.
+5. **Successful connect:** One Gmail mailbox identity and one credential-to-Vault reference were established for `rostyslav@brenychstudio.com`. Exact `gmail.send` plus accepted identity scopes were present; forbidden Gmail scopes were absent. Threads, external messages, send requests, sent/replied transitions, and activity deltas remained zero.
+6. **Disconnect:** The same mailbox row was retained as disconnected, provider revocation was recorded as observed, the credential reference was removed, and the referenced Vault secret was deleted without reading plaintext. No communication effect occurred.
+7. **Reconnect:** The same Google identity and mailbox row were reused with no duplicate. A fresh Vault secret reference replaced the deleted credential, the mailbox returned to connected, and all communication effects remained zero.
+
+Final accepted production state: one connected mailbox, one active credential reference backed by an existing Vault secret, no persisted access/ID token, no token-bearing audit payload, `GMAIL_CONNECTION_ENABLED=true`, operator connection enabled, `VITE_CONTROLLED_SEND_ENABLED=false`, and Shared Bridge authority unchanged at READ 8 / STAGED_WRITE 2 / PRIVILEGED_ACTION 0.
